@@ -49,9 +49,10 @@ function camUpdate(dt, t) {
   post.uniforms.uAp.value = cam.name === 'wide' ? 0.55 : 0.85;
   // tray: bottom of the view, scaled to fit the width
   const z = 0.42, halfH = z * Math.tan(THREE.MathUtils.degToRad(vfov) / 2), halfW = halfH * camera.aspect;
-  const s = Math.min(halfW * 2 * (camera.aspect < 0.9 ? 0.95 : 0.42) / 0.37, 1);
+  const s = Math.min(halfW * 2 * (camera.aspect < 0.9 ? 0.95 : camera.aspect > 1.6 ? 0.36 : 0.42) / 0.37, 1);
   tray.scale.setScalar(s);
-  tray.position.set(0, -halfH + 0.04 * s, -z);
+  const side = camera.aspect > 1.6 && cam.name !== 'floor';
+  tray.position.set(side ? halfW - 0.19 * s - 0.01 : 0, -halfH + 0.04 * s, -z);
   tray.rotation.set(0.62, 0, 0);
   // sign: on the cabinet beside the tank (landscape) or on the wall above (portrait)
   if (camera.aspect >= 0.9) { sign.position.set(0.37, 0.55 + 0.165, -0.2); sign.rotation.set(-0.08, -0.18, 0); }
