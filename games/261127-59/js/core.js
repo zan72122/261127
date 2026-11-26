@@ -115,7 +115,7 @@ export function buildEnvironment(extraObjects = []) {
     envScene.add(m);
     return m;
   };
-  add(new THREE.BoxGeometry(30, 14, 1), new THREE.Color(0.30, 0.17, 0.12), new THREE.Vector3(0, 7, -9));
+  add(new THREE.BoxGeometry(30, 6, 1), new THREE.Color(0.16, 0.085, 0.06), new THREE.Vector3(0, 3, -9));
   add(new THREE.SphereGeometry(4, 16, 8), new THREE.Color(0.55, 0.36, 0.05), new THREE.Vector3(-8, 5, -4));
   add(new THREE.SphereGeometry(3.5, 16, 8), new THREE.Color(0.45, 0.08, 0.04), new THREE.Vector3(8, 4.5, -3));
   add(new THREE.CircleGeometry(20, 32).rotateX(-Math.PI / 2), new THREE.Color(0.42, 0.36, 0.30), new THREE.Vector3(0, -0.5, 0));

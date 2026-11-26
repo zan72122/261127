@@ -36,7 +36,7 @@ function shotDef(name) {
     fp: p ? [[0, 1.2, 1.2], [0, 0.0, -0.75]] : [[0, 1.16, 1.05], [0, 0.0, -1.0]],
     papa: p ? [[0.2, 1.6, 2.8], [0, 0.45, -2.6]] : [[0.3, 1.45, 1.7], [0, 0.5, -2.8]],
     car: p ? [[1.4, 1.5, 0.9], [-0.7, 0.6, -5.2]] : [[1.5, 1.35, -0.5], [-0.8, 0.6, -5.2]],
-    door: p ? [[2.0, 1.5, -1.3], [0.6, 0.95, -6.4]] : [[2.3, 1.45, -2.4], [0.6, 0.95, -6.4]],
+    door: p ? [[2.9, 1.55, -0.4], [0.7, 0.95, -6.5]] : [[2.7, 1.5, -1.3], [0.6, 0.95, -6.6]],
     play: p ? [[0, 1.25, 1.2], [0, 0.0, -1.0]] : [[0, 1.2, 0.95], [0, 0.0, -1.4]],
   };
   const d = S[name];
@@ -613,13 +613,17 @@ async function debugJump() {
   if (!params.has('thumb')) return;
   while (state !== 'play') await wait(0.5);
   await wait(1.0);
-  const red = world.mats[1].position;
-  FD.burst(red.x, red.z, 0.32, 1.6);
-  await wait(0.55);
+  $hand.style.display = 'none';
+  rig.visible = false;
+  papa.root.visible = false;
   camera.userData.lock = true;
   camera.fov = 40; camera.updateProjectionMatrix();
-  camera.position.set(-1.25, 0.95, 0.15); camera.lookAt(0.25, 0.12, -1.75);
-  post.uFocus.value = 2.0;
+  camera.position.set(-0.45, 0.98, 0.85); camera.lookAt(0.05, 0.18, -1.75);
+  post.uFocus.value = 2.6;
+  for (;;) {
+    for (let k = 0; k < 6; k++) FD.dropFromTree(-1.2 + Math.random() * 2.4, 1.2 + Math.random() * 1.0, -2.6 + Math.random() * 2.2, Math.random() < 0.5 ? 0 : 1);
+    await wait(0.4);
+  }
 }
 function autoSweep(frac) {
   for (let z = PATH.z1; z > PATH.z0 + (1 - frac) * (PATH.z1 - PATH.z0) - 0.2; z -= 0.08) {
@@ -644,7 +648,7 @@ function autoSort() {
     for (let i = 0; i < FD.MAXL; i++) {
       if (FD.L.st[i] !== 0 || FD.L.col[i] !== c) continue;
       if (Math.abs(FD.L.x[i]) > 2.4 || FD.L.z[i] < -5 || FD.L.z[i] > 0.6) continue;
-      if (Math.random() < 0.12) { const a = Math.random() * 6.28, r = Math.sqrt(Math.random()) * 0.33; FD.L.x[i] = m.position.x + Math.cos(a) * r; FD.L.z[i] = m.position.z + Math.sin(a) * r; FD.L.dirty[i] = 1; }
+      if (Math.random() < 0.12) { const a = Math.random() * 6.28, r = Math.pow(Math.random(), 0.65) * 0.34; FD.L.x[i] = m.position.x + Math.cos(a) * r; FD.L.z[i] = m.position.z + Math.sin(a) * r; FD.L.dirty[i] = 1; }
     }
   }
   FD.recomputeGrid();

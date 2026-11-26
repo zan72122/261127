@@ -20,8 +20,8 @@ function tyre() {
   const rubber = new T.MeshStandardMaterial({ color: 0x161616, roughness: 0.88, normalMap: tex('tread_normal.jpg'), normalScale: new T.Vector2(1.2, 1.2) });
   const t = new T.Mesh(tg, rubber);
   t.rotation.z = Math.PI / 2;
-  const rimMat = new T.MeshStandardMaterial({ color: 0xc8c8cc, metalness: 1, roughness: 0.22, normalMap: tex('stone_normal.jpg'), normalScale: new T.Vector2(0.05, 0.05) });
-  const rim = new T.Mesh(new T.CylinderGeometry(0.2, 0.2, 0.17, 32), rimMat);
+  const rimMat = new T.MeshStandardMaterial({ color: 0x7c7d82, metalness: 1, roughness: 0.3, normalMap: tex('stone_normal.jpg'), normalScale: new T.Vector2(0.05, 0.05) });
+  const rim = new T.Mesh(new T.CylinderGeometry(0.17, 0.17, 0.16, 32), rimMat);
   rim.rotation.z = Math.PI / 2;
   const hub = new T.Mesh(new T.SphereGeometry(0.06, 16, 8, 0, Math.PI * 2, 0, Math.PI / 2), rimMat);
   hub.rotation.z = -Math.PI / 2; hub.position.x = 0.085;

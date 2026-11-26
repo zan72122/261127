@@ -73,7 +73,7 @@ export function clothMaterial(opts = {}) {
           return vn(p*700.0)*0.5 + vn(p*90.0)*0.3; // felt
         }`)
       .replace('#include <roughnessmap_fragment>', '#include <roughnessmap_fragment>\nroughnessFactor = vRough;')
-      .replace('#include <metalnessmap_fragment>', '#include <metalnessmap_fragment>\nmetalnessFactor = (vMat > 6.5 && vMat < 7.5) || (vMat > 10.5 && vMat < 11.5) ? 1.0 : vMat > 8.5 && vMat < 9.5 ? 0.25 : 0.0;')
+      .replace('#include <metalnessmap_fragment>', '#include <metalnessmap_fragment>\nmetalnessFactor = (vMat > 6.5 && vMat < 7.5) || (vMat > 10.5 && vMat < 11.5) ? 1.0 : 0.0;')
       .replace('#include <normal_fragment_maps>', `#include <normal_fragment_maps>
         {
           float id = floor(vMat + 0.5);

@@ -389,7 +389,7 @@ export function recomputeGrid() {
   }
   for (let k = 0; k < GW * GH; k++) {
     const c = cnt[k] - 1.1;
-    hgt[k] = c > 0 ? Math.min(0.62, Math.pow(c, 0.85) * 0.032) : 0;
+    if (c > 0) { const raw = Math.pow(c, 0.85) * 0.032; hgt[k] = 0.4 * (1 - Math.exp(-raw / 0.4)); } else hgt[k] = 0;
   }
   updateMound();
   // reseat resting leaves
