@@ -556,7 +556,7 @@ export function makePotMaterial(clay) {
         vec3 rawC = (gth.r * vec3(0.13, 0.17, 0.25) + gth.g * vec3(0.27, 0.15, 0.07) + gth.b * vec3(0.82, 0.8, 0.74)) / max(tot, 1e-4);
         rawC *= 0.92 + 0.16 * grainC.r;
         // 焼いた後の色（厚みで濃さが変わる）
-        vec3 cBlue = mix(vec3(0.17, 0.36, 0.5), vec3(0.008, 0.075, 0.19), smoothstep(0.08, 0.85, gth.r));
+        vec3 cBlue = mix(vec3(0.2, 0.42, 0.58), vec3(0.012, 0.1, 0.26), smoothstep(0.08, 0.85, gth.r));
         cBlue *= 0.85 + 0.3 * mott;
         vec3 cAme = mix(vec3(0.62, 0.36, 0.1), vec3(0.09, 0.03, 0.012), smoothstep(0.1, 1.0, gth.g));
         vec3 cWhite = mix(vec3(0.7, 0.69, 0.64), vec3(0.83, 0.85, 0.86), smoothstep(0.15, 0.9, gth.b));
