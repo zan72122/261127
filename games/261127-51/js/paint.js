@@ -183,11 +183,11 @@ function latentMat(maskName, paint) {
         float g = pgr(floor(vMUv * 700.0));
         float alpha = clamp(edge * vis * (0.8 + 0.3 * g), 0.0, 1.0);
         if (alpha < 0.01) discard;
-        vec3 pcol = mix(vec3(0.03, 0.03, 0.03), vec3(0.85, 0.63, 0.3) * (0.75 + 0.5 * g), gold);
+        vec3 pcol = mix(vec3(0.03, 0.03, 0.03), vec3(0.78, 0.52, 0.2) * (0.75 + 0.5 * g), gold);
         diffuseColor = vec4(pcol, alpha);`)
       .replace('#include <normal_fragment_maps>', `
         normal = bumpN(normal, alpha, 0.25);`)
-      .replace('#include <roughnessmap_fragment>', '#include <roughnessmap_fragment>\nroughnessFactor = mix(0.88, 0.35, gold);')
+      .replace('#include <roughnessmap_fragment>', '#include <roughnessmap_fragment>\nroughnessFactor = mix(0.88, 0.42, gold);')
       .replace('#include <metalnessmap_fragment>', '#include <metalnessmap_fragment>\nmetalnessFactor = gold * 0.95;');
   };
   m.customProgramCacheKey = () => 'latent';
@@ -274,8 +274,8 @@ export class DecalSet {
           vec3 L = vWP - uUVPos; float dl = length(L);
           float spot = smoothstep(uUVCos, mix(uUVCos, 1.0, 0.45), dot(L / dl, uUVDir)) * uUVOn / (1.0 + dl * dl * 0.25);
           float rr = length(vMUv - 0.5) * 2.0;
-          float glow = smoothstep(0.08, 0.5, mask) * (spot * 2.2 + vRev * 0.45) * vAmt;
-          float halo = exp(-rr * rr * 6.0) * (spot * 0.5 + vRev * 0.12) * vAmt;
+          float glow = smoothstep(0.08, 0.5, mask) * (spot * 2.2 + vRev * 0.75) * vAmt;
+          float halo = exp(-rr * rr * 6.0) * (spot * 0.5 + vRev * 0.2) * vAmt;
           if (glow + halo < 0.004) discard;
           diffuseColor = vec4(0.0, 0.0, 0.0, clamp(glow * 0.7 + halo * 0.5, 0.0, 0.92));`)
         .replace('#include <normal_fragment_maps>', kind === 0 ? `

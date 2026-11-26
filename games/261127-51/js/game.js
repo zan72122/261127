@@ -163,7 +163,7 @@ function buildProps() {
   const baseM = innerM.clone(); baseM.side = T.FrontSide; baseM.opacity = 0.35; baseM.color.set(0x0a0d0c); baseM.envMapIntensity = 0.35;
   const base = new T.Mesh(new T.CylinderGeometry(0.078, 0.07, 0.012, 64), baseM);
   base.position.y = 0.006;
-  jar.add(base, inner, outer);
+  jar.add(inner, outer);
   // crumbs inside and spilled
   const crumbM = new T.MeshStandardMaterial({ color: 0xb58a55, roughness: 0.85 });
   for (let i = 0; i < 26; i++) {
@@ -958,13 +958,13 @@ function startPlay() {
 }
 function setupTray() {
   P0.tray.visible = true;
-  P0.tray.position.set(1.98, 0, -0.62); P0.tray.rotation.y = 0.35;
+  P0.tray.position.set(2.2, 0, -0.8); P0.tray.rotation.y = -0.66;
   P0.toolItems = [];
   const mk = (kind, x) => {
     let o;
     if (kind === 'flash') { o = A.hand.tools.flash.clone(); o.traverse((c) => { if (c.isSpotLight) c.intensity = 0; }); o.rotation.set(0, 0.4, 0); o.position.set(x, 0.03, 0.02); o.children.forEach((c) => { if (c.material && c.material.blending === T.AdditiveBlending) c.visible = false; }); }
     else { o = P0.pots[kind].clone(); o.position.set(x, 0.016, 0); }
-    o.userData.tool = kind;
+    o.visible = true; o.userData.tool = kind;
     P0.tray.add(o); P0.toolItems.push(o);
     return o;
   };
@@ -1022,6 +1022,8 @@ function dogRun() {
   d.target = { x: p.x, z: p.z, done: () => { d.do('yip', 0.4); } };
 }
 function updatePlay(dt) {
+  // keep the tool tray in the lower left of the view whatever the screen shape
+  { const r = new T.Raycaster(); r.setFromCamera(new T.Vector2(-0.5, -0.62), camera); const t = -r.ray.origin.y / r.ray.direction.y; if (t > 0) { const p = r.ray.origin.clone().addScaledVector(r.ray.direction, t); P0.tray.position.lerp(V3(p.x, 0, p.z), 1 - Math.exp(-dt * 6)); } }
   // flat hand follows the touch and presses down
   if (G.tool !== 'flash') {
     if (G.stampAt) {
@@ -1029,7 +1031,7 @@ function updatePlay(dt) {
       const lift = ptr.down ? Math.max(0, 0.06 * (1 - Math.min(1, G.stampAnim * 2.5)) ** 2) : 0.08;
       A.hand.aimFlat(G.stampAt.p, G.stampAt.n, lift, dt);
     } else {
-      const p = camera.position.clone().lerp(cam.look, 0.45); p.y = 0; A.hand.aimFlat(p, V3(0, 1, 0), 0.18, dt);
+      const r = new T.Raycaster(); r.setFromCamera(new T.Vector2(0.3, -0.45), camera); const tt = -r.ray.origin.y / r.ray.direction.y; const p = r.ray.origin.clone().addScaledVector(r.ray.direction, Math.max(0.3, tt)); p.y = 0; A.hand.aimFlat(p, V3(0, 1, 0), 0.1, dt);
     }
     UVL.on.value = damp(UVL.on.value, 0, 10, dt); S.hum(false);
   } else {
@@ -1158,7 +1160,7 @@ export function debugGo(name) {
     }
     // a broad brushed haze band
     for (let j = 0; j < 60; j++) P0.tile.paint.stamp(0.25 + j * 0.006, 0.28 + Math.sin(j * 0.3) * 0.03, 0.02, 0.03, 0, 0.05, 0);
-    shot([-0.52, 1.13, -1.62], [-0.6, 1.04, -2.3], { snap: true, ap: 1.4 });
+    shot([-0.73, 1.12, -1.58], [-0.77, 1.03, -2.3], { snap: true, ap: 1.4 });
     G.camLock = true;
     G.thumb = true;
   }

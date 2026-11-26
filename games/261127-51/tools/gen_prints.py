@@ -75,8 +75,8 @@ def paw():
     for cx, cy, rot in ((-0.5, -0.12, 0.4), (-0.18, -0.48, 0.1), (0.18, -0.48, -0.1), (0.5, -0.12, -0.4)):
         d = np.minimum(d, pad(x, y, cx, cy, 0.17, 0.23, rot))
     m = np.clip((1 - d) / 0.35, 0, 1)
-    tex = np.clip(0.65 + noise(n, 50, 4) * 0.35, 0, 1)  # pad skin papillae
-    m = m * tex * np.clip(0.8 + noise(n, 6, 5) * 0.3, 0, 1)
+    tex = np.clip(0.85 + noise(n, 60, 4) * 0.2, 0, 1)  # pad skin papillae
+    m = m * tex * np.clip(0.9 + noise(n, 6, 5) * 0.15, 0, 1)
     save('paw', m)
 
 
