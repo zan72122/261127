@@ -65,7 +65,7 @@ const SHOTS = {
   glaze: { pos: [1.05, 1.02, -0.62], look: [1.05, 0.5, -1.45], f: 38, pPos: [1.05, 1.15, -0.45], pLook: [1.05, 0.48, -1.45] },
   kiln: { pos: [0.95, 0.95, 0.15], look: [1.85, 0.6, -0.08], f: 38, pPos: [0.75, 1.0, 0.2], pLook: [1.85, 0.6, -0.08] },
   kilnIn: { pos: [1.18, 0.78, -0.02], look: [1.9, 0.48, -0.06], f: 45 },
-  table: { pos: [-0.95, 1.08, 1.28], look: [-0.95, 0.8, 0.3], f: 40, pPos: [-0.95, 1.18, 1.45], pLook: [-0.95, 0.78, 0.35] },
+  table: { pos: [-0.95, 1.1, 1.3], look: [-0.95, 0.78, 0.35], f: 40, pPos: [-0.95, 1.32, 1.36], pLook: [-0.95, 0.6, 0.45] },
 };
 const cam = { pos: new THREE.Vector3(), look: new THREE.Vector3(), fromPos: new THREE.Vector3(), fromLook: new THREE.Vector3(), toPos: new THREE.Vector3(), toLook: new THREE.Vector3(), t: 1, dur: 1, f0: 40, f1: 40, shot: null };
 function shotVec(s) {
@@ -119,6 +119,8 @@ const clayHolder = new THREE.Group();
 clayHolder.position.set(POS.wheel.x, POS.wheelHeadY + 0.0012, POS.wheel.z);
 scene.add(clayHolder);
 clayHolder.add(clay.mesh);
+const potShadow = contactShadow(clayHolder, 0, 0, 0.2, 0.2, 0.55, 0.0006);
+potShadow.renderOrder = 2;
 const wheel = { speed: 1.6, target: 1.6, angle: 0 };
 
 // ------------------------------------------------------------ 人と手
@@ -136,7 +138,7 @@ async function loadPeople() {
     girl.root.position.set(-0.12, 0, -0.05); girl.root.rotation.y = Math.PI + 0.35;
     room.add(girl.root);
     girl.root.add(apron.neck, apron.waist);
-    papa.root.position.set(-1.35, 0, -0.95); papa.root.rotation.y = -Math.PI / 2 - 0.5;
+    papa.root.position.set(-0.95, 0, -1.6); papa.root.rotation.y = -1.3;
     room.add(papa.root);
     // 立ち姿：腕を少し体の横に
     girl.parts.armL.rotation.z = -0.06; girl.parts.armR.rotation.z = 0.06;
@@ -203,6 +205,7 @@ const glowTex = (() => {
 })();
 const glow = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTex, transparent: true, depthWrite: false, depthTest: false, blending: THREE.AdditiveBlending, color: new THREE.Color(0.8, 0.7, 0.55), opacity: 0 }));
 glow.renderOrder = 10;
+glow.material.depthTest = true;
 scene.add(glow);
 const hint = { target: null, size: 0.2, show: 0 };
 function setHint(fn, size = 0.2) { hint.target = fn; hint.size = size; }
@@ -217,7 +220,7 @@ function drawHintHand(t) {
   glow.position.copy(tgt);
   const pul = 0.5 + 0.5 * Math.sin(t * 3.2);
   glow.scale.setScalar(hint.size * (0.9 + 0.2 * pul));
-  glow.material.opacity = (0.18 + 0.22 * pul) * (ptr.down ? 0.3 : 1);
+  glow.material.opacity = (0.1 + 0.14 * pul) * (ptr.down ? 0.3 : 1);
   // 数秒さわらないと白い手が指さす
   const idle = clock - lastInput;
   if (idle > 4 && !ptr.down && !busy) hint.show = Math.min(1, hint.show + 0.04);
@@ -269,7 +272,7 @@ const introStage = {
     focusTarget.set(-0.3, 0.9, -1.0);
     post.aperture = 0.0025;
     apronState = 'hang';
-    setHint(() => apronState === 'hang' ? new THREE.Vector3(POS.apron.x, POS.apron.y + 0.05, R.z0 + 0.08) : null, 0.5);
+    setHint(() => apronState === 'hang' ? new THREE.Vector3(POS.apron.x, POS.apron.y + 0.05, R.z0 + 0.08) : null, 0.32);
     wheel.target = 0;
     if (people.girl) people.girl.root.visible = true;
   },
@@ -279,7 +282,7 @@ const introStage = {
     if (h) wearApron();
   },
   update(dt) {
-    focusTarget.lerp(apronState === 'hang' ? new THREE.Vector3(-0.35, 1.0, -1.3) : new THREE.Vector3(-0.12, 0.8, -0.05), 1 - Math.exp(-dt * 2));
+    focusTarget.lerp(apronState === 'hang' ? new THREE.Vector3(-0.5, 1.1, -1.7) : new THREE.Vector3(-0.12, 0.8, -0.05), 1 - Math.exp(-dt * 2));
   },
 };
 function wearApron() {
@@ -371,7 +374,7 @@ const wheelStage = {
       wheel.target = 1.6;
       this.sub = 'shape';
       focusTarget.set(POS.wheel.x, 0.53, POS.wheel.z);
-      post.aperture = 0.0042;
+      post.aperture = 0.0042; post.exposure = 0.92;
       setHint(() => this.hintTarget(), 0.22);
       busy = false;
       say('まわった!', 'girl');
@@ -743,6 +746,7 @@ function restartGame() {
 }
 
 function goStage(s) {
+  if (stage && stage !== s && stage.exit) stage.exit();
   stage = s;
   s.enter && s.enter();
 }
@@ -784,6 +788,7 @@ function frame(now) {
   updateApron(dt);
   updateMoves(dt);
   stage.update && stage.update(dt);
+  { const st = clay.stats(); potShadow.scale.setScalar(Math.max(0.5, st.maxR * 13)); potShadow.visible = stage.name !== 'glaze' && stage.name !== 'wheel' && stage.name !== 'intro'; }
   updateHands(dt);
   updateDrops(dt);
   updateCamera(dt, t);
@@ -834,5 +839,5 @@ function viewHand(name, yaw = 0, pitch = 0.6, dist = 0.3) {
   return 'ok';
 }
 if (DEBUG) {
-  window.__game = { viewHand, simStroke, updateFinger, goStage, wheelStage, introStage, dryStage, glazeStage, tableStage, clay, finger, setShot, gameState, wearApron, papaMishap, cutWithWire, reballTap, wetHands, people, hands, camera, scene, post, L, renderer, wheel, ctx, restartGame, setFocal: (f) => { focal = f; applyFocal(); } };
+  window.__game = { viewHand, screenOf: (x, y, z) => { const v = new THREE.Vector3(x, y, z).project(camera); return [(v.x * 0.5 + 0.5) * W, (-v.y * 0.5 + 0.5) * H]; }, get stage() { return stage.name; }, get sub() { return stage.sub; }, hintPos: () => { const t = hint.target && hint.target(); return t ? [t.x, t.y, t.z] : null; }, simStroke, updateFinger, goStage, wheelStage, introStage, dryStage, glazeStage, tableStage, clay, finger, setShot, gameState, wearApron, papaMishap, cutWithWire, reballTap, wetHands, people, hands, camera, scene, post, L, renderer, wheel, ctx, restartGame, setFocal: (f) => { focal = f; applyFocal(); } };
 }

@@ -12,7 +12,7 @@ export const POS = {
   stove: new THREE.Vector3(-1.85, 0, -1.35),
   window: new THREE.Vector3(0.6, 1.45, -2.0),
   apron: new THREE.Vector3(-0.62, 1.32, -1.93),
-  sign: new THREE.Vector3(-1.25, 1.42, -1.975),
+  sign: new THREE.Vector3(-1.3, 1.45, -1.975),
   dryBoard: new THREE.Vector3(-1.2, 0.0, -0.75),
 };
 
@@ -206,8 +206,8 @@ export function buildRoom(scene) {
   const anim = {};
 
   // ---- 素材
-  const mFloor = pbr('floor', { repeat: [1, 1], roughness: 1, ns: 1.2 });
-  const mWall = pbr('wall', { roughness: 1, ns: 1.0 });
+  const mFloor = pbr('floor', { color: 0xd8cbbd, repeat: [1, 1], roughness: 1, ns: 1.2 });
+  const mWall = pbr('wall', { color: 0xc9bcae, roughness: 1, ns: 1.0 });
   const mPlaster = pbr('plaster', { roughness: 1 });
   const mBrick = pbr('brick', { roughness: 1, ns: 1.3 });
   const mBoard = pbr('board', { roughness: 1 });
@@ -355,13 +355,13 @@ export function buildRoom(scene) {
   const hoopM = pbr('iron', { roughness: 0.8, metal: true, repeat: [4, 0.2] });
   anim.tubs = [];
   // 生の釉薬は粉っぽくくすんだ色（焼くと変わる）
-  const rawCols = [0x8e969e, 0xa48462, 0xdcd5c8];
+  const rawCols = [0x6a7890, 0x8e6a48, 0xe8e4da];
   for (let i = 0; i < 3; i++) {
     const tx = (i - 1) * 0.38;
     const tg = new THREE.Group(); tg.position.set(tx, 0.16, 0); tubsG.add(tg);
     lathe([[0, 0.0], [0.15, 0.0], [0.16, 0.01], [0.175, 0.3], [0.165, 0.3], [0.152, 0.02], [0, 0.02]], 40, staveM, tg);
     for (const hy of [0.06, 0.24]) lathe([[0.158 + hy * 0.05, hy - 0.012], [0.161 + hy * 0.05, hy - 0.012], [0.162 + hy * 0.05, hy + 0.012], [0.159 + hy * 0.05, hy + 0.012]], 40, hoopM, tg);
-    const gm = new THREE.MeshPhysicalMaterial({ color: rawCols[i], roughness: 0.55, clearcoat: 0.35, clearcoatRoughness: 0.35, normalMap: tex('grain', 'n', { repeat: [3, 3] }), normalScale: new THREE.Vector2(0.4, 0.4) });
+    const gm = new THREE.MeshPhysicalMaterial({ color: rawCols[i], roughness: 0.62, clearcoat: 0.55, clearcoatRoughness: 0.22, normalMap: tex('plaster', 'n', { repeat: [1.2, 1.2], offset: [i * 0.3, i * 0.17] }), normalScale: new THREE.Vector2(0.7, 0.7), clearcoatNormalMap: tex('plaster', 'n', { repeat: [0.7, 0.7] }), clearcoatNormalScale: new THREE.Vector2(0.35, 0.35) });
     const surf = mesh(new THREE.CircleGeometry(0.166, 48), gm, 0, 0.255, 0, tg, false, true); surf.rotation.x = -Math.PI / 2;
     // 内側の釉薬の跡
     lathe([[0.163, 0.255], [0.17, 0.29], [0.168, 0.292], [0.161, 0.257]], 40, new THREE.MeshStandardMaterial({ color: rawCols[i], roughness: 0.95 }), tg);
@@ -380,7 +380,7 @@ export function buildRoom(scene) {
   mesh(boxGeo(kw, 0.03, kd, 0.5), mSteel, 0, ky + kh, 0, kg);
   mesh(boxGeo(kw, 0.03, kd, 0.5), mSteel, 0, ky + 0.015, 0, kg);
   // 内側の耐火れんが
-  const ifb = pbr('brick', { color: 0xf0e2cc, roughness: 1, repeat: [1.6, 1.6] });
+  const ifb = new THREE.MeshStandardMaterial({ color: 0xf3e9d8, roughness: 1, map: tex('plaster', 'c', { repeat: [1.5, 1.5] }), normalMap: tex('brick', 'n', { repeat: [1.6, 1.6] }), normalScale: new THREE.Vector2(0.8, 0.8), aoMap: tex('brick', 'm', { repeat: [1.6, 1.6] }), roughnessMap: tex('plaster', 'm', { repeat: [1.5, 1.5] }) });
   ifb.emissive = new THREE.Color(0xff5010); ifb.emissiveIntensity = 0;
   mesh(boxGeo(kw - 0.1, kh - 0.1, 0.04, 0.4), ifb, 0, ky + kh / 2, -kd / 2 + 0.05, kg);
   mesh(boxGeo(0.04, kh - 0.1, kd - 0.06, 0.4), ifb, -kw / 2 + 0.05, ky + kh / 2, 0.0, kg);
@@ -446,14 +446,14 @@ export function buildRoom(scene) {
   mesh(boxGeo(0.6, 0.06, 0.02, 0.5), mBeam, 0, 0, 0, peg);
   for (const px of [-0.2, 0.0, 0.2]) { const p = mesh(new THREE.CylinderGeometry(0.009, 0.011, 0.07, 10), mBeam, px, 0, 0.04, peg); p.rotation.x = Math.PI / 2 - 0.25; }
   const sign = new THREE.Group(); sign.position.copy(POS.sign); room.add(sign);
-  mesh(boxGeo(0.66, 0.36, 0.02, 0.5), mBeam, 0, 0, 0, sign);
+  mesh(boxGeo(0.86, 0.46, 0.02, 0.5), mBeam, 0, 0, 0, sign);
   const signM = new THREE.MeshStandardMaterial({ map: makeSign(), roughness: 0.92 });
-  mesh(new THREE.PlaneGeometry(0.6, 0.3), signM, 0, 0, 0.0115, sign, false, true);
+  mesh(new THREE.PlaneGeometry(0.8, 0.4), signM, 0, 0, 0.0115, sign, false, true);
   anim.sign = sign;
 
   // ---- 食卓（最後の場面）
   const tb = new THREE.Group(); tb.position.copy(POS.table); room.add(tb);
-  const topM = pbr('board', { color: 0xc49a70, roughness: 0.75, repeat: [1.6, 1] });
+  const topM = pbr('board', { color: 0xa88f78, roughness: 0.7, repeat: [1.6, 1], ns: 0.7 });
   mesh(boxGeo(1.2, 0.04, 0.75, 0.75), topM, 0, 0.72, 0, tb);
   for (const [lx, lz] of [[-0.54, -0.32], [0.54, -0.32], [-0.54, 0.32], [0.54, 0.32]]) mesh(boxGeo(0.05, 0.7, 0.05, 0.5), mBeam, lx, 0.35, lz, tb);
   mesh(boxGeo(1.1, 0.08, 0.02, 0.5), mBeam, 0, 0.66, -0.34, tb);

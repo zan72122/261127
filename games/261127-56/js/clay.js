@@ -529,7 +529,7 @@ export function makePotMaterial(clay) {
         // 乾く：口縁から白っぽく
         float dryL = clamp(uDry * 1.7 - (1.0 - vRim) * 0.7, 0.0, 1.0);
         vec3 dryClay = vec3(0.5, 0.42, 0.34) * grainC.rgb;
-        vec3 bisque = vec3(0.66, 0.53, 0.43) * grainC.rgb;
+        vec3 bisque = vec3(0.56, 0.41, 0.31) * grainC.rgb;
         vec3 body = mix(wetClay, dryClay, dryL);
         body = mix(body, bisque, uBisque);
         // 釉薬
@@ -539,7 +539,7 @@ export function makePotMaterial(clay) {
         gth *= clamp(1.0 - gro * 3.0 * uFired, 0.4, 1.8);
         float tot = gth.r + gth.g + gth.b;
         float cov = smoothstep(0.03, 0.22, tot);
-        vec3 rawC = (gth.r * vec3(0.27, 0.29, 0.32) + gth.g * vec3(0.38, 0.25, 0.14) + gth.b * vec3(0.72, 0.69, 0.62)) / max(tot, 1e-4);
+        vec3 rawC = (gth.r * vec3(0.13, 0.17, 0.25) + gth.g * vec3(0.27, 0.15, 0.07) + gth.b * vec3(0.82, 0.8, 0.74)) / max(tot, 1e-4);
         rawC *= 0.92 + 0.16 * grainC.r;
         // 焼いた後の色（厚みで濃さが変わる）
         vec3 cBlue = mix(vec3(0.33, 0.5, 0.62), vec3(0.025, 0.09, 0.26), smoothstep(0.08, 0.9, gth.r));
