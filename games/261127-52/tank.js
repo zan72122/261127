@@ -884,7 +884,7 @@ export class Turbidity {
       const l = v[j * N + Math.max(i - 1, 0)], r = v[j * N + Math.min(i + 1, N - 1)], d = v[Math.max(j - 1, 0) * N + i], u = v[Math.min(j + 1, M - 1) * N + i];
       let x = v[p] + (l + r + d + u - 4 * v[p]) * Math.min(0.24, dt * 2.0);
       const y = j / (M - 1);
-      const rate = 0.05 + 0.16 * (1 - y / Math.max(levelFrac, 0.05)) ** 2;
+      const rate = 0.1 + 0.32 * (1 - y / Math.max(levelFrac, 0.05)) ** 2;
       x -= x * rate * dt;
       if (y > levelFrac + 0.04) x = 0;
       nv[p] = Math.max(0, x);

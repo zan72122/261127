@@ -188,6 +188,7 @@ const lampLight = new THREE.SpotLight(new THREE.Color(1.0, 0.7, 0.42), 9, 7, 1.2
 lampLight.position.set(1.05, 1.25, -0.08); lampLight.target.position.set(0.1, 0.0, 0.9);
 lampLight.castShadow = true; lampLight.shadow.mapSize.set(1024, 1024); lampLight.shadow.bias = -0.0004; lampLight.shadow.normalBias = 0.02; lampLight.shadow.camera.near = 0.1; lampLight.shadow.radius = 4;
 scene.add(lampLight, lampLight.target);
+lampLight.shadow.autoUpdate = true;
 const lampUp = new THREE.PointLight(new THREE.Color(1.0, 0.68, 0.4), 1.6, 5, 2); lampUp.position.set(1.05, 1.45, -0.08); scene.add(lampUp);
 const tankLight = new THREE.SpotLight(new THREE.Color(0.88, 0.98, 1.0), 0.95, 2.5, 1.05, 0.75, 2);
 tankLight.position.set(0, TK.y1 + 0.02, 0.0); tankLight.target.position.set(0, TK.y0, 0);
@@ -223,6 +224,17 @@ const seamGlueM = new THREE.MeshStandardMaterial({ color: 0x223028, roughness: 0
   for (const x of [TK.x0 - g / 2, TK.x1 + g / 2]) for (const z of [TK.z1 + g / 2, TK.z0 - g / 2]) e(g * 1.02, H, g * 1.02, x, yc, z);
   // silicone seams inside the corners
   for (const x of [TK.x0 + 0.002, TK.x1 - 0.002]) for (const z of [TK.z1 - 0.002, TK.z0 + 0.002]) { const s = new THREE.Mesh(new THREE.BoxGeometry(0.004, H, 0.004), seamGlueM); s.position.set(x, yc, z); s.renderOrder = 5; tank.add(s); }
+  // background film on the back glass: deep teal-black gradient (makes the interior glow)
+  {
+    const c = document.createElement('canvas'); c.width = 8; c.height = 256; const x = c.getContext('2d');
+    const gr = x.createLinearGradient(0, 0, 0, 256); gr.addColorStop(0, '#1d3a40'); gr.addColorStop(0.55, '#0f2328'); gr.addColorStop(1, '#081316');
+    x.fillStyle = gr; x.fillRect(0, 0, 8, 256);
+    const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace;
+    const fm = new THREE.MeshStandardMaterial({ map: t, roughness: 0.55 });
+    pbr(fm, 'plaster', [1, 1], { color: false, orm: false });
+    fm.normalScale.set(0.3, 0.3);
+    const film = mesh(new THREE.PlaneGeometry(TK.W + 2 * g, H), fm, false, true); film.position.set(0, yc, TK.z0 - g - 0.0015); tank.add(film);
+  }
   // LED light bar on top
   const bar = mesh(boxUV(roundedBox(0.64, 0.014, 0.075, 0.005, 2), 3), MAT.alu); bar.position.set(0, TK.y1 + 0.035, 0); tank.add(bar);
   const led = new THREE.Mesh(new THREE.PlaneGeometry(0.6, 0.05), new THREE.MeshBasicMaterial({ color: new THREE.Color(7, 8, 8.5) })); led.rotation.x = Math.PI / 2; led.position.set(0, TK.y1 + 0.0275, 0); tank.add(led);
@@ -256,7 +268,8 @@ waterM.onBeforeCompile = (sh) => {
         tb = clamp(tb + (tb > 0.02 ? (fract(sin(dot(floor(tp*vec2(160.0,90.0) + uTime*0.5), vec2(12.9,78.2)))*43758.5)-0.5)*0.05 : 0.0), 0.0, 1.0);
         vec3 milk = vec3(0.62, 0.62, 0.55) * (0.65 + 0.35 * tp.y);
         outgoingLight = mix(outgoingLight, milk, tb * 0.92);
-        outgoingLight += vec3(0.0, 0.012, 0.014);
+        outgoingLight = mix(outgoingLight, outgoingLight * vec3(0.72, 0.98, 0.93), 0.75 * (1.0 - tb));
+        outgoingLight += vec3(0.0, 0.018, 0.02);
       }
       #include <opaque_fragment>`);
 };
@@ -345,7 +358,7 @@ const sheets = [];
 // ------------------------------------------------------------------ people
 const girl = buildGirl(PM); scene.add(girl);
 girl.position.set(0.66, 0, 0.36); girl.rotation.y = Math.atan2(-0.6, -0.36);
-const floorBoots = bootPair(girl, PM); floorBoots.position.set(0.98, 0, 0.55); floorBoots.rotation.y = 0.6; scene.add(floorBoots);
+const floorBoots = bootPair(girl, PM); floorBoots.position.set(0.3, 0, 0.42); floorBoots.rotation.y = 0.6; scene.add(floorBoots);
 const arm = new Arm({ scale: 1, tone: skinTone, skinMat: PM.skin, sleeveMat: PM.sweater, rollX: -0.1, sleeveR: [0.034, 0.04], name: 'girlArm' });
 scene.add(arm.group);
 const momArm = new Arm({ scale: 1.38, tone: [0.6, 0.41, 0.31], skinMat: PM.skin, sleeveMat: PM.momSleeve, rollX: -0.12, sleeveR: [0.029, 0.034], name: 'momArm' });
@@ -376,7 +389,7 @@ function cupMesh(fill) {
 }
 function canMesh(big = false) {
   const g = new THREE.Group();
-  const s = big ? 1.35 : 1;
+  const s = big ? 1.2 : 1;
   const cm = big ? MAT.canBlue : MAT.canGreen;
   const body = mesh(new THREE.LatheGeometry([0.0, 0.05, 0.055, 0.056, 0.055, 0.05, 0.03, 0.0].map((r, i) => new THREE.Vector2(r || 0.001, [0, 0, 0.005, 0.06, 0.1, 0.11, 0.115, 0.115][i])), 40), cm);
   g.add(body);

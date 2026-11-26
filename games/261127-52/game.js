@@ -11,8 +11,8 @@ const veil = document.getElementById('veil');
 // ------------------------------------------------------------------ camera framing
 const PRESET = {
   wide: { target: V3(0.3, 0.6, 0.2), dir: V3(0.38, 0.32, 1).normalize(), w: 1.7, h: 1.25 },
-  tank: { target: V3(0, 0.665, 0.0), dir: V3(0, 0.3, 1).normalize(), w: 0.86, h: 0.72 },
-  tankHigh: { target: V3(0, 0.73, 0.0), dir: V3(0, 0.26, 1).normalize(), w: 0.86, h: 0.84 },
+  tank: { target: V3(0, 0.665, 0.0), dir: V3(0, 0.3, 1).normalize(), w: 0.86, h: 0.66 },
+  tankHigh: { target: V3(0, 0.75, 0.0), dir: V3(0, 0.26, 1).normalize(), w: 0.9, h: 0.8 },
   floor: { target: V3(0.05, 0.22, 0.48), dir: V3(0.12, 0.95, 1).normalize(), w: 1.05, h: 0.7 },
 };
 let vfov = 36;
@@ -73,7 +73,7 @@ function setScene(name) {
   S.scene = name; S.t = 0; S.phase = '';
   if (name === 'scape') { setTray(['sand', 'pebble', 'wood', 'plant']); selectTool('sand', true); camTo('tank', 2.6); }
   if (name === 'water') { setTray(['can']); selectTool('can', true); camTo('tankHigh', 2.0); }
-  if (name === 'fish') { setTray(['bag0', 'bag1', 'bag2', 'shell', 'stone']); selectTool(null, true); camTo('tank', 2.0); fish.all.forEach(f => { f.hide = false; }); }
+  if (name === 'fish') { setTray(['bag0', 'bag1', 'bag2', 'shell', 'stone']); selectTool(null, true); camTo('tankHigh', 2.0); fish.all.forEach(f => { f.hide = false; }); }
   tray.visible = name !== 'intro';
 }
 function selectTool(key, silent) {
@@ -113,7 +113,7 @@ function bootsUpdate(dt) {
   if (bootAnim.t < 0) return;
   bootAnim.t += dt;
   const k = Math.min(1, bootAnim.t / 0.8);
-  const from = V3(0.98, 0, 0.55), to = girl.position.clone();
+  const from = V3(0.3, 0, 0.42), to = girl.position.clone();
   floorBoots.position.lerpVectors(from, to, ease(k)); floorBoots.position.y = Math.sin(k * Math.PI) * 0.25;
   floorBoots.rotation.y = lerp(0.6, girl.rotation.y, k);
   if (k >= 1) {
@@ -147,7 +147,7 @@ function celebrate(next, voice = 'できた') {
   setTimeout(() => { camTo('wide', 1.8); girl.visible = true; }, 400);
   setTimeout(() => { audio.say(voice); GA.hop = 0.9; }, 1600);
   setTimeout(() => { GA.clap = 1.4; audio.clap(5); }, 2300);
-  setTimeout(() => { S.busy = 0; if (next) setScene(next); else camTo('tank', 2); }, 4600);
+  setTimeout(() => { S.busy = 0; if (next) setScene(next); else camTo('tankHigh', 2); }, 4600);
 }
 
 // ------------------------------------------------------------------ arm controller (the player's finger = the girl's hand)
@@ -192,6 +192,9 @@ const armCtl = {
       const sel = S.tool === k;
       t.obj.position.y = lerp(t.obj.position.y, sel ? 0.02 + Math.sin(S.t * 4) * 0.004 : 0, Math.min(1, dt * 8));
       t.obj.rotation.y = sel ? Math.sin(S.t * 2) * 0.25 : t.obj.rotation.y * 0.9;
+      // the tool the hint suggests wiggles now and then
+      const wig = S.suggest === k && !sel ? Math.max(0, Math.sin(S.t * 2.2)) : 0;
+      t.obj.rotation.z = Math.sin(S.t * 14) * 0.12 * wig;
     }
   },
 };
@@ -215,7 +218,7 @@ function placeHeld(obj, h, T, tilt) {
 }
 function homeTool(t) { t.inHand = false; t.home.add(t.obj); t.obj.position.set(0, 0, 0); t.obj.rotation.set(0, 0, 0); t.obj.scale.setScalar(1); }
 function shoulder() { return camera.localToWorld(S.scene === 'water' && S.phase === 'wipe' ? V3(0.16, -0.3, -0.3) : V3(0.15, -0.27, -0.5)); }
-const momShoulder = () => camera.localToWorld(V3(0.55, 0.42, 0.05));
+const momShoulder = () => camera.localToWorld(V3(0.62, 0.12, -0.25));
 
 // ------------------------------------------------------------------ input
 const ray = new THREE.Raycaster();
@@ -308,6 +311,7 @@ function act(first) {
       const lp = S.lastP; if (!first && lp && Math.hypot(lp.x - p.x, lp.z - p.z) < 0.045) { armCtl.show(V3(p.x, TK.y0 + h + 0.006, p.z), 'pinch', { tool: 'plant', roll: 0, pitch: -0.9, hold: 0.5 }); return; }
       S.lastP = p.clone();
       plants.plant(p.x, p.z); audio.thud(260, 0.25); audio.click(900, 0.08);
+      if (plants.list.length === 1) setTimeout(() => audio.say('えいっ'), 200);
       sand.flatten(p.x, p.z, 0.008, 0.05);
       armCtl.show(V3(p.x, TK.y0 + h + 0.006, p.z), 'pinch', { tool: 'plant', roll: 0, pitch: -0.9, hold: 0.5 });
     }
@@ -378,7 +382,7 @@ function releaseBag(k) {
   const x = lerp(TK.x0 + 0.08, TK.x1 - 0.08, (k + 0.5) / 3) + rnd(-0.03, 0.03), z = rnd(-0.04, 0.06);
   const surfY = U.uLevel.value;
   audio.pick();
-  armCtl.show(V3(x, surfY + 0.1, z + 0.02), 'pinch', { tool: key, roll: 0, pitch: -0.6, hold: 3.2, tilt: 0 });
+  armCtl.show(V3(x, surfY + 0.09, z + 0.02), 'pinch', { tool: key, roll: 0, pitch: -0.6, hold: 3.2, tilt: 0 });
   const t0 = S.t;
   S.bagAnim = { k, x, z, t0, key };
 }
@@ -387,9 +391,9 @@ function bagUpdate(dt) {
   const e = S.t - B.t0;
   const surfY = U.uLevel.value;
   const t = TOOLS[B.key];
-  if (e < 0.9) armCtl.goal.set(B.x, surfY + 0.1 - e * 0.1, B.z + 0.02);
+  if (e < 0.9) armCtl.goal.set(B.x, surfY + 0.09 - e * 0.04, B.z + 0.02);
   else if (e < 2.2) {
-    armCtl.goal.set(B.x, surfY + 0.02 + Math.sin(e * 3) * 0.004, B.z + 0.02);
+    armCtl.goal.set(B.x, surfY + 0.05 + Math.sin(e * 3) * 0.004, B.z + 0.02);
     armCtl.tiltGoal = Math.min(1, (e - 0.9) / 0.6) * 1.3; // tip the bag
     if (!B.out && e > 1.3) {
       B.out = true; fish.release(B.k, V3(B.x, surfY - 0.03, B.z)); audio.splash(0.35, 0.6);
@@ -465,15 +469,15 @@ function startGag() {
 function gagUpdate(dt) {
   S.gagT += dt; const g = S.gagT;
   const x = 0.1;
-  momCtl.goal.set(x + 0.16, TK.y1 + 0.26, 0.05);
+  momCtl.goal.set(0.37, TK.y1 + 0.13, 0.1);
   if (g > 1.0 && g < 3.4) {
     // pour hard
     const lip = momCan.localToWorld(momCan.userData.lip.clone());
     for (let i = 0; i < 26; i++) drops.emit(lip.x + rnd(-0.01, 0.01), lip.y, lip.z + rnd(-0.01, 0.01), rnd(-0.35, -0.1), rnd(-0.3, 0.1), rnd(-0.08, 0.08), [0.75, 0.85, 0.88], rnd(0.0012, 0.0026), 2, 2);
     S.level = Math.min(1.0, S.level + dt * 0.33);
-    turb.stir(lip.x - 0.08, S.level, dt * 4.5);
+    turb.stir(lip.x - 0.05, S.level, dt * 4.5);
     audio.loop('pour', 1);
-    U.uPush.value.set(lip.x - 0.08, 0, 1.0, 0);
+    U.uPush.value.set(lip.x - 0.05, 0, 1.0, 0);
     if (S.level >= 1.0) { S.overflow = Math.min(1, S.overflow + dt * 2); if (!S.saidOops) { S.saidOops = true; audio.say('あっ', 'mom'); } }
   } else if (g >= 3.4) { audio.loop('pour', 0); U.uPush.value.z *= 0.9; }
   if (g > 3.4 && !S.saidArara) { S.saidArara = true; audio.say('あらら', 'mom'); WET.spread = 2.5; }
@@ -493,7 +497,7 @@ function momUpdate(dt) {
     const tilt = S.phase === 'gag' && S.gagT > 0.9 && S.gagT < 3.4 ? 1 : 0;
     momArm.place(momCtl.T, S0, V3(0.065 * 1.38, -0.028 * 1.38, 0), 1.57, 0, -0.15);
     momCtl.tilt = lerp(momCtl.tilt || 0, tilt * 1.0, Math.min(1, dt * 4));
-    placeHeld(momCan, { grip: [-0.01, 0.16, 0], yaw: Math.PI, s: 1.35 }, momCtl.T, momCtl.tilt);
+    placeHeld(momCan, { grip: [-0.01, 0.16, 0], yaw: Math.PI, s: 1.2 }, momCtl.T, momCtl.tilt);
   }
 }
 
@@ -590,9 +594,16 @@ function simulate(dt) {
       }
     }
   } else { U.uPush.value.z *= 0.92; if (!S.down) audio.loop('pour', S.phase === 'gag' ? 1 : 0); }
-  if (S.knock) { S.knock.t -= dt; if (S.knock.t <= 0) { audio.knock(); fish.attract(S.knock.x, S.knock.y, TK.z1 - 0.04, 2.0, 3.5, 0.45); S.knock = null; } }
+  if (S.knock) { S.knock.t -= dt; if (S.knock.t <= 0) { audio.knock(); S.knocks = (S.knocks || 0) + 1; if (S.knocks % 4 === 1) setTimeout(() => audio.say('ふふっ'), 900); fish.attract(S.knock.x, S.knock.y, TK.z1 - 0.04, 2.0, 3.5, 0.45); S.knock = null; } }
   if (S.phase === 'gag') gagUpdate(dt);
-  if (S.overflow > 0 && S.phase !== 'gag' && S.phase !== 'wipe') { S.overflow = Math.max(0, S.overflow - dt * 0.6); if (S.level > 0.98) { S.level = 0.98; WET.spread = Math.max(WET.spread || 0, 1); } }
+  if (S.overflow > 0 && S.phase !== 'gag') {
+    const pouring = S.down && S.pour && !S.pour.floor && S.tool === 'can';
+    if (!pouring) S.overflow = Math.max(0, S.overflow - dt * 0.8);
+    if (S.level > 0.98 && !pouring) { S.level = 0.98; WET.spread = Math.max(WET.spread || 0, 1); }
+    if (S.overflow > 0.2 && S.phase !== 'wipe' && !S.busy) { // she overflowed it herself: wipe again
+      S.phase = 'wipe'; S.wiped = false; S.down = false; armCtl.release(); camTo('floor', 1.6); setTray(['towel', 'can']); selectTool('towel', true); S.lastP = null; audio.say('あっ');
+    }
+  }
   if (S.phase === 'wipe' && S.overflow === 0 && WET.area !== undefined && WET.area < 18 && S.t > 0 && !S.wiped) {
     S.wiped = true; audio.say('ありがとう', 'mom'); setTimeout(() => { audio.say('ふふっ'); }, 1300);
     setTimeout(() => { S.phase = 'clear'; camTo('tankHigh', 1.8); setTray(['can']); selectTool('can', true); }, 1800);
@@ -643,6 +654,12 @@ function simulate(dt) {
   girl.visible = cam.name === 'wide' || (cam.t < 0.5 && S.scene === 'scape' && S.t < 1.2);
   if (S.scene !== 'intro' && cam.name !== 'wide' && cam.t >= 1) girl.visible = false;
   floorBoots.rotation.z = !S.boots && S.scene === 'intro' ? Math.sin(S.t * 6) * 0.05 * (Math.sin(S.t * 1.3) > 0.3 ? 1 : 0) : 0;
+  // which tool to nudge (wiggle) even before the white hand appears
+  S.suggest = null;
+  if (S.scene === 'scape') S.suggest = sand.coverage() < 0.5 ? 'sand' : !woods.length ? 'wood' : plants.list.length < 3 ? 'plant' : null;
+  else if (S.scene === 'water' && S.phase === 'wipe') S.suggest = 'towel';
+  else if (S.scene === 'fish') { for (let k = 0; k < 3; k++) if (!S.released[k]) { S.suggest = 'bag' + k; break; } }
+  if (S.suggest === S.tool) S.suggest = null;
   // hints after 4 s idle
   if (S.idle > 4 && !S.busy && !S.down && S.phase !== 'gag' && cam.t >= 1) { if (!hintTarget || S.idle % 4 < dt) hintTarget = nextHint(); if (hintTarget) showHintAt(hintTarget); }
   else { hintTarget = null; hideHint(); }
@@ -668,11 +685,13 @@ function render(dt) {
   camUpdate(dt, S.t);
   armCtl.update(dt); momUpdate(dt);
   camera.updateMatrixWorld();
+  M.lampLight.shadow.autoUpdate = cam.name === 'wide' || cam.name === 'floor' || cam.t < 1;
   const scalePx = H / (2 * Math.tan(THREE.MathUtils.degToRad(camera.fov) / 2));
   drops.mat.uniforms.uScale.value = scalePx; motes.material.uniforms.uScale.value = scalePx;
   const rt = M.getRT();
   renderer.setRenderTarget(rt);
   renderer.render(scene, camera);
+  window.__info = { calls: renderer.info.render.calls, tris: renderer.info.render.triangles, progs: renderer.info.programs.length, tex: renderer.info.memory.textures, geo: renderer.info.memory.geometries };
   renderer.setRenderTarget(null);
   post.uniforms.tColor.value = rt.texture; post.uniforms.tDepth.value = rt.depthTexture;
   post.uniforms.uInvProj.value.copy(camera.projectionMatrixInverse); post.uniforms.uInvView.value.copy(camera.matrixWorld);
@@ -717,9 +736,10 @@ if (DEBUG.has('scene')) {
   if (sc === 'scape') { setScene('scape'); cam.t = 1; cam.name = 'tank'; if (DEBUG.has('fill')) fill(); }
   if (sc === 'water' || sc === 'floor' || sc === 'fish') { fill(); setScene(sc === 'floor' ? 'water' : sc); cam.t = 1; S.level = sc === 'water' ? +(DEBUG.get('level') || 0.4) : 0.95; }
   if (sc === 'floor') { S.phase = 'wipe'; S.gagDone = true; camTo('floor', 0.01); setTray(['towel', 'can']); selectTool('towel', true); for (let i = 0; i < 40; i++) wetAdd(rnd(-0.25, 0.25), rnd(0.24, 0.6), 0.5, 0.08); }
-  if (sc === 'fish') { for (let k = 0; k < 3; k++) { fish.release(k, V3(rnd(-0.2, 0.2), TK.y0 + 0.2, 0)); S.released[k] = DEBUG.has('allfish'); } fish.all.forEach(f => { f.p.set(rnd(-0.25, 0.25), TK.y0 + rnd(0.08, 0.28), rnd(-0.12, 0.12)); }); }
+  if (sc === 'fish') { for (let k = 0; k < 3; k++) { fish.release(k, V3(rnd(-0.2, 0.2), TK.y0 + 0.2, 0)); S.released[k] = DEBUG.has('allfish'); if (S.released[k]) { TOOLS['bag' + k].gone = true; TOOLS['bag' + k].home.visible = false; } } fish.all.forEach(f => { f.p.set(rnd(-0.25, 0.25), TK.y0 + rnd(0.08, 0.28), rnd(-0.12, 0.12)); }); }
   if (DEBUG.has('turb')) turb.stir(0, S.level, +DEBUG.get('turb'));
   if (DEBUG.has('wide')) camTo('wide', 0.01);
+  if (DEBUG.has('close')) camTo('tank', 0.01);
 }
 if (DEBUG.has('hand')) {
   const pose = DEBUG.get('hand') || 'point';
@@ -731,3 +751,6 @@ if (DEBUG.has('hand')) {
   PRESET.tank = { target: T.clone().add(V3(-0.03, 0, 0)), dir: V3(0.1, 0.6, 1).normalize(), w: 0.22, h: 0.16 };
   tray.visible = false;
 }
+window.__cam = { V: THREE.Vector3, camera };
+window.__wet = () => WET.area;
+window.__wetClear = () => { WET.v.fill(0); WET.dirty = true; };
