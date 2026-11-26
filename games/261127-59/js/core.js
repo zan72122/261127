@@ -153,8 +153,9 @@ const postMat = new THREE.ShaderMaterial({
   vec3 toSRGB(vec3 c){ return mix(c*12.92, 1.055*pow(c, vec3(1.0/2.4))-0.055, step(0.0031308, c)); }
   float hash(vec2 p){ return fract(sin(dot(p, vec2(12.9898,78.233)) + uTime) * 43758.5453); }
   void main(){
-    float zc = lin(texture2D(tDepth, vUv).r);
-    float r = coc(zc);
+    float dr = texture2D(tDepth, vUv).r;
+    float zc = lin(dr);
+    float r = (dr <= 0.0 || dr >= 0.99999) ? 0.0 : coc(zc); // no depth (or sky): keep sharp
     vec3 col = texture2D(tColor, vUv).rgb;
     if (r > 0.6) {
       vec3 acc = col; float wsum = 1.0;
