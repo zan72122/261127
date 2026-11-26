@@ -34,10 +34,10 @@ const M = peopleMaterials();
 const pan = buildBurnPan(); pan.position.set(-0.8, 0, 2.7); scene.add(pan);
 const pallets = buildPallets(3); pallets.position.set(2.4, 0, 2.1); pallets.rotation.y = 0.3; scene.add(pallets);
 const fires = [
-  new Fire(scene, new V((H.holes.u1.x0 + H.holes.u1.x1) / 2, H.holes.u1.y0 + 0.03, -0.28), 0.52, { id: 0, lightZ: 1.6, light: 5 }),
-  new Fire(scene, new V((H.holes.u2.x0 + H.holes.u2.x1) / 2, H.holes.u2.y0 + 0.03, -0.28), 0.52, { id: 1, lightZ: 1.6, light: 5 }),
-  new Fire(scene, new V(-0.8, 0.11, 2.7), 0.6, { id: 2, light: 6, layers: 4, spread: 0.3, lightZ: 0.4 }),
-  new Fire(scene, new V(2.4, 0.44, 2.1), 0.5, { id: 3, light: 5, lightZ: 0.4 }),
+  new Fire(scene, new V((H.holes.u1.x0 + H.holes.u1.x1) / 2, H.holes.u1.y0 + 0.03, -0.28), 0.6, { id: 0, lightZ: 1.6, light: 5, smokeZ: 0.42, smokeUp: 0.25, layers: 3, spread: 0.22 }),
+  new Fire(scene, new V((H.holes.u2.x0 + H.holes.u2.x1) / 2, H.holes.u2.y0 + 0.03, -0.28), 0.6, { id: 1, lightZ: 1.6, light: 5, smokeZ: 0.42, smokeUp: 0.25, layers: 3, spread: 0.22 }),
+  new Fire(scene, new V(-0.8, 0.11, 2.7), 0.6, { id: 2, light: 6, layers: 3, spread: 0.24, lightZ: 0.4 }),
+  new Fire(scene, new V(2.4, 0.44, 2.1), 0.5, { id: 3, light: 5, lightZ: 0.4, layers: 2, spread: 0.3 }),
 ];
 fires[0].hole = H.holes.u1; fires[1].hole = H.holes.u2;
 fires[2].mat = pan.userData.mat; fires[3].mat = pallets.userData.mat;
@@ -81,17 +81,20 @@ function fadeCut(fn, color = '#f3d9b8') {
 }
 
 // ---------------------------------------------------------------- camera rig
-const cam = { pos: new V(6.7, 1.2, 12.0), look: new V(4.3, 0.85, 9.3), fov: 38, tPos: new V(6.7, 1.2, 12.0), tLook: new V(4.3, 0.85, 9.3), tFov: 38, k: 2, halfW: 20 };
-function setCam(pos, look, fov, k = 2, snap = false, halfW = 20) {
-  cam.tPos.copy(pos); cam.tLook.copy(look); cam.tFov = fov; cam.k = k; cam.halfW = halfW;
+const cam = { pos: new V(6.7, 1.2, 12.0), look: new V(4.3, 0.85, 9.3), fov: 38, tPos: new V(6.7, 1.2, 12.0), tLook: new V(4.3, 0.85, 9.3), tFov: 38, k: 2, halfW: 20, backP: 0 };
+function setCam(pos, look, fov, k = 2, snap = false, halfW = 20, backP = 0) {
+  cam.tPos.copy(pos); cam.tLook.copy(look); cam.tFov = fov; cam.k = k; cam.halfW = halfW; cam.backP = backP;
   if (snap) { cam.pos.copy(pos); cam.look.copy(look); cam.fov = fov; }
 }
+const _cb = new V();
 function updateCam(dt) {
   const a = 1 - Math.exp(-dt * cam.k);
   cam.pos.lerp(cam.tPos, a); cam.look.lerp(cam.tLook, a); cam.fov += (cam.tFov - cam.fov) * a;
   const c = G.camera;
-  c.position.copy(cam.pos); c.lookAt(cam.look);
   const aspect = G.w / G.h;
+  c.position.copy(cam.pos);
+  if (cam.backP > 0 && aspect < 1) c.position.addScaledVector(_cb.copy(cam.pos).sub(cam.look).normalize(), cam.backP * (1 - aspect));
+  c.lookAt(cam.look);
   const need = 2 * Math.atan(Math.tan(THREE.MathUtils.degToRad(cam.halfW)) / aspect) * 180 / Math.PI;
   c.fov = clamp(Math.max(cam.fov, need), cam.fov, 74);
   c.aspect = aspect;
@@ -121,7 +124,7 @@ document.addEventListener('touchmove', (e) => e.preventDefault(), { passive: fal
 // ---------------------------------------------------------------- helpers
 function steamBurst(p, k = 1, n = 5, dir = new V(0, 0, 1)) {
   for (let i = 0; i < n; i++) {
-    smoke.spawn({ p: p.clone().add(new V((rnd() - 0.5) * 0.2, (rnd() - 0.5) * 0.2, (rnd() - 0.5) * 0.2)), v: new V((rnd() - 0.5) * 2.6 + dir.x * 1.2, 0.5 + rnd() * 2.0, (rnd() - 0.2) * 1.4 + dir.z * 1.2).multiplyScalar(k), size: 0.06 + rnd() * 0.18, grow: 0.7 + rnd() * 1.6, life: 0.8 + rnd() * 1.8, alpha: 0.14 + rnd() * 0.16, col: [0.8, 0.8, 0.82], kind: 1, drag: 2.2, buoy: 0.8 });
+    smoke.spawn({ p: p.clone().add(new V((rnd() - 0.5) * 0.2, (rnd() - 0.5) * 0.2, (rnd() - 0.5) * 0.2)), v: new V((rnd() - 0.5) * 2.6 + dir.x * 1.2, 0.5 + rnd() * 2.0, (rnd() - 0.2) * 1.4 + dir.z * 1.2).multiplyScalar(k), size: 0.05 + rnd() * 0.14, grow: 0.6 + rnd() * 1.4, life: 0.7 + rnd() * 1.6, alpha: 0.07 + rnd() * 0.1, col: [0.78, 0.78, 0.8], kind: 1, drag: 2.2, buoy: 0.8 });
   }
 }
 function glowPulse(mats, on, t, base = 0.25) {
@@ -197,7 +200,7 @@ scenes.dress = {
     dad.root.position.set(5.35, 0, 7.9); dad.root.rotation.y = Math.atan2(-0.6, 1.5);
     dad.hold = null;
     nozzle.visible = false; hose.visible = false;
-    setCam(new V(6.55, 1.18, 11.75), new V(4.25, 0.95, 9.15), 40, 2, true, 21);
+    setCam(new V(6.55, 1.18, 11.75), new V(4.25, 0.95, 9.15), 40, 2, true, 21, 1.2);
     W.setSunFocus(new V(4.5, 0, 9.3), 6);
     G.focus = 3.4; G.focusRange = 5;
     this.done = { helmet: false, coat: false }; this.fly = []; this.fin = -1;
@@ -252,7 +255,7 @@ scenes.s1 = {
     dad.root.position.set(-1.65, 0, 7.35); dad.root.rotation.y = Math.PI + 0.35;
     dad.hold = null;
     nozzle.visible = true; hose.visible = true;
-    setCam(new V(1.3, 1.22, 9.15), new V(-0.4, 1.55, 0), 43, 1.1, false, 23);
+    setCam(new V(1.3, 1.22, 9.15), new V(-0.4, 1.55, 0), 43, 1.1, false, 23, 2.2);
     W.setSunFocus(new V(0.2, 0, 4), 9);
     G.focus = 8.3; G.focusRange = 9;
     this.aim = new V(0, 2.2, 0); this.aimCur = new V(0, 1.6, 0.5); this.target = this.aim.clone();
@@ -273,7 +276,7 @@ scenes.s1 = {
   update(dt, t) {
     // aim smoothing
     this.aimCur.lerp(this.target, 1 - Math.exp(-dt * 7));
-    if (this.fin < 0) cam.tLook.set(-0.4, 1.55, 0).lerp(new V(this.aimCur.x, Math.max(0.9, this.aimCur.y), 0), 0.18);
+    if (this.fin < 0 && !cam.lock) cam.tLook.set(-0.4, 1.55, 0).lerp(new V(this.aimCur.x, Math.max(0.9, this.aimCur.y), 0), 0.18);
     const spraying = ptr.down && this.fin < 0.5;
     this.spray += ((spraying ? 1 : 0) - this.spray) * (1 - Math.exp(-dt * 10));
     // nozzle at the girl's chest, pointing along the launch velocity
@@ -347,8 +350,8 @@ scenes.s1 = {
     if (this.fin >= 0) {
       const was = this.fin; this.fin += dt;
       if (was < 1.0 && this.fin >= 1.0) { girl.action('jump', 1.8); dad.action('clap', 1.8); A.say.yay(); A.claps(8, 0.4); A.chime([0, 4, 7, 12, 16]); }
-      if (was < 1.4 && this.fin >= 1.4) setCam(new V(1.2, 1.5, 9.3), new V(0, 2.2, 0), 42, 0.6, false, 24);
-      if (was < 5.0 && this.fin >= 5.0) fadeCut(() => go('s2'));
+      if (was < 1.4 && this.fin >= 1.4) setCam(new V(1.2, 1.5, 9.3), new V(0, 2.2, 0), 42, 0.6, false, 24, 1.5);
+      if (was < 6.5 && this.fin >= 6.5) fadeCut(() => go('s2'));
     }
   },
   collide(q) {
@@ -360,7 +363,7 @@ scenes.s1 = {
         const cx = f.pos.x, cy = f.pos.y + f.size * 0.5, cz = f.pos.z + (f.hole ? 0.25 : 0);
         const dx = p.x - cx, dy = p.y - cy, dz = p.z - cz;
         if (dx * dx + dy * dy * 0.6 + dz * dz < f.r * f.r) {
-          f.cool(0.0032);
+          f.cool(0.0042);
           if (S.burstBudget > 1 && rnd() < 0.35) { S.burstBudget -= 1; steamBurst(p, 1, 2, new V(0, 0, 0.6)); A.burst('sizzle', 0.25); }
           if (rnd() < 0.55) return true;
         }
@@ -372,7 +375,7 @@ scenes.s1 = {
         const h = H.holes[k];
         if (p.x > h.x0 && p.x < h.x1 && p.y > h.y0 && p.y < h.y1) {
           const f = k === 'u1' ? fires[0] : fires[1];
-          if (f.H > 0) { f.cool(0.0026); if (S.burstBudget > 1 && rnd() < 0.3) { S.burstBudget -= 1; steamBurst(new V(p.x, p.y, 0.05), 1, 2); A.burst('sizzle', 0.2); } }
+          if (f.H > 0) { f.cool(0.0036); if (S.burstBudget > 1 && rnd() < 0.3) { S.burstBudget -= 1; steamBurst(new V(p.x, p.y, 0.05), 1, 2); A.burst('sizzle', 0.2); } }
           return true;
         }
       }
@@ -519,6 +522,8 @@ H.shutters.forEach((s) => H.setShutter(s, 0));
 
 function stepSmoke(dt, fanSpeed) {
   const vel = new V(), c = new V();
+  let openSum = 0; for (const w of WINS) openSum += w.sh.open;
+  const exhaust = Math.exp(-dt * openSum * (0.025 + 0.075 * fanSpeed));
   for (let k = 0; k < NZ; k++) for (let j = 0; j < NY; j++) for (let i = 0; i < NX; i++) {
     c.copy(cellC(i, j, k));
     vel.set(0, 0.03, 0);
@@ -540,7 +545,7 @@ function stepSmoke(dt, fanSpeed) {
       const dl = w.p.distanceTo(c);
       if (dl < 0.9) r *= Math.exp(-dt * o * (0.5 + fanSpeed * 2.6) * (1 - dl / 0.9));
     }
-    rho2[i + NX * (j + NY * k)] = r;
+    rho2[i + NX * (j + NY * k)] = r * exhaust;
   }
   // slight diffusion along x (mixing) and write back
   for (let n = 0; n < rho.length; n++) rho[n] = rho2[n];
@@ -564,7 +569,7 @@ scenes.s2 = {
     spot.intensity = 28; bulb.intensity = 2.5; bulbMesh.material.emissiveIntensity = 6;
     const lh = wpos(wl.userData.head); spot.position.copy(lh); spot.target.position.set(-2.2, 0.6, -1.3);
     volPass.mat.uniforms.uLampPos.value.copy(lh);
-    for (let k = 0; k < NZ; k++) for (let j = 0; j < NY; j++) for (let i = 0; i < NX; i++) { const door = i / (NX - 1); rho[i + NX * (j + NY * k)] = clamp((0.62 + 0.3 * (j / NY)) * (1 - Math.pow(door, 2.2) * 0.85) + (rnd() - 0.5) * 0.08, 0, 1); }
+    for (let k = 0; k < NZ; k++) for (let j = 0; j < NY; j++) for (let i = 0; i < NX; i++) { const door = i / (NX - 1); rho[i + NX * (j + NY * k)] = clamp((0.42 + 0.32 * (j / NY)) * (1 - Math.pow(door, 2.0) * 0.85) + (rnd() - 0.5) * 0.08, 0, 1); }
     uploadSmoke();
     G.vol.enabled = true;
     smoke.clear();
@@ -572,7 +577,7 @@ scenes.s2 = {
     this.bubbleT = 0;
   },
   exit() { G.vol.enabled = false; spot.intensity = 0; bulb.intensity = 0; bulbMesh.material.emissiveIntensity = 0; W.hemi.intensity = 0.45; scene.environmentIntensity = 0.6; G.exposure = 1.0; bubble.visible = false; },
-  items() { return [{ o: bear, k: 'bear', mats: bearMats }, { o: toy, k: 'toy', mats: toyMats }, { o: ball, k: 'ball', mats: ballMats }].filter((it) => !this.handed.includes(it.k)); },
+  items() { if (!this.itemList) this.itemList = [{ o: bear, k: 'bear', mats: bearMats }, { o: toy, k: 'toy', mats: toyMats }, { o: ball, k: 'ball', mats: ballMats }]; return this.itemList.filter((it) => !this.handed.includes(it.k) && !(this.give && this.give.it === it)); },
   down() {
     if (this.give) return;
     const objs = [fan, ...WINS.map((w) => w.sh.group), ...this.items().map((i) => i.o)];
@@ -643,12 +648,17 @@ scenes.s2 = {
     const right = new V().crossVectors(fwd, new V(0, 1, 0)).normalize();
     const rest = camP.clone().addScaledVector(fwd, 0.27).addScaledVector(right, 0.12).add(new V(0, -0.13, 0));
     let handP = rest;
-    if (ptr.down && !this.give) { const r = ray(); handP = r.origin.clone().addScaledVector(r.direction, 0.5); handP.y -= 0.04; }
+    if (ptr.down && !this.give) {
+      const r = ray(); handP = r.origin.clone().addScaledVector(r.direction, 0.3);
+      // keep the hand in the lower part of the view so it never covers what she is looking at
+      const rel = handP.clone().sub(camP); const upAmt = rel.y; if (upAmt > -0.07) handP.y -= upAmt + 0.07;
+      const side = rel.dot(right); if (side < -0.06) handP.addScaledVector(right, -0.06 - side);
+    }
     this.handP = (this.handP || rest.clone()).lerp(handP, 1 - Math.exp(-dt * 9));
     if (this.wave && ptr.down) this.handP.addScaledVector(right, Math.sin(t * 14) * 0.03);
     const restL = camP.clone().addScaledVector(fwd, 0.25).addScaledVector(right, -0.13).add(new V(0, -0.17, 0));
     girl.hold = { R: { p: this.handP.clone(), dir: fwd.clone().add(new V(0, 0.25, 0)), palm: new V(0, -0.3, 0).addScaledVector(right, -0.6).addScaledVector(fwd, 0.4), pole: new V(0.6, -1, -0.2) }, L: { p: restL, dir: fwd.clone().add(new V(0, 0.1, 0)), palm: right.clone().addScaledVector(fwd, 0.2), pole: new V(-0.6, -1, -0.2) } };
-    girl.grip.R = ptr.down ? 0.25 : 0.45; girl.grip.L = 0.5;
+    girl.grip.R = ptr.down ? 0.2 : 0.45; girl.point.R = 0; girl.grip.L = 0.5;
     // giving an item to dad
     if (this.give) {
       const g = this.give; g.t += dt;
@@ -700,7 +710,7 @@ scenes.s2 = {
 // ================================================================ scene 3: hose mishap + ladder rainbow
 const D3 = new V(-SUN.x, 0, -SUN.z).normalize(); // facing away from the sun
 const R3 = new V().crossVectors(D3, new V(0, 1, 0)).normalize();
-const CAM3 = new V(11.48, 1.15, 10.68);
+const CAM3 = new V(10.75, 1.15, 7.09).addScaledVector(R3, 2.4).addScaledVector(D3, -6.6);
 // rainbow sky layer
 const MW = 96, MH = 48;
 const mist = new Float32Array(MW * MH), mistB = new Float32Array(MW * MH);
@@ -749,6 +759,28 @@ const hose3Geo = tube({ path: hose3Pts, radial: 10, segs: 70, radius: [0.034, 0.
 const hose3 = new THREE.Mesh(hose3Geo, hoseMat); hose3.castShadow = true; hose3.visible = false; scene.add(hose3);
 const noz3 = makeNozzle(); noz3.visible = false; scene.add(noz3);
 const hoseGlowMat = hoseMat;
+function makeRemote() {
+  const g = new THREE.Group();
+  const body = new THREE.MeshPhysicalMaterial({ color: 0xb59a3a, roughness: 0.45, clearcoat: 0.3, normalMap: tex('rubber_n.jpg', false, 4), normalScale: new THREE.Vector2(0.3, 0.3) });
+  const blk = pbr('rubber', { tile: 0.05, metal0: true });
+  const b = new THREE.Mesh(roundedBox(0.2, 0.05, 0.11, 0.018), body); g.add(b);
+  const face = new THREE.Mesh(roundedBox(0.17, 0.008, 0.085, 0.004), new THREE.MeshStandardMaterial({ color: 0x2a2c2e, roughness: 0.5 })); face.position.y = 0.026; g.add(face);
+  const sticks = [];
+  for (const sx of [-0.045, 0.045]) {
+    const boot = new THREE.Mesh(new THREE.SphereGeometry(0.018, 16, 10, 0, Math.PI * 2, 0, Math.PI / 2), blk); boot.position.set(sx, 0.028, 0); g.add(boot);
+    const st = new THREE.Group(); st.position.set(sx, 0.03, 0); g.add(st);
+    const rod = new THREE.Mesh(new THREE.CylinderGeometry(0.005, 0.005, 0.035, 8), new THREE.MeshStandardMaterial({ color: 0x888, metalness: 1, roughness: 0.3 })); rod.position.y = 0.018; st.add(rod);
+    const knob = new THREE.Mesh(new THREE.SphereGeometry(0.011, 14, 10), blk); knob.position.y = 0.038; st.add(knob);
+    sticks.push(st);
+  }
+  const stop = new THREE.Mesh(new THREE.CylinderGeometry(0.014, 0.016, 0.012, 20), new THREE.MeshPhysicalMaterial({ color: 0x9a1810, roughness: 0.3, clearcoat: 1 })); stop.position.set(0, 0.034, 0.03); g.add(stop);
+  const lamp = new THREE.Mesh(new THREE.SphereGeometry(0.005, 10, 8), new THREE.MeshStandardMaterial({ color: 0x40ff60, emissive: 0x30ff50, emissiveIntensity: 2 })); lamp.position.set(0, 0.03, -0.03); g.add(lamp);
+  for (const sx of [-1, 1]) { const h = new THREE.Mesh(roundedBox(0.035, 0.045, 0.1, 0.015), blk); h.position.set(sx * 0.105, -0.005, 0); g.add(h); }
+  g.userData.sticks = sticks;
+  g.traverse((o) => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
+  return g;
+}
+const remote = makeRemote(); remote.scale.setScalar(0.85); remote.visible = false; scene.add(remote);
 
 scenes.s3 = {
   enter() {
@@ -757,7 +789,7 @@ scenes.s3 = {
     W.setSunFocus(new V(12.5, 0, 6), 15);
     G.focus = 8; G.focusRange = 14;
     // dad with a hose to the right
-    this.dadHome = CAM3.clone().addScaledVector(D3, 3.4).addScaledVector(R3, 1.7); this.dadHome.y = 0;
+    this.dadHome = CAM3.clone().addScaledVector(D3, 3.6).addScaledVector(R3, 1.05); this.dadHome.y = 0;
     dad.root.position.copy(this.dadHome); dad.root.rotation.y = Math.atan2(D3.x, D3.z) + 0.9;
     dad.setWet(0); this.dadWet = 0;
     hose3.visible = true; noz3.visible = true; rainbow.visible = true;
@@ -794,7 +826,7 @@ scenes.s3 = {
     const camP = G.camera.position;
     const fwd = new V(); G.camera.getWorldDirection(fwd);
     placeFP(fwd);
-    const lookMain = CAM3.clone().addScaledVector(D3, 15).add(new V(0, 4.2, 0));
+    const lookMain = CAM3.clone().addScaledVector(D3, 15).addScaledVector(R3, -2.5).add(new V(0, 4.6, 0));
     if (this.phase === 'sunset' && this.pt > 2.8) { this.phase = 'open'; this.pt = 0; setCam(CAM3, lookMain, 38, 0.9, false, 24); }
     const dadHands = dad.root.localToWorld(new V(0, dad.D.hipY + 0.12, 0.42));
     // hose end motion per phase
@@ -857,14 +889,27 @@ scenes.s3 = {
     if (this.dadWet > 0.3 && rnd() < dt * 20 * this.dadWet) drops.emit(dad.root.localToWorld(new V((rnd() - 0.5) * 0.4, dad.D.hem + rnd() * 0.1, (rnd() - 0.5) * 0.3)), new V(0, -0.5, 0), { size: 0.008 + rnd() * 0.006, life: 1.2, alpha: 0.7, kind: 1 });
     // girl's hands
     const right = new V().crossVectors(fwd, new V(0, 1, 0)).normalize();
-    let handR = camP.clone().addScaledVector(fwd, 0.36).addScaledVector(right, 0.16).add(new V(0, -0.28, 0));
-    let handL = camP.clone().addScaledVector(fwd, 0.3).addScaledVector(right, -0.2).add(new V(0, -0.34, 0));
+    let handR = camP.clone().addScaledVector(fwd, 0.27).addScaledVector(right, 0.12).add(new V(0, -0.13, 0));
+    let handL = camP.clone().addScaledVector(fwd, 0.25).addScaledVector(right, -0.13).add(new V(0, -0.17, 0));
+    const ladderMode = this.phase === 'ladder' || this.phase === 'free';
+    remote.visible = ladderMode;
     if (this.phase === 'grab') { handR = free.clone().addScaledVector(this.endDir, -0.1).add(new V(0, 0.04, 0)); handL = free.clone().addScaledVector(this.endDir, -0.32).add(new V(0, 0.04, 0)); }
-    else if (ptr.down) { const r = ray(); handR = r.origin.clone().addScaledVector(r.direction, 0.5); }
+    else if (ladderMode) {
+      // holding the ladder remote low in front of her; sticks lean toward where she points
+      const cUp = new V(0, 1, 0).applyQuaternion(G.camera.quaternion);
+      const rp = camP.clone().addScaledVector(fwd, 0.34).addScaledVector(cUp, -0.17).addScaledVector(right, 0.02);
+      remote.position.copy(rp); remote.quaternion.copy(G.camera.quaternion); remote.rotateX(0.95); remote.rotateY(Math.PI);
+      let sx = 0, sy = 0; if (ptr.down) { sx = clamp(ptr.ndc.x, -1, 1); sy = clamp(ptr.ndc.y, -1, 1); }
+      remote.userData.sticks.forEach((st, i) => { st.rotation.z += (-sx * 0.4 - st.rotation.z) * 0.2; st.rotation.x += ((this.holdLadder ? -0.4 : sy * 0.3) - st.rotation.x) * 0.2; });
+      handR = remote.localToWorld(new V(-0.1, 0.0, 0.0)); handL = remote.localToWorld(new V(0.1, 0.0, 0.0));
+    }
     this.hR = (this.hR || handR.clone()).lerp(handR, 1 - Math.exp(-dt * 9));
     this.hL = (this.hL || handL.clone()).lerp(handL, 1 - Math.exp(-dt * 9));
-    girl.hold = { R: { p: this.hR.clone(), dir: fwd.clone().add(new V(0, 0.2, 0)), palm: new V(0, -1, 0).addScaledVector(right, -0.5), pole: new V(0.6, -1, -0.2) }, L: { p: this.hL.clone(), dir: fwd.clone(), palm: new V(0, -1, 0).addScaledVector(right, 0.5), pole: new V(-0.6, -1, -0.2) } };
-    girl.grip.R = this.phase === 'grab' ? 0.9 : (ptr.down ? 0.3 : 0.5); girl.grip.L = this.phase === 'grab' ? 0.9 : 0.5;
+    if (ladderMode) { this.hR.copy(handR); this.hL.copy(handL); }
+    girl.hold = ladderMode
+      ? { R: { p: this.hR.clone(), dir: fwd.clone().add(new V(0, 0.35, 0)), palm: right.clone(), pole: new V(0.6, -1, -0.2) }, L: { p: this.hL.clone(), dir: fwd.clone().add(new V(0, 0.35, 0)), palm: right.clone().negate(), pole: new V(-0.6, -1, -0.2) } }
+      : { R: { p: this.hR.clone(), dir: fwd.clone().add(new V(0, 0.2, 0)), palm: new V(0, -1, 0).addScaledVector(right, -0.5), pole: new V(0.6, -1, -0.2) }, L: { p: this.hL.clone(), dir: fwd.clone(), palm: new V(0, -1, 0).addScaledVector(right, 0.5), pole: new V(-0.6, -1, -0.2) } };
+    girl.grip.R = (this.phase === 'grab' || ladderMode) ? 0.75 : 0.5; girl.point.R = 0; girl.grip.L = (this.phase === 'grab' || ladderMode) ? 0.75 : 0.5;
     // ladder control + spraying the sky
     const T = W.truck;
     const ladderPhase = this.phase === 'ladder' || this.phase === 'free';
@@ -872,7 +917,7 @@ scenes.s3 = {
     T.lightBar.material.emissiveIntensity = 0.4 + (Math.sin(t * 9) > 0 ? 2.5 : 0);
     if (ladderPhase) {
       if (ptr.down && this.holdLadder) {
-        if (this.elev < 1.0) this.elev = Math.min(1.0, this.elev + dt * 0.35); else this.ext = Math.min(1, this.ext + dt * 0.22);
+        if (this.elev < 0.85) this.elev = Math.min(0.85, this.elev + dt * 0.3); else this.ext = Math.min(0.8, this.ext + dt * 0.2);
         if (!this.ladSnd || t - this.ladSnd > 0.25) { this.ladSnd = t; A.clank(0.5 + this.ext * 0.4, 0.25); }
       }
       let skySpray = ptr.down && !this.holdLadder;
@@ -894,7 +939,7 @@ scenes.s3 = {
         while (this.emitAcc > 1) {
           this.emitAcc -= 1;
           const v = v0.clone().multiplyScalar(0.96 + rnd() * 0.08).add(new V((rnd() - 0.5) * 0.9, (rnd() - 0.5) * 0.9, (rnd() - 0.5) * 0.9));
-          const q = drops.emit(tip, v, { size: 0.03 + rnd() * 0.04, life: 3, alpha: 0.7, kind: 0, src: 2 });
+          const q = drops.emit(tip.clone().addScaledVector(v, rnd() * dt), v, { size: 0.04 + rnd() * 0.06, life: 3, alpha: 0.8, kind: 0, src: 2 });
           if (q) q.hi = hi;
         }
         A.setLoop('jet', this.ladSpray, 1400); A.setLoop('jetLow', this.ladSpray * 0.6);
@@ -905,7 +950,7 @@ scenes.s3 = {
     this.mistAcc += dt;
     for (const q of drops.P) {
       if (q.src === 2 && q.kind === 0 && q.age > 0.25 && rnd() < dt * 5 * (q.hi || 1)) {
-        drops.emit(q.p, q.v.clone().multiplyScalar(0.25).add(new V((rnd() - 0.5) * 1.5, (rnd() - 0.2) * 1.0, (rnd() - 0.5) * 1.5)), { size: 0.05 + rnd() * 0.1, life: 2.5 + rnd() * 2.5, alpha: 0.22, kind: 2, drag: 1.4, src: 3 });
+        drops.emit(q.p, q.v.clone().multiplyScalar(0.25).add(new V((rnd() - 0.5) * 1.5, (rnd() - 0.2) * 1.0, (rnd() - 0.5) * 1.5)), { size: 0.06 + rnd() * 0.14, life: 2.5 + rnd() * 2.5, alpha: 0.26, kind: 2, drag: 1.4, src: 3 });
       }
       if ((q.src === 3 || q.src === 2) && rnd() < 0.5) addMist(q.p, q.src === 3 ? 0.05 : 0.02);
     }
@@ -925,20 +970,19 @@ scenes.s3 = {
     if (this.rainbowSeen && rnd() < dt * 0.1 && this.rbSum > 0.05) { dad.action('clap', 1.2); }
   },
   bowMist() {
-    // sample mist along the primary bow
+    // average mist along the primary bow (42 deg around the antisolar point)
+    const anti = SUN.clone().negate();
+    const up0 = new V(0, 1, 0).addScaledVector(anti, -anti.y).normalize();
     let s = 0, n = 0;
-    for (let a = -60; a <= 60; a += 6) {
-      const az = a * Math.PI / 180;
-      // direction at 42deg from antisolar: rotate antisolar up by 42deg around an axis
-      const anti = SUN.clone().negate();
-      const axis = new V(Math.sin(az), 0, 0);
-      const dir = anti.clone().applyAxisAngle(new V().crossVectors(anti, new V(0, 1, 0)).normalize().applyAxisAngle(anti, az), -42 * Math.PI / 180);
+    for (let a = -70; a <= 70; a += 5) {
+      const perp = up0.clone().applyAxisAngle(anti, a * Math.PI / 180);
+      const dir = anti.clone().multiplyScalar(Math.cos(0.733)).addScaledVector(perp, Math.sin(0.733));
       let azd = (Math.atan2(dir.x, dir.z) - AZ0) * 180 / Math.PI; azd = ((azd + 180) % 360 + 360) % 360 - 180;
       const el = Math.asin(dir.y) * 180 / Math.PI;
       const u = Math.floor((azd + 70) / 140 * MW), v = Math.floor((el + 12) / 72 * MH);
       if (u >= 0 && v >= 0 && u < MW && v < MH) { s += Math.min(1, mist[v * MW + u]); n++; }
     }
-    return n ? s / n : 0;
+    return n ? s / n * 4 : 0;
   },
   collide(q) {
     const p = q.p;
@@ -1003,7 +1047,7 @@ function frame(now) {
 
 // ---------------------------------------------------------------- boot
 window.addEventListener('resize', () => resize());
-window.__game = { go, scenes, get S() { return S; }, G, girl, dad, fires, W, ptr, cam, setCam, drops, smoke, nozzle,
+window.__game = { mist, MW, MH, go, scenes, get S() { return S; }, get name() { return sceneName; }, THREE, G, girl, dad, fires, W, ptr, cam, setCam, drops, smoke, nozzle,
   step(n, dt = 1 / 30) { for (let i = 0; i < n; i++) tick(dt); },
   press(x, y) { ptr.down = true; ptr.id = 99; ptr.x = x * G.w; ptr.y = y * G.h; ptr.ndc.set(x * 2 - 1, -(y * 2 - 1)); if (S.down) S.down(); },
   drag(x, y) { ptr.x = x * G.w; ptr.y = y * G.h; ptr.ndc.set(x * 2 - 1, -(y * 2 - 1)); if (S.move) S.move(); },

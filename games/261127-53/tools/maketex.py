@@ -153,11 +153,11 @@ def concrete(n=1024):
     v = big * 0.35 + mid * 0.35 + grain * 0.3
     col = tint(v, (118, 114, 106), (168, 162, 150))
     stone = tint(cid_r, (120, 112, 100), (190, 182, 168))
-    col = col * (1 - agg[..., None] * 0.3) + stone * agg[..., None] * 0.3
+    col = col * (1 - agg[..., None] * 0.14) + stone * agg[..., None] * 0.14
     col *= (1 - pores[..., None] * 0.45)
     col *= (1 - stains[..., None] * 0.25)
     col *= (1 - crack[..., None] * 0.5)
-    h = grain * 0.4 + agg * 0.6 - pores * 0.8 - crack * 1.0 + mid * 0.3
+    h = grain * 0.45 + agg * 0.3 - pores * 0.6 - crack * 1.0 + mid * 0.3
     rough = 0.84 + grain * 0.1 - stains * 0.08 - agg * 0.08
     save('concrete', col, h, 4.0, rough)
 
@@ -182,18 +182,19 @@ def canvas(n=512, name='coat', c0=(30, 38, 58), c1=(52, 62, 86)):
 
 # ---------------------------------------------------------------- leather (gloves, boots)
 def leather(n=512):
-    f1, f2, cid = voronoi(n, 2200, seed=41)
-    cell = np.clip((f2 - f1) / 4.0, 0, 1) ** 0.6
+    pebble = fnoise(n, 0.3, 70, seed=41)
+    pebble2 = fnoise(n, 0.6, 35, seed=45)
     big = fnoise(n, 2.4, 1, seed=42)
     crease = fnoise(n, 1.6, 3, seed=43, aniso=(1.0, 0.35))
-    crease = np.clip(1 - np.abs(crease - 0.5) * 9, 0, 1)
+    crease = np.clip(1 - np.abs(crease - 0.5) * 12, 0, 1)
     wear = np.clip((fnoise(n, 2.2, 2, seed=44) - 0.5) * 2.5, 0, 1)
-    col = tint(big * 0.6 + cell * 0.4, (112, 74, 42), (160, 112, 66))
-    col = col * (1 + wear[..., None] * 0.25)
-    col *= (1 - crease[..., None] * 0.3)
-    h = cell * 0.7 - crease * 0.8 + big * 0.2
-    rough = 0.62 + (1 - cell) * 0.15 - wear * 0.15
-    save('leather', col, h, 3.0, rough)
+    col = tint(big, (118, 80, 48), (150, 104, 62))
+    col *= (0.96 + 0.08 * pebble2[..., None])
+    col = col * (1 + wear[..., None] * 0.18)
+    col *= (1 - crease[..., None] * 0.22)
+    h = pebble * 0.35 + pebble2 * 0.25 - crease * 0.6 + big * 0.1
+    rough = 0.55 + pebble * 0.12 - wear * 0.12
+    save('leather', col, h, 1.6, rough, ao=0.85 + 0.15 * (1 - crease))
 
 # ---------------------------------------------------------------- truck paint (red, clear coat)
 def redpaint(n=512):
@@ -247,7 +248,7 @@ def rubber(n=256):
     save('rubber', col, h, 1.5, rough, ao=np.ones_like(h))
 
 # ---------------------------------------------------------------- gravel / far ground
-def gravel(n=1024):
+def gravel(n=512):
     f1, f2, cid = voronoi(n, 3200, seed=91)
     cr = np.random.default_rng(92).random(cid.max() + 1)[cid]
     stone = np.clip(1 - f1 / 11, 0, 1) ** 0.5
@@ -307,7 +308,7 @@ def sprites():
     cl = np.clip((cl - 0.42) * 2.4, 0, 1)
     det = fnoise(k, 1.2, 24, seed=143)
     img = (np.stack([cl, det, fnoise(k, 2.0, 3, seed=144)], -1) * 255).astype(np.uint8)
-    Image.fromarray(img).save(os.path.join(OUT, 'clouds.jpg'), quality=88)
+    Image.fromarray(img).save(os.path.join(OUT, 'clouds.jpg'), quality=78)
     # hair strands (for ponytail cards / hair cap): R=color variation, alpha via G
     h = 256
     st = fnoise(h, 0.6, 30, seed=151, aniso=(1.0, 0.02))

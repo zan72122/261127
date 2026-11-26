@@ -1,7 +1,7 @@
 // People: real-proportion figures in turnout gear, built from profiled tubes, posed with 2-bone IK.
 import * as THREE from '../lib/three.module.min.js';
 import { tube, limb, roundedBox, updateTube } from './geo.js';
-import { pbr, wettable } from './gfx.js';
+import { pbr, wettable, tex } from './gfx.js';
 
 const V = THREE.Vector3;
 const UP = new V(0, 1, 0);
@@ -14,12 +14,12 @@ export function peopleMaterials() {
   const pants = wettable(pbr('coat', { tile: 0.09, metal0: true, physical: true, sheen: 0.5, sheenColor: 0x8090b0, sheenRoughness: 0.7, color: 0xd8dce6 }));
   const reflect = new THREE.MeshStandardMaterial({ color: 0xc9c8c0, roughness: 0.32, metalness: 0.75, normalMap: null });
   const reflectY = new THREE.MeshStandardMaterial({ color: 0xb59a52, roughness: 0.45, metalness: 0.3 });
-  const leather = wettable(pbr('leather', { tile: 0.06, metal0: true, normal: 1.3 }));
-  const leatherDark = pbr('leather', { tile: 0.06, metal0: true, color: 0x6a5a4a });
+  const leather = wettable(pbr('leather', { tile: 0.14, metal0: true, normal: 0.8, physical: true, sheen: 0.3, sheenColor: 0xffe0c0, sheenRoughness: 0.5 }));
+  const leatherDark = pbr('leather', { tile: 0.14, metal0: true, color: 0x5a4a3c, normal: 0.6 });
   const rubber = pbr('rubber', { tile: 0.1, metal0: true });
   const skin = new THREE.MeshPhysicalMaterial({ color: 0xe0b394, roughness: 0.55, sheen: 0.4, sheenColor: 0xffd0b0, sheenRoughness: 0.5, normalMap: null });
   const hair = new THREE.MeshPhysicalMaterial({ map: null, color: 0x3a2618, roughness: 0.42, metalness: 0, sheen: 0.6, sheenColor: 0x8a6040, sheenRoughness: 0.35 });
-  const helmet = new THREE.MeshPhysicalMaterial({ color: 0xe4e0d6, roughness: 0.28, metalness: 0.0, clearcoat: 1, clearcoatRoughness: 0.12 });
+  const helmet = new THREE.MeshPhysicalMaterial({ color: 0xcfcbc2, roughness: 0.4, metalness: 0.0, clearcoat: 0.8, clearcoatRoughness: 0.18, roughnessMap: tex('wall_orm.jpg', false, 3), normalMap: tex('wall_n.jpg', false, 3), normalScale: new THREE.Vector2(0.15, 0.15) });
   const helmetRidge = new THREE.MeshPhysicalMaterial({ color: 0x8c8a84, roughness: 0.3, metalness: 0.8 });
   const shield = new THREE.MeshPhysicalMaterial({ color: 0xd8c890, roughness: 0.04, metalness: 0.2, transparent: true, opacity: 0.32, depthWrite: false, clearcoat: 1 });
   const knit = wettable(pbr('hose', { tile: 0.05, metal0: true, physical: true, sheen: 0.8, sheenColor: 0xffe0b0, sheenRoughness: 0.8, color: 0xc8a060, normal: 1.6 }));
@@ -43,64 +43,69 @@ function hashf(i) { const s = Math.sin(i * 127.1 + 311.7) * 43758.5453; return s
 export function makeGlove(s, side, M) {
   const g = new THREE.Group();
   const mirror = side === 'L' ? -1 : 1;
-  // gauntlet cuff (flared, with folds)
+  // gauntlet: goes OVER the coat sleeve, flared, soft folds
   const cuff = new THREE.Mesh(tube({
-    path: [new V(0, -0.1 * s, 0), new V(0, -0.05 * s, 0), new V(0, 0.012 * s, 0)], radial: 20, segs: 8, up: new V(0, 0, 1),
-    radius: (t, a) => { const r = (0.058 - 0.016 * t) * s; return [r * 1.08, r * 0.82]; },
-    disp: (t, a) => (1 - t) * 0.003 * s * Math.sin(a * 6 + 1.3) + 0.0015 * s * Math.sin(a * 13),
+    path: [new V(0, -0.115 * s, 0), new V(0, -0.06 * s, 0), new V(0, 0.0, 0), new V(0, 0.022 * s, 0)], radial: 24, segs: 10, up: new V(0, 0, 1),
+    radius: (t) => { const r = (0.064 - 0.02 * Math.pow(t, 1.3)) * s; return [r * 1.08, r * 0.96]; },
+    disp: (t, a) => (1 - t) * 0.0025 * s * Math.sin(a * 5 + 1.3) + 0.0012 * s * Math.sin(a * 11) + (t < 0.06 ? 0.002 * s : 0),
   }), M.leather);
   g.add(cuff);
-  // wrist strap
-  const strap = new THREE.Mesh(tube({ path: [new V(0, -0.022 * s, 0), new V(0, -0.006 * s, 0)], radial: 20, segs: 2, up: new V(0, 0, 1), radius: [0.047 * s * 1.1, 0.047 * s * 0.85] }), M.leatherDark);
+  const inner = new THREE.Mesh(cuff.geometry, new THREE.MeshStandardMaterial({ color: 0x2a1d14, roughness: 0.9, side: THREE.BackSide }));
+  g.add(inner);
+  // wrist strap with a dark band
+  const strap = new THREE.Mesh(tube({ path: [new V(0, -0.012 * s, 0), new V(0, 0.004 * s, 0)], radial: 24, segs: 2, up: new V(0, 0, 1), radius: [0.049 * s * 1.1, 0.049 * s * 0.98] }), M.leatherDark);
   g.add(strap);
-  // palm / back of hand
-  const palm = new THREE.Mesh(roundedBox(0.084 * s, 0.092 * s, 0.036 * s, 0.015 * s), M.leather);
-  palm.position.set(0, 0.046 * s, 0);
+  // hand body: tapered, softly rounded (wider at the knuckles)
+  const pg = roundedBox(0.086 * s, 0.09 * s, 0.034 * s, 0.015 * s, 4);
+  { const p = pg.attributes.position; for (let i = 0; i < p.count; i++) { const y = p.getY(i) / (0.045 * s); const k = 0.9 + 0.1 * (y * 0.5 + 0.5); p.setX(i, p.getX(i) * k); p.setZ(i, p.getZ(i) * (1 + 0.15 * (1 - Math.abs(y)))); } pg.computeVertexNormals(); }
+  const palm = new THREE.Mesh(pg, M.leather);
+  palm.position.set(0, 0.045 * s, 0);
   g.add(palm);
-  // knuckle reinforcement on the back (-Z side)
-  const pad = new THREE.Mesh(roundedBox(0.074 * s, 0.03 * s, 0.01 * s, 0.004 * s), M.leatherDark);
-  pad.position.set(0, 0.076 * s, -0.017 * s);
+  const pad = new THREE.Mesh(roundedBox(0.078 * s, 0.026 * s, 0.012 * s, 0.005 * s), M.leatherDark);
+  pad.position.set(0, 0.078 * s, -0.016 * s);
   g.add(pad);
-  const refl = new THREE.Mesh(roundedBox(0.05 * s, 0.012 * s, 0.004 * s, 0.0018 * s), M.reflect);
-  refl.position.set(0, 0.045 * s, -0.019 * s);
+  const refl = new THREE.Mesh(roundedBox(0.052 * s, 0.011 * s, 0.004 * s, 0.0018 * s), M.reflect);
+  refl.position.set(0, 0.046 * s, -0.019 * s);
   g.add(refl);
-  // fingers
+  // fingers: index(3) next to the thumb; thick and close like a real structural glove
   const fingers = [];
-  const fx = [-0.03, -0.01, 0.01, 0.03];
-  const fl = [[0.034, 0.024, 0.02], [0.038, 0.027, 0.022], [0.036, 0.026, 0.021], [0.028, 0.02, 0.018]];
-  const fr = [0.0108, 0.0112, 0.011, 0.0098];
+  const fx = [-0.0315, -0.0105, 0.0105, 0.0315];
+  const fl = [[0.026, 0.019, 0.017], [0.033, 0.023, 0.019], [0.036, 0.025, 0.02], [0.033, 0.022, 0.019]];
+  const fr = [0.0098, 0.0108, 0.0113, 0.0112];
   for (let f = 0; f < 4; f++) {
-    let parent = g;
     const chain = [];
     const base = new THREE.Group();
-    base.position.set(fx[f] * s * mirror, 0.09 * s - Math.abs(f - 1.5) * 0.004 * s, 0);
-    base.rotation.z = (f - 1.5) * -0.05 * mirror;
-    g.add(base); parent = base;
+    base.position.set(fx[f] * s * mirror, 0.088 * s - Math.abs(f - 2) * 0.003 * s, -0.001 * s);
+    base.rotation.z = (f - 1.5) * -0.025 * mirror;
+    g.add(base);
+    let parent = base;
     for (let k = 0; k < 3; k++) {
-      const L = fl[f][k] * s, r = fr[f] * s * (1 - k * 0.07);
+      const L = fl[f][k] * s, r = fr[f] * s * (1 - k * 0.06);
       const seg = new THREE.Group();
       if (k > 0) seg.position.y = fl[f][k - 1] * s;
       parent.add(seg);
-      const m = new THREE.Mesh(limb(L, r, r * 0.95, { radial: 10, segs: 4, flat: 0.86, bulge: 0.04, capBulge: 0.9 }), M.leather);
+      const m = new THREE.Mesh(limb(L + r * 0.6, r, r * 0.94, { radial: 12, segs: 5, flat: 0.88, bulge: 0.05, capBulge: 1.0 }), M.leather);
+      m.position.y = -r * 0.3;
       seg.add(m);
       chain.push(seg); parent = seg;
     }
     fingers.push(chain);
   }
-  // thumb (2 segments + metacarpal)
+  // thumb: metacarpal + 2 segments, padded
   const tb = new THREE.Group();
-  tb.position.set(0.04 * s * mirror, 0.022 * s, 0.006 * s);
-  tb.rotation.set(0.35, 0, -0.75 * mirror);
+  tb.position.set(0.036 * s * mirror, 0.02 * s, 0.008 * s);
+  tb.rotation.set(0.45, 0, -0.62 * mirror);
   g.add(tb);
   const thumb = [];
   let par = tb;
-  const tl = [0.04, 0.03, 0.024];
+  const tl = [0.036, 0.028, 0.022];
   for (let k = 0; k < 3; k++) {
     const seg = new THREE.Group();
     if (k > 0) seg.position.y = tl[k - 1] * s;
     par.add(seg);
-    const r = (0.0135 - k * 0.0012) * s;
-    seg.add(new THREE.Mesh(limb(tl[k] * s, r, r * 0.95, { radial: 10, segs: 4, flat: 0.85, capBulge: 0.9 }), M.leather));
+    const r = (0.0145 - k * 0.0013) * s;
+    const m = new THREE.Mesh(limb(tl[k] * s + r * 0.5, r, r * 0.95, { radial: 12, segs: 5, flat: 0.85, capBulge: 1.0 }), M.leather);
+    m.position.y = -r * 0.25; seg.add(m);
     thumb.push(seg); par = seg;
   }
   g.userData = { fingers, thumb, s };
@@ -108,23 +113,24 @@ export function makeGlove(s, side, M) {
   return g;
 }
 
-export function setGrip(glove, grip, spread = 0) {
+export function setGrip(glove, grip, point = 0) {
   const { fingers, thumb } = glove.userData;
   fingers.forEach((ch, f) => {
-    const g = grip * (1 + (f - 1.5) * 0.06);
-    ch[0].rotation.x = 0.15 + g * 1.35;
-    ch[1].rotation.x = 0.12 + g * 1.5;
-    ch[2].rotation.x = 0.08 + g * 1.0;
-    ch[0].parent.rotation.x = 0;
+    let g = grip * (1 + (1.5 - f) * 0.08);
+    if (f === 3) g *= 1 - point;
+    ch[0].rotation.x = 0.12 + g * 1.4;
+    ch[1].rotation.x = 0.1 + g * 1.55;
+    ch[2].rotation.x = 0.06 + g * 1.05;
   });
-  thumb[0].rotation.x = 0.35 + grip * 0.3;
-  thumb[1].rotation.x = 0.1 + grip * 0.6;
-  thumb[2].rotation.x = 0.1 + grip * 0.5;
+  const tg = Math.max(grip, point * 0.8);
+  thumb[0].rotation.x = 0.35 + tg * 0.35;
+  thumb[1].rotation.x = 0.1 + tg * 0.6;
+  thumb[2].rotation.x = 0.1 + tg * 0.5;
 }
 
 // ---------------------------------------------------------------- person
 const DIMS = {
-  girl: { H: 1.1, hipY: 0.53, shY: 0.855, neckY: 0.9, headY: 0.993, headR: [0.074, 0.088, 0.085], shW: 0.128, hipW: 0.058, ua: 0.175, fa: 0.15, th: 0.245, sh: 0.225, ank: 0.07, hem: 0.37, cw: 0.13, cd: 0.098, armR: 0.042, legR: 0.058, glove: 0.8, helmetR: 0.122 },
+  girl: { H: 1.1, hipY: 0.53, shY: 0.855, neckY: 0.9, headY: 0.993, headR: [0.074, 0.088, 0.085], shW: 0.128, hipW: 0.058, ua: 0.175, fa: 0.15, th: 0.245, sh: 0.225, ank: 0.07, hem: 0.37, cw: 0.13, cd: 0.098, armR: 0.042, legR: 0.058, glove: 0.8, helmetR: 0.116 },
   dad: { H: 1.78, hipY: 0.95, shY: 1.47, neckY: 1.55, headY: 1.665, headR: [0.083, 0.11, 0.1], shW: 0.2, hipW: 0.1, ua: 0.3, fa: 0.27, th: 0.445, sh: 0.43, ank: 0.09, hem: 0.74, cw: 0.205, cd: 0.145, armR: 0.06, legR: 0.085, glove: 1.12, helmetR: 0.148 },
 };
 
@@ -145,7 +151,7 @@ export class Person {
     this.handT = { R: new V(), L: new V() };
     this.palm = { R: new V(0, 0, 1), L: new V(0, 0, 1) };
     this.handDir = { R: null, L: null };
-    this.grip = { R: 0.2, L: 0.2 };
+    this.grip = { R: 0.2, L: 0.2 }; this.point = { R: 0, L: 0 };
     this.mode = 'idle';
     this.act = null; this.actT = 0;
     this.t = Math.random() * 10;
@@ -258,12 +264,12 @@ export class Person {
     this.helmet = this.makeHelmet();
     this.head.add(this.helmet);
     // --- arms & legs: single continuous tubes through shoulder-elbow-wrist / hip-knee-ankle (rebuilt every frame)
-    const sleeveDisp = (t, a) => 0.0022 * k * Math.sin(a * 5 + t * 40) + 0.003 * k * Math.exp(-Math.pow((t - 0.5) / 0.06, 2)) * Math.sin(a * 3 + 1) + (t > 0.94 ? 0.003 * k : 0) + (t > 0.62 && t < 0.7 ? 0.0025 * k : 0);
+    const sleeveDisp = (t, a) => 0.0022 * k * Math.sin(a * 5 + t * 40) + 0.003 * k * Math.exp(-Math.pow((t - 0.5) / 0.06, 2)) * Math.sin(a * 3 + 1) + (t > 0.62 && t < 0.7 ? 0.0025 * k : 0);
     const dummy = (n) => { const a = []; for (let i = 0; i < n; i++) a.push(new V(0, -i * 0.1, 0.001 * i)); return a; };
     this.arms = {};
     for (const s of ['R', 'L']) {
       const ag = tube({ path: dummy(5), radial: 18, segs: 22, caps: true, capBulge: 0.95, bands: [[0.62, 0.7]],
-        radius: (t) => D.armR * smoothKeys([[0, 1.18], [0.25, 1.1], [0.5, 0.97], [0.8, 0.95], [1, 1.02]], t), disp: sleeveDisp });
+        radius: (t) => D.armR * smoothKeys([[0, 1.18], [0.25, 1.1], [0.5, 0.97], [0.8, 0.93], [1, 0.86]], t), disp: sleeveDisp });
       const arm = new THREE.Mesh(ag, [this.mCoat, M.reflect]);
       let karm = null;
       if (this.kind === 'girl') {
@@ -301,6 +307,7 @@ export class Person {
     // rim
     const rimG = new THREE.TorusGeometry(R, R * 0.06, 10, 48);
     const rim = new THREE.Mesh(rimG, M.helmet); rim.rotation.x = Math.PI / 2; rim.scale.set(0.95, 1.1, 1); g.add(rim);
+    const stripe = new THREE.Mesh(new THREE.SphereGeometry(R * 1.004, 40, 3, 0, Math.PI * 2, Math.PI * 0.36, Math.PI * 0.05), M.reflect); stripe.scale.set(0.93, 0.86, 1.08); g.add(stripe);
     // short front visor
     const visG = new THREE.SphereGeometry(R * 1.12, 32, 6, Math.PI * 0.18, Math.PI * 0.64, Math.PI * 0.47, Math.PI * 0.07);
     const vis = new THREE.Mesh(visG, M.helmet); vis.scale.set(0.95, 0.5, 1.2); vis.rotation.y = 0; g.add(vis);
@@ -344,10 +351,20 @@ export class Person {
     const shaftH = D.sh * 0.55;
     const shaft = new THREE.Mesh(limb(shaftH, D.legR * 0.86, D.legR * 0.98, { flat: 0.92, bulge: 0.0, radial: 18, segs: 6, disp: (t, a) => 0.002 * k * Math.sin(a * 3 + t * 12) }), M.rubber);
     g.add(shaft);
-    const foot = new THREE.Mesh(roundedBox(D.legR * 1.75, D.legR * 1.15, D.legR * 3.6, D.legR * 0.5), M.rubber);
-    foot.position.set(0, -D.ank * 0.15 + D.legR * 0.3, D.legR * 0.85); g.add(foot);
-    const sole = new THREE.Mesh(roundedBox(D.legR * 1.85, D.legR * 0.32, D.legR * 3.75, D.legR * 0.14), M.leatherDark);
-    sole.position.set(0, -D.ank * 0.15 - D.legR * 0.2, D.legR * 0.85); g.add(sole);
+    // foot: rounded, tapered toward a raised toe cap
+    const fg = roundedBox(D.legR * 1.8, D.legR * 1.2, D.legR * 3.7, D.legR * 0.55, 4);
+    { const p = fg.attributes.position; const L = D.legR * 1.85;
+      for (let i = 0; i < p.count; i++) { const z = p.getZ(i) / L; const y = p.getY(i);
+        const toe = Math.max(0, z); p.setX(i, p.getX(i) * (1 - toe * 0.18)); p.setY(i, y * (1 - toe * 0.3) + toe * toe * D.legR * 0.12 - (z < -0.6 ? 0 : 0)); }
+      fg.computeVertexNormals(); }
+    const foot = new THREE.Mesh(fg, M.rubber);
+    foot.position.set(0, -D.ank * 0.15 + D.legR * 0.32, D.legR * 0.9); g.add(foot);
+    const sg = roundedBox(D.legR * 1.9, D.legR * 0.3, D.legR * 3.85, D.legR * 0.14, 3);
+    { const p = sg.attributes.position; const L = D.legR * 1.92; for (let i = 0; i < p.count; i++) { const z = p.getZ(i) / L; const toe = Math.max(0, z); p.setX(i, p.getX(i) * (1 - toe * 0.18)); p.setY(i, p.getY(i) + toe * toe * D.legR * 0.2); } sg.computeVertexNormals(); }
+    const sole = new THREE.Mesh(sg, M.leatherDark);
+    sole.position.set(0, -D.ank * 0.15 - D.legR * 0.2, D.legR * 0.9); g.add(sole);
+    const heel = new THREE.Mesh(roundedBox(D.legR * 1.6, D.legR * 0.45, D.legR * 1.1, D.legR * 0.12), M.leatherDark);
+    heel.position.set(0, -D.ank * 0.15 - D.legR * 0.25, -D.legR * 0.4); g.add(heel);
     const ring = new THREE.Mesh(limb(0.025 * k, D.legR * 0.97, D.legR * 0.98, { caps: false, radial: 18, segs: 1, bulge: 0 }), M.reflectY);
     ring.position.y = shaftH * 0.7; g.add(ring);
     g.userData.shaftH = shaftH;
@@ -473,7 +490,7 @@ export class Person {
       const gl = A.glove;
       gl.position.copy(W).addScaledVector(Y, 0.0 * k);
       gl.quaternion.setFromRotationMatrix(m);
-      setGrip(gl, this.grip[s] ?? 0.2);
+      setGrip(gl, this.grip[s] ?? 0.2, this.point[s] || 0);
       if (A.bare) { A.bare.position.copy(W); A.bare.quaternion.copy(gl.quaternion); }
       // forearm sleeve should end over the glove cuff: pull fa a bit forward
     }

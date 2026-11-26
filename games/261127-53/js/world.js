@@ -28,7 +28,7 @@ void main(){
   col += vec3(0.42, 0.2, 0.25) * anti * exp(-pow((e - 0.11) / 0.065, 2.0));
   col = mix(col, vec3(0.34, 0.38, 0.56), anti * (1.0 - smoothstep(0.0, 0.07, e)) * 0.7);
   float g = max(cosS, 0.0);
-  col += vec3(1.8, 0.8, 0.28) * pow(g, 6.0) * 0.9 + vec3(4.0, 1.8, 0.6) * pow(g, 90.0) * 1.6;
+  col += vec3(1.3, 0.52, 0.16) * pow(g, 8.0) * 0.9 + vec3(3.0, 1.2, 0.35) * pow(g, 140.0) * 1.4;
   if (e > 0.0) {
     vec2 cuv = d.xz / (e + 0.07) * 0.085 + vec2(uTime * 0.0015, 0.0);
     vec3 cl = texture2D(uClouds, cuv).rgb;
@@ -103,7 +103,7 @@ export function buildWorld(scene) {
   { const p = padG.attributes.position, uv = padG.attributes.uv; const puv = new Float32Array(p.count * 2);
     for (let i = 0; i < p.count; i++) { uv.setXY(i, p.getX(i), -p.getZ(i)); puv[i * 2] = (p.getX(i) - W.pad.x0) / padW; puv[i * 2 + 1] = (p.getZ(i) - W.pad.z0) / padD; }
     padG.setAttribute('puv', new THREE.BufferAttribute(puv, 2)); }
-  const padM = wettable(pbr('concrete', { tile: 2.2, metal0: true, normal: 1.4 }), { paint: gpaint.tex });
+  const padM = wettable(pbr('concrete', { tile: 3.0, metal0: true, normal: 0.9 }), { paint: gpaint.tex });
   const pad = new THREE.Mesh(padG, padM); pad.receiveShadow = true; scene.add(pad); W.padMesh = pad;
   // expansion joints (dark lines) for scale cues
   const jm = new THREE.MeshStandardMaterial({ color: 0x2c2926, roughness: 0.9 });
@@ -122,7 +122,7 @@ export function buildWorld(scene) {
   scene.add(W.truck.group);
   const tsh = contactShadow(3.4, 11.0, 0.65); tsh.position.set(0, 0.006, 0.4); W.truck.group.add(tsh);
   // ---------------- sign with pictograms
-  W.sign = buildSign(); W.sign.position.set(-4.6, 0, 3.2); W.sign.rotation.y = 0.35; scene.add(W.sign);
+  W.sign = buildSign(); W.sign.position.set(-3.0, 0, 5.4); W.sign.rotation.y = 0.85; scene.add(W.sign);
   // traffic cones row (scale cue) — muted orange rubber, no logos
   const coneM = new THREE.MeshStandardMaterial({ color: 0xb4542a, roughness: 0.6 });
   const coneW = new THREE.MeshStandardMaterial({ color: 0xd8d4c8, roughness: 0.4, metalness: 0.2 });
@@ -164,7 +164,7 @@ function buildHouse(scene) {
   H.holes = holes;
   const paint = new PaintMap(512, 440, 6.06, 5.18);
   H.paint = paint; H.paintRect = { x0: X0, y0: 0, w: 6.06, h: 5.18 };
-  const facM = wettable(pbr('steel', { tile: 1.6, normal: 1.3, color: 0x8fa2ae }), { paint: paint.tex, heatGain: 0.4 });
+  const facM = wettable(pbr('steel', { tile: 1.6, normal: 1.3, color: 0x7d97ae }), { paint: paint.tex, heatGain: 0.12 });
   H.facadeMat = facM;
   const pieces = wallPieces(X0, X1, 0, CH * 2, Object.values(holes));
   const geos = pieces.map(([a, b, c, d]) => corrugated(a, b, c, d, { X0, W: 6.06, Y0: 0, H: 5.18 }));
@@ -193,7 +193,7 @@ function buildHouse(scene) {
     const m = new THREE.Mesh(roundedBox(0.19, 0.13, 0.19, 0.012), castM); m.position.set(x, y, z); g.add(m);
   }
   // side/back walls & roof: plain corrugated steel (no paint map)
-  const sideM = pbr('steel', { tile: 1.6, normal: 1.3, color: 0x8a9ca8 });
+  const sideM = pbr('steel', { tile: 1.6, normal: 1.3, color: 0x7a92a8 });
   const back = new THREE.Mesh(corrugated(X0, X1, 0, CH * 2), sideM); back.position.z = -D; back.rotation.y = Math.PI; back.position.x = 0; g.add(back);
   // end walls: right end (x = X1) lower has the door to the room (scene 2)
   H.roomDoor = { z0: -1.75, z1: -0.7, y1: 2.0 };
@@ -384,11 +384,19 @@ function buildSign() {
 
 function buildHydrant() {
   const g = new THREE.Group();
-  const m = new THREE.MeshPhysicalMaterial({ color: 0x9a2a1e, roughness: 0.38, clearcoat: 0.6, clearcoatRoughness: 0.3, normalMap: tex('redpaint_n.jpg', false, 2), normalScale: new THREE.Vector2(0.6, 0.6) });
-  const body = new THREE.Mesh(new THREE.CylinderGeometry(0.11, 0.13, 0.75, 24), m); body.position.y = 0.375; g.add(body);
-  const top = new THREE.Mesh(new THREE.SphereGeometry(0.12, 24, 12, 0, Math.PI * 2, 0, Math.PI / 2), m); top.position.y = 0.75; g.add(top);
-  const brass = new THREE.MeshStandardMaterial({ color: 0xb08a4a, metalness: 1, roughness: 0.3 });
-  for (const s of [-1, 1]) { const o = new THREE.Mesh(new THREE.CylinderGeometry(0.045, 0.05, 0.1, 16).rotateZ(Math.PI / 2), brass); o.position.set(s * 0.15, 0.55, 0); g.add(o); }
+  const m = new THREE.MeshPhysicalMaterial({ map: tex('redpaint_c.jpg', true, 3), normalMap: tex('redpaint_n.jpg', false, 3), roughnessMap: tex('redpaint_orm.jpg', false, 3), color: 0xc0a8a0, roughness: 1, clearcoat: 0.35, clearcoatRoughness: 0.4, normalScale: new THREE.Vector2(0.8, 0.8) });
+  const dark = pbr('steel', { tile: 0.3, color: 0x4a4440 });
+  const brass = new THREE.MeshStandardMaterial({ color: 0xa8864e, metalness: 1, roughness: 0.38, normalMap: tex('steel_n.jpg', false, 4), normalScale: new THREE.Vector2(0.3, 0.3) });
+  const prof = [[0.0, 0.0], [0.17, 0.0], [0.17, 0.035], [0.14, 0.05], [0.125, 0.07], [0.12, 0.6], [0.128, 0.62], [0.135, 0.66], [0.12, 0.68], [0.1, 0.76], [0.06, 0.8], [0.0, 0.81]].map(([r, y]) => new THREE.Vector2(r, y));
+  const lg = new THREE.LatheGeometry(prof, 40);
+  { const p = lg.attributes.position, uv = lg.attributes.uv; for (let i = 0; i < p.count; i++) uv.setXY(i, Math.atan2(p.getZ(i), p.getX(i)) * 0.13, p.getY(i)); }
+  const body = new THREE.Mesh(lg, m); g.add(body);
+  for (let i = 0; i < 8; i++) { const b = new THREE.Mesh(new THREE.CylinderGeometry(0.011, 0.011, 0.02, 6), dark); b.position.set(Math.cos(i * 0.785) * 0.152, 0.045, Math.sin(i * 0.785) * 0.152); g.add(b); }
+  for (const sx of [-1, 1]) {
+    const o = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.055, 0.08, 20).rotateZ(Math.PI / 2), m); o.position.set(sx * 0.15, 0.5, 0); g.add(o);
+    const c = new THREE.Mesh(new THREE.CylinderGeometry(0.052, 0.052, 0.035, 6).rotateZ(Math.PI / 2), brass); c.position.set(sx * 0.2, 0.5, 0); g.add(c);
+  }
+  const nut = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.025, 0.04, 5), brass); nut.position.y = 0.83; g.add(nut);
   return shadowAll(g);
 }
 
@@ -396,7 +404,7 @@ function buildHydrant() {
 export function buildTruck() {
   const T = {};
   const g = new THREE.Group(); T.group = g;
-  const red = new THREE.MeshPhysicalMaterial({ map: tex('redpaint_c.jpg', true, 0.5), normalMap: tex('redpaint_n.jpg', false, 0.5), roughnessMap: tex('redpaint_orm.jpg', false, 0.5), roughness: 1, metalness: 0.15, clearcoat: 1, clearcoatRoughness: 0.08, normalScale: new THREE.Vector2(0.5, 0.5) });
+  const red = new THREE.MeshPhysicalMaterial({ map: tex('redpaint_c.jpg', true, 0.5), normalMap: tex('redpaint_n.jpg', false, 0.5), roughnessMap: tex('redpaint_orm.jpg', false, 0.5), color: 0xb8a8a4, roughness: 0.9, metalness: 0.1, clearcoat: 1, clearcoatRoughness: 0.06, normalScale: new THREE.Vector2(0.5, 0.5) });
   const chrome = new THREE.MeshStandardMaterial({ color: 0xd8d8d8, metalness: 1, roughness: 0.12 });
   const alu = pbr('steel', { tile: 0.6, color: 0xd0d0cc, roughness: 0.7, metalness: 1 });
   const dark = new THREE.MeshStandardMaterial({ color: 0x1b1c1e, roughness: 0.6, metalness: 0.2 });
@@ -437,9 +445,13 @@ export function buildTruck() {
   wheelZ.forEach((z) => {
     for (const s of [-1, 1]) {
       const w = new THREE.Group();
-      const tire = new THREE.Mesh(new THREE.TorusGeometry(0.4, 0.15, 16, 32), rub); w.add(tire);
-      const tread = new THREE.Mesh(new THREE.CylinderGeometry(0.53, 0.53, 0.3, 32, 1, true).rotateX(Math.PI / 2), rub); w.add(tread);
-      const rim = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.3, 0.26, 24).rotateX(Math.PI / 2), chrome); w.add(rim);
+      const prof = []; const R0 = 0.3, R1 = 0.53, Wd = 0.16;
+      for (let k = 0; k <= 16; k++) { const a = -Math.PI / 2 + Math.PI * k / 16; prof.push(new THREE.Vector2(R1 - 0.06 + Math.cos(a) * 0.06, Math.sin(a) * Wd)); }
+      prof.unshift(new THREE.Vector2(R0, -Wd * 0.9)); prof.push(new THREE.Vector2(R0, Wd * 0.9));
+      const tg = new THREE.LatheGeometry(prof, 40); tg.rotateX(Math.PI / 2);
+      { const p = tg.attributes.position, uv = tg.attributes.uv; for (let k = 0; k < p.count; k++) { const a = Math.atan2(p.getY(k), p.getX(k)); uv.setXY(k, a * 0.53, p.getZ(k) + Math.hypot(p.getX(k), p.getY(k))); } }
+      const tire = new THREE.Mesh(tg, rub); w.add(tire);
+      const rim = new THREE.Mesh(new THREE.CylinderGeometry(0.31, 0.31, 0.24, 32).rotateX(Math.PI / 2), new THREE.MeshStandardMaterial({ color: 0xb8b8b4, metalness: 1, roughness: 0.25 })); w.add(rim);
       const hub = new THREE.Mesh(new THREE.CylinderGeometry(0.11, 0.13, 0.32, 16).rotateX(Math.PI / 2), dark); w.add(hub);
       for (let k = 0; k < 8; k++) { const nut = new THREE.Mesh(new THREE.CylinderGeometry(0.018, 0.018, 0.34, 6).rotateX(Math.PI / 2), chrome); nut.position.set(Math.cos(k * 0.785) * 0.19, Math.sin(k * 0.785) * 0.19, 0); w.add(nut); }
       w.rotation.y = Math.PI / 2; w.position.set(s * 1.05, 0.53, z); g.add(w);
@@ -475,11 +487,23 @@ export function buildTruck() {
   T.nozzle = new THREE.Object3D(); T.nozzle.position.set(0, 0, 0.34); tip.add(T.nozzle);
   // ladder hose along the side
   T.secL = secL;
+  const _a = new THREE.Vector3(), _b = new THREE.Vector3(), _up = new THREE.Vector3(0, 1, 0);
   T.setLadder = (elev, ext, yaw) => {
     tt.rotation.y = yaw;
     pivot.rotation.x = -elev;
     T.sections[1].position.z = 0.3 + ext * (secL - 1.0);
     T.sections[2].position.z = 0.3 + ext * (secL - 1.0);
+    if (T.rams) {
+      g.updateMatrixWorld(true);
+      T.rams.forEach((r) => {
+        _a.set(r.sx, 0.15, 0.55); tt.localToWorld(_a); g.worldToLocal(_a);
+        _b.set(r.sx, -0.1, 2.3); pivot.localToWorld(_b); g.worldToLocal(_b);
+        const d = _b.clone().sub(_a); const L = d.length(); d.normalize();
+        const q = new THREE.Quaternion().setFromUnitVectors(_up, d);
+        r.cyl.quaternion.copy(q); r.cyl.scale.set(1, 1.0, 1); r.cyl.position.copy(_a).addScaledVector(d, 0.5);
+        r.rod.quaternion.copy(q); r.rod.scale.set(1, Math.max(0.05, L - 0.9), 1); r.rod.position.copy(_b).addScaledVector(d, -(L - 0.9) / 2);
+      });
+    }
   };
   T.setLadder(0.04, 0, 0);
   // rear control panel (pump panel) with gauges
@@ -488,6 +512,20 @@ export function buildTruck() {
   const levers = [];
   for (let i = 0; i < 2; i++) { const lv = new THREE.Mesh(new THREE.CylinderGeometry(0.015, 0.015, 0.25, 8), chrome); lv.position.set(-0.2 + i * 0.4, 1.3, -4.02); lv.rotation.x = 0.5; g.add(lv); levers.push(lv); }
   T.levers = levers;
+  // rear: roll-up shutter, tail lights, hydraulic rams, ladder base frame
+  for (const sx of [-1, 1]) {
+    const tl = new THREE.Mesh(roundedBox(0.16, 0.26, 0.04, 0.02), new THREE.MeshPhysicalMaterial({ color: 0x5a0808, emissive: 0x900800, emissiveIntensity: 0.8, roughness: 0.15, clearcoat: 1 })); tl.position.set(sx * 1.02, 1.05, -3.93); g.add(tl);
+    const am = new THREE.Mesh(roundedBox(0.16, 0.1, 0.04, 0.02), new THREE.MeshPhysicalMaterial({ color: 0x6a4008, emissive: 0x803c00, emissiveIntensity: 0.4, roughness: 0.15, clearcoat: 1 })); am.position.set(sx * 1.02, 1.28, -3.93); g.add(am);
+    const st = new THREE.Mesh(roundedBox(0.012, 1.3, 0.012, 0.004), white); st.position.set(sx * 1.24, 1.45, -3.9); g.add(st);
+  }
+  const baseFr = new THREE.Mesh(roundedBox(0.9, 0.18, 1.3, 0.03), alu); baseFr.position.set(0, 0.12, 0.35); pivot.add(baseFr);
+  T.rams = [];
+  for (const sx of [-0.28, 0.28]) {
+    const cyl = new THREE.Mesh(new THREE.CylinderGeometry(0.065, 0.065, 1.0, 18), red); const rod = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.035, 1.0, 14), chrome);
+    g.add(cyl); g.add(rod); T.rams.push({ cyl, rod, sx });
+  }
+  const seat = new THREE.Mesh(roundedBox(0.45, 0.5, 0.4, 0.06), dark); seat.position.set(0.62, 0.45, -0.25); tt.add(seat);
+  const cons = new THREE.Mesh(roundedBox(0.4, 0.3, 0.25, 0.03), alu); cons.position.set(0.62, 0.75, 0.1); cons.rotation.x = -0.4; tt.add(cons);
   // rear bumper / steps
   const rb = new THREE.Mesh(roundedBox(2.4, 0.18, 0.35, 0.04), alu); rb.position.set(0, 0.55, -3.95); g.add(rb);
   const outl = new THREE.Mesh(roundedBox(2.0, 0.08, 0.1, 0.03), new THREE.MeshStandardMaterial({ color: 0x3b0808, emissive: 0x500000, roughness: 0.2 })); outl.position.set(0, 1.0, -3.92); g.add(outl);

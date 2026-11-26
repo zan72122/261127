@@ -75,7 +75,9 @@ export class PaintMap {
       }
       this.dirty = true;
     }
-    if (this.dirty) {
+    this.upT = (this.upT || 0) + dt;
+    if (this.dirty && this.upT > 0.08) {
+      this.upT = 0;
       const D = this.data;
       for (let i = 0, j = 0; i < this.wet.length; i++, j += 4) {
         D[j] = this.wet[i] * 255; D[j + 1] = this.soot[i] * 255; D[j + 2] = this.heat[i] * 255; D[j + 3] = 255;
@@ -96,29 +98,25 @@ const FLAME_VS = `varying vec2 vUv; void main(){ vUv = uv; gl_Position = project
 const FLAME_FS = `
 uniform sampler2D uNoise; uniform float uTime; uniform float uSeed; uniform float uPower; uniform float uSmolder;
 varying vec2 vUv;
-float fbm(vec2 p){ return texture2D(uNoise, p).g * 0.5 + texture2D(uNoise, p * 2.03 + 0.17).b * 0.32 + texture2D(uNoise, p * 4.1 + 0.53).r * 0.18; }
+float fbm(vec2 p){ return texture2D(uNoise, p).g * 0.5 + texture2D(uNoise, p * 2.03 + 0.17).b * 0.3 + texture2D(uNoise, p * 4.1 + 0.53).r * 0.2; }
 void main(){
-  vec2 uv = vUv;
-  float y = uv.y;
-  float x = (uv.x - 0.5) * 2.0;
-  float n = fbm(vec2(uv.x * 0.55 + uSeed, y * 0.45 - uTime * 0.85));
-  float n2 = fbm(vec2(uv.x * 1.2 + uSeed * 2.0, y * 0.9 - uTime * 1.6));
-  float warp = (n - 0.5) * 1.1 * y + (n2 - 0.5) * 0.4 * (0.3 + y);
-  float xw = x + warp;
-  float w = mix(0.92, 0.1, pow(y, 0.75));
-  float d = abs(xw) / w;
-  float body = 1.0 - smoothstep(0.3, 1.0, d);
-  float tongues = smoothstep(0.12, 0.55, n2 * 1.1 + (1.0 - y) * 0.95 - 0.35);
-  float base = smoothstep(0.0, 0.07, y) * (1.0 - smoothstep(0.85, 1.0, y));
-  float f = body * tongues * base;
-  float heat = f * (1.35 - y * 0.95) + (n - 0.5) * 0.25 * f;
-  heat = clamp(heat, 0.0, 1.6);
-  vec3 c = mix(vec3(0.5, 0.05, 0.0), vec3(1.0, 0.28, 0.03), smoothstep(0.04, 0.35, heat));
-  c = mix(c, vec3(1.0, 0.6, 0.16), smoothstep(0.35, 0.75, heat));
-  c = mix(c, vec3(1.0, 0.88, 0.6), smoothstep(0.8, 1.3, heat));
-  float a = smoothstep(0.02, 0.3, heat);
+  float y = vUv.y;
+  float x = (vUv.x - 0.5) * 2.0;
+  float n = fbm(vec2(x * 0.35 + uSeed, y * 0.55 - uTime * 0.75));
+  float n2 = fbm(vec2(x * 0.8 + uSeed * 3.0, y * 1.1 - uTime * 1.35));
+  float px = x + (n - 0.5) * 1.2 * y + (n2 - 0.5) * 0.25;
+  float width = mix(0.95, 0.3, y);
+  float body = 1.0 - smoothstep(0.15, 1.0, abs(px) / width);
+  float flame = body * (1.0 - y) * 2.1 - (n * 1.1 + n2 * 0.8) * pow(y, 0.8) * 1.6 + (n2 - 0.5) * 0.25;
+  flame *= smoothstep(0.0, 0.06, y);
+  flame = clamp(flame, 0.0, 1.2);
+  float heat = flame * 1.25;
+  vec3 c = mix(vec3(0.55, 0.06, 0.0), vec3(1.0, 0.3, 0.03), smoothstep(0.03, 0.3, heat));
+  c = mix(c, vec3(1.0, 0.6, 0.16), smoothstep(0.3, 0.7, heat));
+  c = mix(c, vec3(1.0, 0.86, 0.55), smoothstep(0.75, 1.3, heat));
+  float a = smoothstep(0.02, 0.3, flame);
   c = mix(c, vec3(0.9, 0.18, 0.02), uSmolder);
-  gl_FragColor = vec4(c * a * uPower * (0.9 + heat * 2.4), a);
+  gl_FragColor = vec4(c * a * uPower * (0.55 + heat * 1.5), a);
 }`;
 
 let noiseTex = null;
@@ -137,10 +135,10 @@ export class Fire {
         blending: THREE.AdditiveBlending,
         uniforms: { uNoise: { value: getNoise() }, uTime: { value: 0 }, uSeed: { value: Math.random() * 10 }, uPower: { value: 1 }, uSmolder: { value: 0 } },
       });
-      const g = new THREE.PlaneGeometry(1, 1.6); g.translate(0, 0.8, 0);
+      const g = new THREE.PlaneGeometry(1.1, 2.0); g.translate(0, 1.0, 0);
       const mesh = new THREE.Mesh(g, m);
       mesh.position.set((i - (nf - 1) / 2) * size * (o.spread ?? 0.35), 0, (i % 2) * 0.05);
-      mesh.userData.w = 1 - Math.abs(i - (nf - 1) / 2) * 0.3;
+      mesh.userData.w = (1 - Math.abs(i - (nf - 1) / 2) * 0.22) * (0.85 + Math.random() * 0.3);
       mesh.renderOrder = 5;
       this.group.add(mesh); this.flames.push(mesh);
     }
@@ -150,6 +148,7 @@ export class Fire {
     this.lightPower = o.light ?? 14;
     this.smokeAcc = 0; this.steamAcc = 0;
     this.burst = 0;
+    this.smokeZ = o.smokeZ ?? 0; this.smokeUp = o.smokeUp ?? 0;
   }
   cool(amount) {
     if (this.H <= 0) return 0;
@@ -180,16 +179,16 @@ export class Fire {
       this.smokeAcc += dt * (H > 0 ? (H > 0.45 ? 5 : 9) : 0);
       while (this.smokeAcc > 1) {
         this.smokeAcc -= 1;
-        const top = this.pos.clone().add(new V((Math.random() - 0.5) * this.size * 0.5, this.size * (0.6 + flameK * 1.2), (Math.random() - 0.2) * 0.2));
+        const top = this.pos.clone().add(new V((Math.random() - 0.5) * this.size * 0.5, this.size * (0.6 + flameK * 1.2) + this.smokeUp, (Math.random() - 0.2) * 0.2 + this.smokeZ));
         const dark = H > 0.45 ? 0.16 : 0.32;
         smoke.spawn({ p: top, v: new V((Math.random() - 0.5) * 0.15, 0.6 + Math.random() * 0.4, 0.15 + Math.random() * 0.1), size: this.size * (0.35 + Math.random() * 0.3), grow: 0.55 + Math.random() * 0.4, life: 2.8 + Math.random() * 2, alpha: H > 0.45 ? 0.5 : 0.42, col: [dark, dark * 0.97, dark * 0.95], kind: 0 });
       }
       this.steam = Math.max(0, this.steam - dt * 0.6);
-      this.steamAcc += dt * this.steam * 14;
+      this.steamAcc += dt * this.steam * 10;
       while (this.steamAcc > 1) {
         this.steamAcc -= 1;
         const p = this.pos.clone().add(new V((Math.random() - 0.5) * this.size * 0.9, this.size * (0.15 + Math.random() * 0.6), (Math.random() - 0.3) * 0.3));
-        smoke.spawn({ p, v: new V((Math.random() - 0.5) * 0.5, 0.9 + Math.random() * 1.0, 0.25 + Math.random() * 0.3), size: this.size * (0.2 + Math.random() * 0.35), grow: 0.8 + Math.random() * 0.9, life: 1.6 + Math.random() * 1.8, alpha: 0.22 + Math.random() * 0.12, col: [0.82, 0.82, 0.84], kind: 1 });
+        smoke.spawn({ p, v: new V((Math.random() - 0.5) * 0.5, 0.9 + Math.random() * 1.0, 0.25 + Math.random() * 0.3), size: this.size * (0.2 + Math.random() * 0.35), grow: 0.8 + Math.random() * 0.9, life: 1.6 + Math.random() * 1.8, alpha: 0.1 + Math.random() * 0.1, col: [0.8, 0.8, 0.82], kind: 1 });
       }
     }
     if (H <= 0 && !this.out && this.steam < 0.2) this.out = true;
@@ -274,7 +273,7 @@ export class Puffs {
       for (const f of this.fires) {
         if (f.H <= 0) continue;
         const d2 = q.p.distanceToSquared(f.pos) + 0.3;
-        const k = Math.min(1.2, f.H * 0.45 / d2);
+        const k = Math.min(0.45, f.H * 0.25 / d2);
         r += q.col[0] * 1.0 * k * 1.5 + 0.08 * k; g += q.col[1] * 0.45 * k + 0.03 * k; b += q.col[2] * 0.12 * k;
       }
       pos[i * 3] = q.p.x; pos[i * 3 + 1] = q.p.y; pos[i * 3 + 2] = q.p.z;
