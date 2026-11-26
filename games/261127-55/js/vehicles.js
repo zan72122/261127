@@ -131,11 +131,11 @@ export class Car extends Drawable {
     smoothNormals(geo);
     const detail = this.makeDetail();
     const paintM = new THREE.MeshPhysicalMaterial({
-      color: 0xffffff, metalness: 0.35, roughness: 0.32, clearcoat: 1, clearcoatRoughness: 0.045,
+      color: 0xffffff, metalness: 0.35, roughness: 0.32, clearcoat: 1, clearcoatRoughness: 0.22, clearcoatRoughnessMap: tex('paint_orm.jpg', { late: true }),
       clearcoatNormalMap: tex('paint_nrm.jpg', { late: true }), clearcoatNormalScale: new THREE.Vector2(0.25, 0.25),
       normalMap: detail.n, aoMap: detail.orm, roughnessMap: detail.orm, envMapIntensity: 1.25,
     });
-    paintM.clearcoatNormalMap.repeat.set(3, 3);
+    paintM.clearcoatNormalMap.repeat.set(3, 3); paintM.clearcoatRoughnessMap.repeat.set(2, 2);
     const body = this.part('body', (x, y) => pointInPoly(x, y, this.outer) && !pointInPoly(x, y, this.win), [-0.71, 0.12, 0.71, 0.75], 0.025, { th: 0.7 });
     this.bodyMesh = this.addMesh(body, new THREE.Mesh(geo, paintM), 'paint', new THREE.Color(0.75, 0.12, 0.1));
     // 室内：座席とハンドル（窓から見える）

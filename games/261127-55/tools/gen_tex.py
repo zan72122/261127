@@ -301,18 +301,6 @@ def blossoms():
     c = np.stack([0.99 - 0.02 * t, 0.86 - 0.08 * t, 0.90 - 0.06 * t], -1)
     c *= (0.95 + 0.05 * np.cos(xx * 30))[..., None]
     save('petal.png', np.concatenate([c, a[..., None]], -1))
-    # 遠景の葉・花の塊（ぼけ用）
-    img2 = np.zeros((256, 256, 4))
-    for i in range(500):
-        cx, cy = rng.normal(128, 50), rng.normal(128, 50)
-        rr = rng.uniform(4, 10)
-        yy, xx = np.mgrid[0:256, 0:256]
-        m = (xx - cx) ** 2 + (yy - cy) ** 2 < rr * rr
-        g = rng.uniform(0.8, 1.05)
-        img2[m, :3] = np.array([0.97, 0.82, 0.87]) * g
-        img2[m, 3] = 1
-    img2[..., 3] = blur(img2[..., 3], 1.2)
-    save('blossom_far.png', img2)
 
 # ---------- 5. 木材（板） ----------
 def wood():

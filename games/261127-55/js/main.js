@@ -85,8 +85,9 @@ const trees = [
 for (const [x, z, s, seed] of trees) { const t = makeCherryTree(seed, s, Math.hypot(x, z) > 12 ? 0.6 : 1); t.position.set(x, 0, z); t.rotation.y = seed; scene.add(t); }
 // ベンチ
 const bench = makeBench(); bench.position.set(-2.45, 0, -3.15); scene.add(bench);
+const bench2 = makeBench(); bench2.position.set(0.5, 0, -3.5); bench2.rotation.y = -0.08; scene.add(bench2);
 // 黒板の看板
-const sign = makeSignBoard(); sign.position.set(1.32, 0, -1.85); sign.rotation.y = -0.55; scene.add(sign);
+const sign = makeSignBoard(); sign.position.set(1.3, 0, -2.45); sign.rotation.y = -0.45; scene.add(sign);
 const petals = new Petals(scene);
 const sparks = new Particles(scene, 'spark.png', 400, THREE.AdditiveBlending);
 sparks.fade = 'twinkle';
@@ -118,9 +119,9 @@ const hat = makeStrawHat(1.0); scene.add(hat);
 const humanBlob = (s) => { const b = contactBlob(0.5 * s, 0.4 * s, 0.45); b.position.y = 0.004; return b; };
 const girlBlob = humanBlob(0.8), papaBlob = humanBlob(1.2); scene.add(girlBlob, papaBlob);
 // 手（大きく映る）
-const girlHand = new HandRig({ scale: 0.64, tone: 0xf1c7ab, sleeve: girl.top, chalkColor: new THREE.Color(CHALKS[0]) });
+const girlHand = new HandRig({ scale: 0.66, tone: 0xe2b092, sleeve: girl.top, chalkColor: new THREE.Color(CHALKS[0]) });
 scene.add(girlHand.root);
-const papaHand = new HandRig({ scale: 1.0, tone: 0xdcae8e, sleeve: papa.top, chalkColor: new THREE.Color(CHALKS[3]), button: true });
+const papaHand = new HandRig({ scale: 1.0, tone: 0xcf9c7b, sleeve: papa.top, chalkColor: new THREE.Color(CHALKS[3]), button: true });
 scene.add(papaHand.root);
 // チョークの箱（ベンチの上）
 const chalkBox = new THREE.Group();
@@ -140,13 +141,13 @@ const bubble = makeBubble(); bubble.visible = false; scene.add(bubble);
 const SH = {
   intro: { t: [-2.2, 0.55, -2.95], yaw: 0.3, pitch: 0.12, rw: 1.5, rh: 0.8, pw: 0.6 },
   introBox: { t: [-2.15, 0.5, -3.05], yaw: 0.2, pitch: 0.42, rw: 0.62, rh: 0.45, pw: 0.75 },
-  car: { t: [0.0, 0.0, -0.44], yaw: 0.0, pitch: 0.74, rw: 0.92, rh: 0.6, pw: 0.8, pp: 0.1 },
+  car: { t: [0.0, 0.0, -0.44], yaw: 0.0, pitch: 0.74, rw: 0.92, rh: 0.6, pw: 0.88, pp: 0.1 },
   carWide: { t: [0.0, 0.65, -0.45], yaw: 0.1, pitch: 0.2, rw: 2.1, rh: 1.2, pw: 0.62 },
   carFix: { t: [car.wb[0] + 0.07, 0.17, carOrig[1] + 0.76], yaw: 0.06, pitch: 0.2, rw: 0.55, rh: 0.36, pw: 0.8 },
   boat: { t: [2.25, 0.0, -0.66], yaw: -0.04, pitch: 0.72, rw: 0.82, rh: 0.75, pw: 0.85, pp: 0.08 },
   boatWide: { t: [2.1, 0.75, -0.6], yaw: -0.12, pitch: 0.2, rw: 1.9, rh: 1.3, pw: 0.62 },
   thumb: { t: [0.05, 0.3, 0.25], yaw: -0.62, pitch: 0.2, rw: 1.05, rh: 0.62 },
-  free: { t: [-1.9, 0.35, -2.0], yaw: 0.12, pitch: 0.32, rw: 1.5, rh: 1.15, pw: 0.72, pp: 0.12 },
+  free: { t: [0.6, 0.35, -1.7], yaw: 0.0, pitch: 0.34, rw: 2.0, rh: 1.2, pw: 0.6, pp: 0.1 },
 };
 const cam = { pos: new THREE.Vector3(), tgt: new THREE.Vector3(), dPos: new THREE.Vector3(), dTgt: new THREE.Vector3(), speed: 2.2, follow: null, shot: null };
 function shotPose(s, out) {
@@ -178,7 +179,7 @@ function go(st) { S.st = st; S.t = 0; S.idle = 0; S.enter = true; }
 function placeHumans(where) {
   if (where === 'intro') {
     girl.root.position.set(-2.12, 0, -2.6); girl.root.rotation.y = Math.PI + 0.15; girl.play('idle');
-    papa.root.position.set(-3.3, 0, -2.7); papa.root.rotation.y = 1.25; papa.play('idle');
+    papa.root.position.set(-3.45, 0, -3.55); papa.root.rotation.y = 1.35; papa.play('idle');
   } else if (where === 'car') {
     girl.root.position.set(-0.95, 0, 0.62); girl.root.rotation.y = 2.25;
     papa.root.position.set(1.15, 0, -0.85); papa.root.rotation.y = -Math.PI / 2;
@@ -186,7 +187,7 @@ function placeHumans(where) {
     girl.root.position.set(1.05, 0, 0.55); girl.root.rotation.y = 2.0;
     papa.root.position.set(3.95, 0, -1.25); papa.root.rotation.y = -Math.PI / 2 - 0.3;
   } else if (where === 'free') {
-    papa.root.position.set(-2.6, 0, -3.1); papa.root.rotation.y = 0; papa.play('sit');
+    papa.root.position.set(0.35, 0, -3.45); papa.root.rotation.y = 0.2; papa.play('sit');
     girl.root.visible = false;
   }
 }
@@ -346,20 +347,29 @@ const loop = new THREE.CatmullRomCurve3([
 ].map(([x, z]) => new THREE.Vector3(x + carOrig[0], 0, z + carOrig[1] + 0.06)), true, 'catmullrom', 0.5);
 const loopLen = loop.getLength();
 function startDrive(first) {
-  S.drive = { s: 0, v: 0, first, done: false, lastH: 0 };
+  let curve = loop, len = loopLen;
+  if (S.st === 'free') {
+    // 止まっている所から、左回りに小さく一周
+    const p0 = car.pivot.position.clone(), h = car.pivot.rotation.y;
+    const fwd = new THREE.Vector3(Math.cos(h), 0, -Math.sin(h)), left = new THREE.Vector3(-fwd.z, 0, fwd.x).multiplyScalar(-1);
+    const r = 0.75, c = p0.clone().addScaledVector(left, r); const pts = [];
+    for (let i = 0; i < 10; i++) { const a = (i / 10) * Math.PI * 2; pts.push(c.clone().addScaledVector(left, -Math.cos(a) * r).addScaledVector(fwd, Math.sin(a) * r * 1.3)); }
+    curve = new THREE.CatmullRomCurve3(pts, true, 'catmullrom', 0.5); len = curve.getLength();
+  }
+  S.drive = { s: 0, v: 0, first, done: false, lastH: 0, curve, len };
   A.engine(true, 0); car.lampM.emissiveIntensity = 2.0;
 }
 function updateDrive(dt) {
   const D = S.drive; if (!D) return;
   const rough = 1 - car.roundness(car.parts.find((p) => p.name === 'wheelR'));
   const vmax = rough > 0.05 ? 0.55 : 0.95;
-  const remain = loopLen - D.s;
+  const remain = D.len - D.s;
   const target = remain < 0.6 ? Math.max(0.08, remain * 1.3) : vmax;
   D.v += (target - D.v) * (1 - Math.exp(-dt * 2));
   D.s += D.v * dt;
-  if (D.s >= loopLen) { D.s = loopLen; D.done = true; }
-  const u = (D.s / loopLen) % 1;
-  const p = loop.getPointAt(u), tg = loop.getTangentAt(u);
+  if (D.s >= D.len) { D.s = D.len; D.done = true; }
+  const u = Math.min(0.99999, D.s / D.len);
+  const p = D.curve.getPointAt(u), tg = D.curve.getTangentAt(u);
   car.pivot.position.set(p.x, 0, p.z);
   car.pivot.rotation.set(0, Math.atan2(-tg.z, tg.x), 0);
   car.spin -= (D.v * dt) / car.R;
@@ -396,7 +406,7 @@ function hintTarget() {
   if (st === 'free') {
     const t = S.things.find((q) => !q.done);
     if (t) { const c = t.cov.centroidUnpainted(); if (c) return new THREE.Vector3(c[0], 0.02, c[1]); }
-    return new THREE.Vector3(-1.75, 0, -1.55);
+    return new THREE.Vector3(0.35, 0, -1.6);
   }
   return null;
 }
@@ -470,7 +480,7 @@ function update(dt) {
     }
   }
   if (st === 'car_paint') {
-    if (enter) { girlHand.root.visible = true; }
+    if (enter) { girlHand.root.visible = true; papaHand.root.visible = false; }
     paintTick(dt);
     for (const p of car.parts) {
       if (!p.done && p.frac >= p.th) completePart(p);
@@ -569,9 +579,10 @@ function update(dt) {
   // --- 自由に描く ---
   if (st === 'free_intro') {
     if (enter) {
-      setShot('free', true); placeHumans('free'); papa.root.visible = true; tray.visible = true; girlHand.root.visible = true;
-      car.pivot.position.set(-0.05, 0, 0.36); car.pivot.rotation.y = 0.0; carBlob.position.set(-0.05, 0.003, 0.36); carBlob.rotation.y = 0;
+      setShot('free', true); placeHumans('free'); papa.root.visible = true; tray.visible = true; girlHand.root.visible = true; papaHand.root.visible = false;
+      car.pivot.position.set(-1.1, 0, -0.95); car.pivot.rotation.y = 0.45; carBlob.position.set(-1.1, 0.003, -0.95); carBlob.rotation.y = 0.45;
       bubble.visible = true; bubble.userData.draw(S.wish);
+      S.boatHome = new THREE.Vector2(1.95, -0.85); boat.pivot.position.x = Math.min(boat.pivot.position.x, 2.2);
     }
     if (T > 0.3) go('free');
   }
@@ -599,8 +610,10 @@ function update(dt) {
       bp.rotation.y = -S.boatSail.a - Math.PI / 2 + 0.2;
       if (Math.random() < dt * 6) GU.uRip.value.set(bp.position.x, bp.position.z, S.time, 0.5);
       if (S.boatSail.t > 11.4) S.boatSail = null;
+      if (!S.boatSail && S.boatHome) S.boatHome.set(bp.position.x, bp.position.z);
     } else {
-      bp.position.x += (pond.c.x + 0.05 - bp.position.x) * dt * 0.1; bp.position.z += (pond.c.y + 0.1 - bp.position.z) * dt * 0.1;
+      const hx = S.boatHome ? S.boatHome.x : pond.c.x + 0.05, hz = S.boatHome ? S.boatHome.y : pond.c.y + 0.1;
+      bp.position.x += (hx - bp.position.x) * dt * 0.25; bp.position.z += (hz - bp.position.z) * dt * 0.25;
     }
     bp.position.y = -0.065 + Math.sin(S.time * 1.7) * 0.008;
     bp.rotation.x = Math.sin(S.time * 1.3) * 0.03; bp.rotation.z = Math.sin(S.time * 1.1 + 1) * 0.025;
@@ -616,7 +629,7 @@ function update(dt) {
   if (car.state !== 'up' && (st === 'car_lift' || S.liftDone)) car.state = 'up';
 
   // 人
-  girl.update(dt); papa.update(dt);
+  if (girl.root.visible) girl.update(dt); if (papa.root.visible) papa.update(dt);
   girlBlob.visible = girl.root.visible; girlBlob.position.set(girl.root.position.x, 0.004, girl.root.position.z);
   papaBlob.visible = papa.root.visible; papaBlob.position.set(papa.root.position.x, 0.004, papa.root.position.z + (papa.state.startsWith('sit') ? 0.15 : 0));
   if (bubble.visible) { const hp = papa.head.getWorldPosition(new THREE.Vector3()); bubble.position.set(hp.x + 0.36, hp.y + 0.16 + Math.sin(S.time * 2) * 0.02, hp.z); }

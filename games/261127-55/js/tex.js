@@ -4,6 +4,7 @@ import * as THREE from '../lib/three.module.min.js';
 const BASE = new URL('../tex/', import.meta.url).href;
 const cache = new Map();
 const queue = { core: [], late: [] };
+let lateStarted = false;
 let maxAniso = 4;
 export function setAniso(n) { maxAniso = Math.min(8, n); }
 
@@ -27,7 +28,8 @@ export function tex(name, opt = {}) {
   t.anisotropy = maxAniso;
   t.needsUpdate = true;
   cache.set(key, t);
-  (opt.late ? queue.late : queue.core).push({ name, t });
+  if (lateStarted) apply([{ name, t }]); // 遊んでいる途中で初めて要った物はすぐ読む
+  else (opt.late ? queue.late : queue.core).push({ name, t });
   return t;
 }
 
@@ -48,12 +50,13 @@ function loadImg(name) {
 function apply(list) {
   return Promise.all(list.map(({ name, t }) => loadImg(name).then((im) => {
     if (!im) return;
-    t.image = im; t.anisotropy = maxAniso; t.needsUpdate = true;
+    // 1x1 の仮画像がもう GPU に載っていたら作り直す（大きさが変わるため）
+    t.dispose(); t.image = im; t.anisotropy = maxAniso; t.needsUpdate = true;
   })));
 }
 
 export function loadCore() { const l = queue.core.splice(0); return apply(l); }
-export function loadLate() { const l = queue.late.concat(queue.core); queue.late = []; queue.core = []; return apply(l); }
+export function loadLate() { lateStarted = true; const l = queue.late.concat(queue.core); queue.late = []; queue.core = []; return apply(l); }
 export function allNames() { return [...new Set([...cache.keys()].map((k) => k.split('|')[0]))]; }
 
 // PBR セット

@@ -4,18 +4,18 @@ import { tex } from './tex.js';
 import { merge, clamp, lerp, smooth, rng } from './util.js';
 
 // ---------- 皮ふ・布の材質 ----------
-export function skinMat(tone = 0xefc3a6) {
+export function skinMat(tone = 0xd9a383) {
   const m = new THREE.MeshPhysicalMaterial({
     color: tone, roughness: 0.52, metalness: 0,
     map: tex('skin_col.jpg', { srgb: true }), normalMap: tex('skin_nrm.jpg'), normalScale: new THREE.Vector2(0.55, 0.55),
-    sheen: 0.35, sheenColor: new THREE.Color(1.0, 0.55, 0.45), sheenRoughness: 0.6,
+    sheen: 0.18, sheenColor: new THREE.Color(1.0, 0.6, 0.5), sheenRoughness: 0.7,
   });
-  m.map.repeat.set(3, 3); m.normalMap.repeat.set(3, 3);
+  m.map.repeat.set(3, 3); m.normalMap.repeat.set(5, 5);
   // 皮ふの下で光が散る感じ：影側を少し赤く持ち上げる
   m.onBeforeCompile = (sh) => {
     sh.fragmentShader = sh.fragmentShader.replace('#include <opaque_fragment>', `
       { float nl=dot(normal, normalize((viewMatrix*vec4(${'0.52,0.74,0.42'.split(',').map((v, i) => (i === 0 ? '-' : '') + v).join(',')},0.)).xyz));
-        outgoingLight += diffuseColor.rgb*vec3(0.55,0.16,0.10)*0.22*smoothstep(0.35,-0.25,nl); }
+        outgoingLight += diffuseColor.rgb*vec3(0.5,0.14,0.08)*0.12*smoothstep(0.35,-0.25,nl); }
       #include <opaque_fragment>`);
   };
   m.customProgramCacheKey = () => 'skin';
@@ -117,13 +117,13 @@ class LiveTube {
 // 手の座標：+X 指先の向き, +Y 手の甲, +Z 右（右手：親指は -Z 側）
 const FINGERS = [
   // name, mcp, lens, r0, splay
-  ['index', [0.092, 0.004, -0.029], [0.041, 0.025, 0.020], 0.0094, -0.06],
-  ['middle', [0.096, 0.006, -0.008], [0.046, 0.028, 0.022], 0.0097, 0.0],
-  ['ring', [0.091, 0.004, 0.012], [0.042, 0.026, 0.021], 0.0090, 0.07],
-  ['pinky', [0.081, 0.0, 0.030], [0.033, 0.020, 0.018], 0.0079, 0.16],
+  ['index', [0.092, 0.004, -0.029], [0.040, 0.024, 0.019], 0.0102, -0.035],
+  ['middle', [0.096, 0.006, -0.008], [0.044, 0.027, 0.021], 0.0105, 0.0],
+  ['ring', [0.091, 0.004, 0.012], [0.040, 0.025, 0.020], 0.0098, 0.04],
+  ['pinky', [0.081, 0.0, 0.030], [0.031, 0.019, 0.017], 0.0087, 0.1],
 ];
 const POSES = {
-  grip: { index: [0.42, 0.5, 0.32], middle: [0.95, 1.05, 0.55], ring: [1.25, 1.35, 0.75], pinky: [1.35, 1.35, 0.8] },
+  grip: { index: [0.22, 0.3, 0.18], middle: [0.62, 0.78, 0.42], ring: [0.95, 1.15, 0.6], pinky: [1.05, 1.15, 0.6] },
   relax: { index: [0.25, 0.32, 0.2], middle: [0.32, 0.4, 0.25], ring: [0.38, 0.45, 0.3], pinky: [0.42, 0.5, 0.3] },
   open: { index: [0.05, 0.1, 0.05], middle: [0.05, 0.1, 0.05], ring: [0.08, 0.12, 0.06], pinky: [0.1, 0.12, 0.08] },
   point: { index: [0.0, 0.06, 0.04], middle: [1.3, 1.4, 0.8], ring: [1.4, 1.45, 0.8], pinky: [1.45, 1.45, 0.8] },
@@ -218,7 +218,7 @@ export function buildHand(opts = {}) {
   }
   // 親指
   let thumbTip;
-  if (opts.pose === 'grip') thumbTip = tips.indexPad.clone().add(new THREE.Vector3(-0.024, -0.016, -0.018));
+  if (opts.pose === 'grip') thumbTip = tips.indexPad.clone().add(new THREE.Vector3(-0.02, -0.012, -0.02));
   else if (opts.pose === 'point') thumbTip = new THREE.Vector3(0.075, -0.018, -0.012);
   else if (opts.pose === 'open') thumbTip = new THREE.Vector3(0.07, -0.004, -0.085);
   else thumbTip = new THREE.Vector3(0.088, -0.022, -0.05);
@@ -292,9 +292,9 @@ export class HandRig {
     }
     // チョーク
     this.chalk = chalkStick(opts.chalkColor || 0xffffff);
-    const dir = new THREE.Vector3(0.38, -1, 0.06).normalize();
+    const dir = new THREE.Vector3(0.55, -1, 0.04).normalize();
     this.chalk.quaternion.setFromUnitVectors(new THREE.Vector3(0, -1, 0), dir);
-    this.chalk.position.copy(h.grip).addScaledVector(dir, -0.018);
+    this.chalk.position.copy(h.grip).addScaledVector(dir, -0.022);
     this.root.add(this.chalk);
     this.tipLocal = this.chalk.position.clone().addScaledVector(dir, this.chalk.userData.len);
     this.root.visible = false;
@@ -328,8 +328,8 @@ export class HandRig {
 
 // ---------- 全身 ----------
 const DEF = {
-  girl: { H: 1.1, hip: 0.55, shY: 0.315, shW: 0.115, upper: 0.17, fore: 0.15, thigh: 0.255, shin: 0.245, ankle: 0.055, headR: 0.088, neck: 0.05, handS: 0.62, footL: 0.16, tone: 0xf1c7ab },
-  papa: { H: 1.76, hip: 0.92, shY: 0.53, shW: 0.195, upper: 0.30, fore: 0.27, thigh: 0.44, shin: 0.43, ankle: 0.08, headR: 0.112, neck: 0.085, handS: 1.0, footL: 0.27, tone: 0xdcae8e },
+  girl: { H: 1.1, hip: 0.55, shY: 0.315, shW: 0.115, upper: 0.17, fore: 0.15, thigh: 0.255, shin: 0.245, ankle: 0.055, headR: 0.088, neck: 0.05, handS: 0.62, footL: 0.16, tone: 0xe2b092 },
+  papa: { H: 1.76, hip: 0.92, shY: 0.53, shW: 0.195, upper: 0.30, fore: 0.27, thigh: 0.44, shin: 0.43, ankle: 0.08, headR: 0.112, neck: 0.085, handS: 1.0, footL: 0.27, tone: 0xcf9c7b },
 };
 
 function lathe(profile, seg, fold) {
