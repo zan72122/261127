@@ -146,7 +146,7 @@ export class Post {
     this.qs = new THREE.Scene(); this.qs.add(this.quad);
     this.qc = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
     this.bright = new THREE.ShaderMaterial({
-      uniforms: { t: { value: null }, thr: { value: 1.0 } }, vertexShader: POST_VS,
+      uniforms: { t: { value: null }, thr: { value: 0.75 } }, vertexShader: POST_VS,
       fragmentShader: `uniform sampler2D t; uniform float thr; varying vec2 vUv;
         void main(){ vec3 c = texture2D(t, vUv).rgb; float l = max(max(c.r, c.g), c.b);
           gl_FragColor = vec4(c * smoothstep(thr, thr * 2.5, l), 1.0); }`, depthTest: false, depthWrite: false });
@@ -163,7 +163,7 @@ export class Post {
         tC: { value: null }, tD: { value: null }, tB1: { value: null }, tB2: { value: null },
         res: { value: new THREE.Vector2() }, time: { value: 0 }, heat: { value: this.heat },
         nearFar: { value: new THREE.Vector2(0.05, 50) }, focus: { value: 1.0 }, dof: { value: 1.0 },
-        bloomK: { value: 0.6 }, vign: { value: 0.28 }, grain: { value: 0.025 }, warm: { value: new THREE.Vector3(1, 1, 1) }
+        bloomK: { value: 0.4 }, vign: { value: 0.28 }, grain: { value: 0.025 }, warm: { value: new THREE.Vector3(1, 1, 1) }
       },
       vertexShader: POST_VS,
       fragmentShader: `

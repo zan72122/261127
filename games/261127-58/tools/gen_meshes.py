@@ -269,16 +269,20 @@ def build_person(kind):
             sl_end = L('wri') + (L('elb') - L('wri')) * 0.06
             sleeve = lambda Q, s: smin(sd_cap(Q, s('sho'), s('elb'), .041, .036), sd_cap(Q, s('elb'), s('wri') + (s('elb') - s('wri')) * .06, .036, .032), .015)
         else:
-            sleeve = lambda Q, s: sd_cap(Q, s('sho'), s('sho') + (s('elb') - s('sho')) * .55, .062, .056)
+            sleeve = lambda Q, s: smin(sd_cap(Q, s('sho'), s('elb'), .06, .052), sd_cap(Q, s('elb'), s('wri') + (s('elb') - s('wri')) * .22, .052, .047), .02)
         d = smin(d, np.minimum(sleeve(P, L), sleeve(P, R)), .03 * sc)
         d = d + wrinkles(P, .0022 * sc)
-        if girl:
-            d = d + joint_folds(P, L('elb'), L('sho'), L('wri'), .05, .0028, 160) + joint_folds(P, R('elb'), R('sho'), R('wri'), .05, .0028, 160)
+        k_ = 1 if girl else 1.5
+        d = d + joint_folds(P, L('elb'), L('sho'), L('wri'), .05 * k_, .0028 * k_, 160 / k_) + joint_folds(P, R('elb'), R('sho'), R('wri'), .05 * k_, .0028 * k_, 160 / k_)
+        if not girl:  # rolled cuff bulge
+            for s_ in (L, R):
+                cuff = s_('wri') + (s_('elb') - s_('wri')) * .24
+                d = smin(d, sd_cap(P, cuff, cuff + (s_('elb') - s_('wri')) * .06, .055), .01)
         # neck opening & hem
         d = smax(d, -(sd_cap(P, H['neck'] + V(0, -.012, .012 * sc), H['neck'] + V(0, .2, .0), .04 * (1 if girl else 1.5))), .01)
         hem = H['hips'][1] - (.04 if girl else .03)
         d = smax(d, hem - P[:, 1] + .004 * noise3(P * 30), .008)
-        if not girl:  # short sleeve ends
+        if False:  # short sleeve ends
             for s in (L, R):
                 end = s('sho') + (s('elb') - s('sho')) * .55
                 ax = (s('elb') - s('sho')); ax /= np.linalg.norm(ax)
@@ -334,12 +338,12 @@ def build_person(kind):
     # ---------------- papa's leather apron
     def f_apron(P):
         body = np.minimum(f_shirt(P), f_pants(P))
-        off = body - .016
-        shell = np.maximum(off, -(off + .009))
+        off = body - .012
+        shell = np.maximum(off, -(off + .006))
         q = P - H['spine']
         front = .035 - q[:, 2]
-        width = np.abs(q[:, 0]) - np.where(P[:, 1] > H['chest'][1] + .02, .12, .2)
-        top = P[:, 1] - (H['chest'][1] + .12); bot = (H['kne'][1] + .08) - P[:, 1]
+        width = np.abs(q[:, 0]) - np.where(P[:, 1] > H['chest'][1] - .02, .105, .165)
+        top = P[:, 1] - (H['chest'][1] + .1); bot = (H['kne'][1] + .2) - P[:, 1]
         d = np.maximum.reduce([shell, front, width, top, bot])
         straps = np.minimum(sd_cap(P, H['chest'] + V(.1, .12, .1), H['neck'] + V(.06, .02, -.03), .012),
                             sd_cap(P, H['chest'] + V(-.1, .12, .1), H['neck'] + V(-.06, .02, -.03), .012))
@@ -347,7 +351,7 @@ def build_person(kind):
         return d + .001 * fbm3(P * 60, 2)
 
     layers = [('skin', f_skin), ('shirt', f_shirt), ('pants', f_pants), ('shoes', f_shoes), ('hair', f_hair)]
-    if not girl: layers.append(('apron', f_apron))
+
     return H, headC, bones, segs, layers
 
 def make_person(kind, step):
@@ -473,7 +477,7 @@ def make_glove(step=0.0013):
     pm = np.clip((.004 - sd_ell(v, V(-.02, .06, -.016), V(.03, .04, .02))) / .002, 0, 1) * (v[:, 2] < -.008)
     col = col * (1 - .22 * pm[:, None] * V(1, 1.1, 1.3))
     cuffm = np.clip((-.004 - v[:, 1]) / .004, 0, 1)
-    col = col * (1 - cuffm[:, None] * V(-.05, .02, .12))
+    col = col * (1 - cuffm[:, None] * V(.28, .34, .38))
     stitch = np.exp(-((np.abs(v[:, 2]) - .0026) / .0006) ** 2) * (np.sin((v[:, 1] + v[:, 0]) * 1800) > .3)
     col = col * (1 - .35 * stitch[:, None])
     col = np.clip(col / 1.15, 0, 1)

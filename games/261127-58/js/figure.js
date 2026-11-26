@@ -146,7 +146,7 @@ export function personMats(kind) {
   const girl = kind === 'girl';
   return {
     skin: organic('skin', { color: girl ? 0xeac8b4 : 0xd2ae98, roughness: 0.62, scale: 22, bump: 0.25, sheen: 0.25, sheenColor: 0xffc8b0, sheenRoughness: 0.5 }),
-    shirt: organic(girl ? 'knit' : 'knit', { color: girl ? 0x9fb4c8 : 0x2c3a4c, roughness: 1, scale: girl ? 9 : 7, bump: 0.9, sheen: 0.8, sheenColor: girl ? 0xdde8f4 : 0x5a6a80, sheenRoughness: 0.45 }),
+    shirt: organic(girl ? 'knit' : 'denim', { color: girl ? 0x5f7590 : 0x9aa6b4, roughness: 1, scale: girl ? 9 : 7, bump: 0.9, sheen: 0.35, sheenColor: girl ? 0x8a9ab0 : 0x5a6a80, sheenRoughness: 0.5 }),
     pants: organic('denim', { color: girl ? 0xb0b8c8 : 0xd0d4dc, roughness: 1, scale: 6, bump: 1.0, sheen: 0.4, sheenColor: 0x8090b0 }),
     shoes: organic('canvas', { color: girl ? 0xc85a4a : 0x6a4a34, roughness: 0.9, scale: 12, bump: 1.0 }),
     hair: organic('hair_t', { color: girl ? 0x3a2418 : 0x221a14, roughness: 0.5, scale: 14, bump: 0.5, sheen: 1.0, sheenColor: girl ? 0x8a5a3a : 0x5a4a3a, sheenRoughness: 0.35, clearcoat: 0.0 }),
@@ -155,7 +155,7 @@ export function personMats(kind) {
 }
 export function gloveMats() {
   return {
-    glove: organic('suede', { color: 0xd6c6ae, roughness: 1, scale: 7, bump: 0.35, sheen: 0.5, sheenColor: 0xd8c0a0, sheenRoughness: 0.7 }),
-    sleeve: organic('knit', { color: 0x9fb4c8, roughness: 1, scale: 14, bump: 1.0, sheen: 0.8, sheenColor: 0xdde8f4, sheenRoughness: 0.45 }),
+    glove: organic('suede', { color: 0x9a8670, roughness: 1, scale: 10, bump: 0.7, sheen: 0.45, sheenColor: 0xb8a48a, sheenRoughness: 0.75 }),
+    sleeve: organic('knit', { color: 0x5f7590, roughness: 1, scale: 14, bump: 1.0, sheen: 0.35, sheenColor: 0x8a9ab0, sheenRoughness: 0.5 }),
   };
 }

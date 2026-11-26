@@ -316,8 +316,8 @@ def leather(n=512):
     h = norm01(0.55 * grain + 0.3 * (1 - crease) + 0.15 * fbm(n, 32, 3))
     col = np.ones((n, n, 3)) * C(108, 70, 42)
     col *= (0.75 + 0.35 * fbm(n, 4, 5))[..., None] * (0.9 + 0.15 * grain)[..., None]
-    scorch = np.clip((fbm(n, 5, 5) - 0.6) * 4, 0, 1)
-    col = lerp(col, col * 0.4, scorch * 0.7)
+    scorch = np.clip((fbm(n, 5, 5) - 0.62) * 2.5, 0, 1)
+    col = lerp(col, col * 0.7, scorch * 0.5)
     save('leather', col, h, 0.55 + 0.25 * grain + 0.1 * scorch, nstrength=2.5)
 
 def terry(n=512, loops=90):
@@ -337,11 +337,14 @@ def plaster(n=1024):
     save('plaster', col, h, 0.85 + 0.1 * fine, nstrength=1.2)
 
 def frit(n=256):
-    f1, f2, cid = worley(n, 70)
-    gr = np.clip(1 - f1 * 1.3, 0, 1)
-    h = norm01(gr * (0.6 + 0.4 * cid))
-    col = np.ones((n, n, 3)) * (0.6 + 0.4 * cid)[..., None] * (0.7 + 0.3 * gr)[..., None]
-    save('frit', col, h, 0.75 - 0.3 * gr * (cid > 0.7), nstrength=4.0)
+    f1, f2, cid = worley(n, 46)
+    edge = np.clip((f2 - f1) * 6, 0, 1)            # angular crushed grains
+    gr = edge * (0.5 + 0.5 * cid)
+    h = norm01(gr + 0.25 * fbm(n, 64, 2))
+    col = np.ones((n, n, 3)) * (0.55 + 0.45 * cid)[..., None] * (0.5 + 0.5 * edge)[..., None]
+    sparkle = (cid > 0.82).astype(float) * edge
+    col = col + sparkle[..., None] * 0.35
+    save('frit', col, h, 0.6 - 0.45 * sparkle, nstrength=5.0)
 
 def skin(n=256):
     pores = (vnoise(n, 128) > 0.82).astype(float)

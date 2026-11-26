@@ -141,9 +141,8 @@ export class World {
     ring.position.set(0, 1.0, d / 2 + 0.012); g.add(ring);
     // burner pipe & valve
     const bp = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, 0.9, 16), M.iron);
-    bp.rotation.z = Math.PI / 2; bp.position.set(0.95, 1.35, 0); g.add(bp);
-    g.add(mesh(new THREE.CylinderGeometry(0.03, 0.03, 1.35, 16), M.iron, { x: 1.4, y: 0.68 }));
-    g.add(mesh(new THREE.CylinderGeometry(0.06, 0.06, 0.05, 20), M.brass, { x: 1.4, y: 1.0, z: 0.05, rx: Math.PI / 2 }));
+    bp.rotation.z = Math.PI / 2; bp.position.set(0.75, 1.35, -0.2); bp.scale.y = 0.55; g.add(bp);
+
     // stand legs + floor shadow
     const b = blob(1.8, 1.6, 0.7); b.position.y = 0.003; g.add(b);
     this.root.add(g);
@@ -162,8 +161,8 @@ export class World {
   buildBench() {
     const M = this.mats, g = new THREE.Group(); this.bench = g;
     // seat plank + legs
-    g.add(mesh(rbox(1.7, 0.05, 0.36, 0.012, 1.0,2, true), M.oak, { y: 0.56, z: 0.35 }));
-    for (const sx of [-0.75, 0.75]) for (const sz of [0.22, 0.48]) g.add(mesh(rbox(0.05, 0.54, 0.05, 0.006, 0.5), M.steel, { x: sx, y: 0.27, z: sz }));
+    g.add(mesh(rbox(1.25, 0.05, 0.36, 0.012, 1.0,2, true), M.oak, { y: 0.56, z: 0.35 }));
+    for (const sx of [-0.55, 0.55]) for (const sz of [0.22, 0.48]) g.add(mesh(rbox(0.05, 0.54, 0.05, 0.006, 0.5), M.steel, { x: sx, y: 0.27, z: sz }));
     // rails (the pipe rolls on these)
     for (const sx of [-0.32, 0.32]) {
       g.add(mesh(rbox(0.04, 0.04, 1.0, 0.004, 0.5), M.steel, { x: sx, y: 0.82, z: 0.1 }));
@@ -173,30 +172,36 @@ export class World {
     const b = blob(2.2, 1.3, 0.5); b.position.set(0, 0.003, 0.25); g.add(b);
     this.root.add(g);
     // marver (polished steel table) with the frit dishes
-    const mv = new THREE.Group(); mv.position.set(1.12, 0, 0.05); this.marver = mv;
-    mv.add(mesh(rbox(0.62, 0.05, 0.7, 0.008, 0.5), M.steel, { y: 0.79 }));
-    for (const sx of [-0.27, 0.27]) for (const sz of [-0.3, 0.3]) mv.add(mesh(rbox(0.05, 0.77, 0.05, 0.006, 0.5), M.iron, { x: sx, y: 0.385, z: sz }));
-    mv.add(mesh(rbox(0.56, 0.03, 0.64, 0.006, 0.5), M.iron, { y: 0.18 }));
-    const b2 = blob(1.0, 1.1, 0.55); b2.position.y = 0.003; mv.add(b2);
+    const mv = new THREE.Group(); mv.position.set(0.86, 0, 0.3); this.marver = mv;
+    mv.add(mesh(rbox(0.46, 0.04, 0.36, 0.008, 0.5), M.steel, { y: 0.77 }));
+    for (const sx of [-0.2, 0.2]) for (const sz of [-0.15, 0.15]) mv.add(mesh(rbox(0.04, 0.75, 0.04, 0.006, 0.5), M.iron, { x: sx, y: 0.375, z: sz }));
+    mv.add(mesh(rbox(0.42, 0.025, 0.32, 0.006, 0.5), M.iron, { y: 0.16 }));
+    const b2 = blob(0.8, 0.7, 0.55); b2.position.y = 0.003; mv.add(b2);
     this.root.add(mv);
     // frit dishes: shallow steel pans filled with coloured crushed glass
     this.frits = [];
-    const cols = [[30, 70, 200], [20, 140, 80], [215, 140, 30], [190, 30, 50]];
+    const cols = [[38, 66, 160], [40, 118, 74], [196, 128, 40]];
     const fritT = texSet('frit');
     cols.forEach((c, i) => {
       const dish = new THREE.Group();
       const pan = new THREE.Mesh(lathe([[0, 0], [0.07, 0], [0.078, 0.004], [0.082, 0.022], [0.086, 0.024], [0.079, 0.0045], [0.0, 0.004]], 40, 3, 1), M.steel);
       pan.castShadow = true; pan.receiveShadow = true; dish.add(pan);
-      const pm = new THREE.MeshStandardMaterial({ color: new THREE.Color(`rgb(${c[0]},${c[1]},${c[2]})`), roughness: 0.6 });
-      fritT.bind(pm, [1.5, 1.5]);
-      const powder = new THREE.Mesh(new THREE.CircleGeometry(0.077, 40).rotateX(-Math.PI / 2), pm);
-      // heap the powder a little
+      // crushed coloured glass: glinting grains, uneven heap
+      const pm = new THREE.MeshPhysicalMaterial({ color: new THREE.Color(`rgb(${c[0]},${c[1]},${c[2]})`).multiplyScalar(0.8), roughness: 0.5, clearcoat: 0.25, clearcoatRoughness: 0.3, envMapIntensity: 0.7 });
+      pm.normalScale = new THREE.Vector2(2.2, 2.2);
+      fritT.bind(pm, [1.3, 1.3]);
+            const pg2 = new THREE.RingGeometry(0.0, 0.077, 64, 10).rotateX(-Math.PI / 2);
+      const powder = new THREE.Mesh(pg2, pm);
       const pp = powder.geometry.attributes.position;
-      for (let k = 0; k < pp.count; k++) { const r = Math.hypot(pp.getX(k), pp.getZ(k)); pp.setY(k, 0.015 + 0.006 * (1 - r / 0.077)); }
+      for (let k = 0; k < pp.count; k++) {
+        const x = pp.getX(k), z = pp.getZ(k), r = Math.hypot(x, z);
+        const bump = Math.sin(x * 160 + i) * Math.cos(z * 140 - i) * 0.0012 + Math.sin(x * 420 + z * 380) * 0.0004;
+        pp.setY(k, 0.012 + 0.009 * Math.pow(Math.max(0, 1 - r / 0.077), 0.7) + bump * (1 - r / 0.08));
+      }
       powder.geometry.computeVertexNormals(); powder.receiveShadow = true;
       dish.add(powder);
-      const x = -0.2 + (i % 2) * 0.17, z = 0.2 - Math.floor(i / 2) * 0.2;
-      dish.position.set(x, 0.815, z + 0.06);
+      const x = [-0.15, -0.02, -0.09][i], z = [-0.08, -0.08, 0.05][i];
+      dish.position.set(x, 0.79, z); dish.scale.setScalar(0.72);
       dish.userData = { col: c, home: dish.position.clone(), i };
       mv.add(dish);
       this.frits.push(dish);
@@ -220,13 +225,13 @@ export class World {
     const hose = new THREE.Mesh(new THREE.TubeGeometry(curve, 60, 0.0085, 12), this.mats.rubber);
     hose.castShadow = true; this.hose = hose; this.root.add(hose);
     // towel bucket (for the eyebrow moment)
-    const tb = new THREE.Group(); tb.position.set(1.45, 0, 0.62); this.towelBucket = tb;
+    const tb = new THREE.Group(); tb.position.set(1.0, 0.79, 0.38); tb.scale.setScalar(0.52); this.towelBucket = tb;
     const bk = new THREE.Mesh(lathe([[0, 0], [0.14, 0], [0.145, 0.01], [0.17, 0.3], [0.175, 0.305], [0.168, 0.3], [0.138, 0.012], [0, 0.012]], 40, 4, 1), M.steel);
     bk.castShadow = true; bk.receiveShadow = true; tb.add(bk);
     const water = new THREE.Mesh(new THREE.CircleGeometry(0.165, 32).rotateX(-Math.PI / 2), new THREE.MeshPhysicalMaterial({ color: 0x3a4a48, roughness: 0.05, metalness: 0, transmission: 0.3, normalMap: loadTex('water_n.jpg', false, [2, 2]) }));
     water.position.y = 0.26; tb.add(water);
     this.towel = this.makeTowel(); this.towel.position.set(0, 0.29, 0.02); tb.add(this.towel);
-    const bb = blob(0.6, 0.6, 0.6); bb.position.y = 0.003; tb.add(bb);
+    const bb = blob(0.5, 0.5, 0.5); bb.position.y = 0.003; tb.add(bb);
     this.root.add(tb);
   }
   makeTowel() {
@@ -337,11 +342,11 @@ export class World {
   buildProps() {
     const M = this.mats, R = this.root;
     // tool board on the back wall with hooks (gloves & goggles hang here at the start)
-    const board = new THREE.Group(); board.position.set(0.55, 0, -3.15); this.board = board;
-    board.add(mesh(rbox(1.3, 0.9, 0.03, 0.006, 1.0,2, true), M.pine, { y: 1.3 }));
-    for (const hx of [-0.35, 0.05, 0.4]) board.add(mesh(new THREE.CylinderGeometry(0.008, 0.008, 0.09, 10).rotateX(Math.PI / 2), M.iron, { x: hx, y: 1.55, z: 0.05 }));
+    const board = new THREE.Group(); board.position.set(0.62, 0, -3.15); this.board = board;
+    board.add(mesh(rbox(0.95, 0.55, 0.03, 0.006, 1.0,2, true), M.oak, { y: 1.15 }));
+    for (const hx of [-0.2, -0.1, 0.17, 0.36]) board.add(mesh(new THREE.CylinderGeometry(0.008, 0.008, 0.09, 10).rotateX(Math.PI / 2), M.iron, { x: hx, y: 1.3, z: 0.05 }));
     // tongs and jacks hanging
-    for (const [hx, L] of [[0.4, 0.55], [0.45, 0.48]]) board.add(mesh(rbox(0.012, L, 0.006, 0.002, 0.3), M.steel, { x: hx, y: 1.55 - L / 2, z: 0.04, rz: 0.04 * (hx - 0.42) * 20 }));
+    for (const [hx, L] of [[0.34, 0.42], [0.38, 0.36]]) board.add(mesh(rbox(0.012, L, 0.006, 0.002, 0.3), M.steel, { x: hx, y: 1.3 - L / 2, z: 0.04, rz: 0.04 * (hx - 0.36) * 20 }));
     R.add(board);
     // the rule sign (pictures only): gloves+goggles -> glowing ball -> water/shelf -> window sun
     const c = document.createElement('canvas'); c.width = 1024; c.height = 512;
@@ -471,6 +476,9 @@ export class World {
     if (this.glowMat.map) this.glowMat.map.offset.set(t * 0.05, Math.sin(t * 0.7) * 0.05);
     for (const l of this.lamps) { l.L.intensity = l.I * (1 - mk * 0.85); l.bulb.material.color.setRGB(12 * (1 - mk * 0.8), 9 * (1 - mk * 0.8), 6 * (1 - mk * 0.8)); }
     this.sun.intensity = 7.5 * mk;
+    // only re-render the shadow maps that matter right now
+    this.sun.shadow.autoUpdate = mk > 0.01;
+    for (const l of this.lamps) if (l.L.castShadow) l.L.shadow.autoUpdate = mk < 0.95;
     this.hemi.intensity = 0.55 + mk * 0.5;
     this.hemi.color.setRGB(1, 0.88 + mk * 0.08, 0.77 + mk * 0.2);
     this.skyMat.map = mk > 0.5 ? this.skyMorning : this.skyNight;

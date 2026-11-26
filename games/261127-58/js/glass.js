@@ -17,8 +17,8 @@ export function blackbody(t, out = new THREE.Color()) {
   // t: 0 (cold) .. 1 (~1150°C working heat). returns linear emission colour (HDR)
   if (t < 0.1) return out.setRGB(0, 0, 0);
   const k = clamp((t - 0.1) / 0.9, 0, 1);
-  const r = 1.0, g = 0.06 + 0.62 * Math.pow(k, 1.4), b = 0.01 + 0.3 * Math.pow(k, 3);
-  const I = 0.1 * Math.pow(26, k) * sstep(0.1, 0.25, t);
+  const r = 1.0, g = 0.025 + 0.3 * Math.pow(k, 1.7), b = 0.003 + 0.03 * Math.pow(k, 3);
+  const I = 0.065 * Math.pow(15, k) * sstep(0.1, 0.25, t);
   return out.setRGB(r * I, g * I, b * I);
 }
 
@@ -69,8 +69,8 @@ export class Glass {
         .replace('#include <common>', `#include <common>
 uniform float emisK; uniform float hotDark; varying float vHeat; varying float vCrack;
 vec3 bb(float t){ if (t < 0.1) return vec3(0.0); float k = clamp((t - 0.1) / 0.9, 0.0, 1.0);
-  vec3 c = vec3(1.0, 0.06 + 0.62 * pow(k, 1.4), 0.01 + 0.3 * pow(k, 3.0));
-  return c * 0.1 * pow(26.0, k) * smoothstep(0.1, 0.25, t); }`)
+  vec3 c = vec3(1.0, 0.025 + 0.3 * pow(k, 1.7), 0.003 + 0.03 * pow(k, 3.0));
+  return c * 0.065 * pow(15.0, k) * smoothstep(0.1, 0.25, t); }`)
         .replace('#include <bumpmap_pars_fragment>', THREE.ShaderChunk.bumpmap_pars_fragment.replaceAll('bumpScale *', 'bumpScale * vCrack *'))
         .replace('#include <map_fragment>', `#include <map_fragment>
   float crl = texture2D(bumpMap, vBumpMapUv).r * vCrack;
@@ -78,7 +78,11 @@ vec3 bb(float t){ if (t < 0.1) return vec3(0.0); float k = clamp((t - 0.1) / 0.9
   diffuseColor.rgb *= mix(vec3(1.0), vec3(0.32, 0.1, 0.03), smoothstep(0.18, 0.6, vHeat) * hotDark);`)
         .replace('#include <emissivemap_fragment>', `#include <emissivemap_fragment>
   float nv = abs(dot(normalize(vNormal), normalize(vViewPosition)));
-  totalEmissiveRadiance = bb(vHeat) * emisK * mix(0.55, 1.0, nv);`)
+  vec3 pc = texture2D(map, vMapUv).rgb; float pamt = 1.0 - min(pc.r, min(pc.g, pc.b));
+  // molten glass swirls: slow luminance streaks inside the gather
+  vec2 sw = vMapUv * vec2(6.2832, 3.1416);
+  float swirl = 0.88 + 0.12 * sin(sw.x * 3.0 + sin(sw.y * 4.0) * 2.0) * sin(sw.y * 5.0 + sw.x);
+  totalEmissiveRadiance = bb(vHeat) * emisK * mix(0.5, 1.15, nv * nv) * swirl * mix(vec3(1.0), vec3(0.3) + pc * 0.45, pamt);`)
         .replace('#include <transmission_fragment>', THREE.ShaderChunk.transmission_fragment.replace('material.transmission = transmission;',
           'material.transmission = transmission * (1.0 - smoothstep(0.12, 0.55, vHeat) * 0.9 * hotDark) * (1.0 - crl * 0.4);'));
     };
@@ -90,12 +94,12 @@ vec3 bb(float t){ if (t < 0.1) return vec3(0.0); float k = clamp((t - 0.1) / 0.9
     // seed bubbles: opaque mirror specks seen through refraction
     const rnd = mulberry(seed * 977 + 3);
     this.bub = [];
-    const nb = 26 + Math.floor(rnd() * 14);
-    const bm = new THREE.MeshStandardMaterial({ color: 0xffffff, metalness: 1, roughness: 0.06, envMapIntensity: 1.6 });
+    const nb = 10 + Math.floor(rnd() * 10);
+    const bm = new THREE.MeshStandardMaterial({ color: 0xd8d8d8, metalness: 1, roughness: 0.18, envMapIntensity: 0.7 });
     this.bubbles = new THREE.InstancedMesh(new THREE.SphereGeometry(1, 10, 8), bm, nb);
     for (let i = 0; i < nb; i++) {
       let vi; do { vi = Math.floor(rnd() * this.n); } while (this.theta[vi] < 0.6);
-      this.bub.push({ vi, f: 0.25 + rnd() * 0.6, r: 0.0005 + Math.pow(rnd(), 3) * 0.0022, s: 0.6 + rnd() * 0.5 });
+      this.bub.push({ vi, f: 0.25 + rnd() * 0.6, r: 0.0004 + Math.pow(rnd(), 3) * 0.0016, s: 0.6 + rnd() * 0.5 });
     }
     this.group.add(this.bubbles);
     this.dirty = true; this.paintDirty = false;
@@ -118,12 +122,14 @@ vec3 bb(float t){ if (t < 0.1) return vec3(0.0); float k = clamp((t - 0.1) / 0.9
     const k = rate * dt * (over ? 0.004 : 0.018) * (1 + this.blown * 0.4);
     for (let i = 0; i < n; i++) {
       const w = sstep(0.28, 1.25, this.theta[i]);
-      if (w <= 0) continue;
+      if (w <= 0 && this.theta[i] < 0.05) continue;
       let dx = P[i * 3] - cx, dy = P[i * 3 + 1] - cy, dz = P[i * 3 + 2] - cz;
       const l = Math.hypot(dx, dy, dz) || 1;
       // grow more where the wall is hotter (hot glass moves first)
       const hot = 0.35 + 0.65 * this.heat[i];
-      P[i * 3] += dx / l * k * w * hot; P[i * 3 + 1] += dy / l * k * w * hot; P[i * 3 + 2] += dz / l * k * w * hot;
+      // the bulb swells and drifts away from the pipe, so a soft neck forms
+      const away = k * 0.55 * sstep(0.05, 1.3, this.theta[i]);
+      P[i * 3] += dx / l * k * w * hot; P[i * 3 + 1] += dy / l * k * w * hot - away; P[i * 3 + 2] += dz / l * k * w * hot;
     }
     this.blown += rate * dt;
     this.dirty = true;
@@ -272,6 +278,7 @@ vec3 bb(float t){ if (t < 0.1) return vec3(0.0); float k = clamp((t - 0.1) / 0.9
       m.iridescence = sstep(0.55, 1, this.thin) * 0.9;
       this.uni.hotDark.value = 1 - 0.75 * sstep(0.4, 1, this.thin);
       this.uni.emisK.value = 1 - 0.55 * sstep(0.3, 1, this.thin);
+      this.hotEnv = true;
       // bubbles follow the wall
       const B = this.bubbles, mtx = new THREE.Matrix4(), q = new THREE.Quaternion();
       this.bub.forEach((b, k) => {
@@ -285,6 +292,8 @@ vec3 bb(float t){ if (t < 0.1) return vec3(0.0); float k = clamp((t - 0.1) / 0.9
       this.dirty = false;
     }
     if (this.paintDirty) { this.paint.needsUpdate = true; this.paintDirty = false; }
+    // hot glass is mostly its own glow: damp mirror reflections while it is hot
+    if ((this._envT = (this._envT || 0) + dt) > 0.25 || dt === 0) { this._envT = 0; const mh = this.meanHeat(); this.mat.envMapIntensity = 1.25 * (1 - 0.8 * sstep(0.15, 0.6, mh)); this.mat.specularIntensity = 1 - 0.5 * sstep(0.2, 0.7, mh); }
   }
   worldCenter(out = new THREE.Vector3()) {
     this.geo.boundingSphere || this.geo.computeBoundingSphere();
@@ -302,12 +311,13 @@ vec3 bb(float t){ if (t < 0.1) return vec3(0.0); float k = clamp((t - 0.1) / 0.9
         varying vec3 vN; varying vec2 vUv; varying float vCr;
         void main(){
           vec3 c = texture2D(tP, vUv).rgb; c = pow(c, vec3(2.2)) * tint;
+          // light through coloured glass: lighter tint than the glass looks, bright focused core
+          vec3 tl = mix(vec3(1.0), c / max(max(c.r, max(c.g, c.b)), 0.05), 0.62) * mix(1.0, 0.8, dot(c, vec3(0.33)) < 0.3 ? 1.0 : 0.0);
           float d = abs(dot(normalize(vN), -sunDir));
-          float lens = 0.28 + 2.4 * pow(d, 5.0) + 0.25 * pow(d, 1.5);
+          float lens = 0.82 + 1.9 * pow(d, 9.0) - 0.25 * smoothstep(0.35, 0.0, d);
           float cr = texture2D(crk, vUv * vec2(3.0, 1.5)).r * vCr;
-          lens = mix(lens, 0.6 + 1.6 * cr, vCr * 0.6);
-          vec3 sat = mix(vec3(dot(c, vec3(0.33))), c, 1.6);
-          gl_FragColor = vec4(max(sat, 0.0) * lens, 1.0);
+          lens = mix(lens, 0.75 + 1.4 * cr, vCr * 0.7);
+          gl_FragColor = vec4(tl * lens, 1.0);
         }`,
       side: THREE.DoubleSide, blending: THREE.CustomBlending, blendSrc: THREE.DstColorFactor, blendDst: THREE.ZeroFactor,
       depthTest: false, depthWrite: false, transparent: true

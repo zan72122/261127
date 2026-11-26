@@ -31,11 +31,11 @@ const audio = new Audio();
 // ------------------------------------------------------------------ camera rig
 // preset: target, dir (camera = target + dir*dist), dist, need (w,h metres to frame)
 const CAM = {
-  intro: { t: V3(-0.15, 0.95, -2.6), dir: V3(0.3, 0.2, 1).normalize(), dist: 3.6, need: [2.8, 1.75] },
-  s1: { t: V3(0.4, 0.875, 0.1), dir: V3(-0.12, 0.42, 1).normalize(), dist: 0.66, need: [0.56, 0.4] },
-  s1gag: { t: V3(0.75, 1.05, -0.05), dir: V3(-0.3, 0.42, 0.85).normalize(), dist: 1.6, need: [1.2, 0.95] },
+  intro: { t: V3(0.1, 0.82, -2.6), dir: V3(0.22, 0.2, 1).normalize(), dist: 3.4, need: [2.4, 1.85] },
+  s1: { t: V3(0.55, 0.845, 0.15), dir: V3(-0.28, 0.5, 1).normalize(), dist: 0.66, need: [0.6, 0.4] },
+  s1gag: { t: V3(0.8, 1.2, -0.1), dir: V3(-0.5, 0.08, 0.86).normalize(), dist: 2.1, need: [1.3, 1.3] },
   s2: { t: V3(2.3, 0.82, -1.7), dir: V3(-0.1, 0.3, 1).normalize(), dist: 2.7, need: [2.6, 1.35] },
-  s3: { t: V3(2.85, 0.6, 0.1), dir: V3(-0.8, 0.32, 0.52).normalize(), dist: 2.9, need: [2.4, 1.6] },
+  s3: { t: V3(2.95, 0.5, 0.15), dir: V3(-0.78, 0.38, 0.5).normalize(), dist: 2.8, need: [2.3, 1.5] },
   end: { t: V3(3.0, 0.7, 0.2), dir: V3(-0.85, 0.36, 0.5).normalize(), dist: 3.1, need: [3.0, 1.9] },
 };
 const rig = { t: CAM.intro.t.clone(), pos: V3(), fov: 36, k: 1, focus: 2.5 };
@@ -90,7 +90,7 @@ let girl = null, papa = null, gloveData = null;
 const handGloves = [];           // gloves worn by the girl (attached to her bones)
 let fpL = null, fpR = null;      // first-person gloves at the bench
 let jacks = null, tongs = null, goggles = null, hookGoggles = null;
-let papaBrows = [], papaTowel = null, girlMouth = null;
+let papaBrows = [], papaTowel = null, girlMouth = null; const papaGloves = [];
 
 function makeGoggles() {
   const g = new THREE.Group();
@@ -136,6 +136,29 @@ function setMouth(kind) {
   else if (kind === 'hm') { m.rotation.z = 0; m.scale.set(0.7, 0.4, 1); }
 }
 
+function addApron(fig) {
+  // heavy leather apron: a curved, slightly wrinkled sheet hung from the chest
+  const W = 0.4, H = 0.7, g = new THREE.PlaneGeometry(W, H, 20, 30);
+  const p = g.attributes.position, R = 0.24;
+  for (let i = 0; i < p.count; i++) {
+    let x = p.getX(i), y = p.getY(i);
+    const v = (y + H / 2) / H;                     // 0 bottom .. 1 top
+    x *= 0.72 + 0.28 * (1 - sstep(0.62, 0.9, v)); // narrower bib
+    const a = x / R;
+    const wr = Math.sin(x * 70 + y * 9) * 0.003 + Math.sin(y * 38 + x * 20) * 0.004 * (1 - v);
+    p.setXYZ(i, Math.sin(a) * R, y, Math.cos(a) * R - R + wr + (1 - v) * 0.02);
+  }
+  g.computeVertexNormals();
+  const m = world.mats.leather.clone(); m.side = THREE.DoubleSide; m.color = new THREE.Color(0xd8c0a8);
+  texSet('leather').bind(m, [1.3, 2.2]);
+  const ap = new THREE.Mesh(g, m); ap.castShadow = true; ap.receiveShadow = true;
+  const chest = fig.byName.chest;
+  ap.position.set(0, -0.19, 0.135); chest.add(ap);
+  for (const sx of [-1, 1]) {
+    const st = new THREE.Mesh(new THREE.CylinderGeometry(0.006, 0.006, 0.26, 6), m);
+    st.position.set(sx * 0.1, 0.2, 0.06); st.rotation.set(-0.75, 0, sx * 0.35); st.castShadow = true; chest.add(st);
+  }
+}
 function makeJacks() {
   const g = new THREE.Group();
   const st = world.mats.steel;
@@ -167,8 +190,22 @@ async function loadPeople() {
   girl = new Figure(gd, personMats('girl')); girl.headC = gd.bones.headC;
   papa = new Figure(pd, personMats('papa')); papa.headC = pd.bones.headC;
   scene.add(girl.group, papa.group);
+  for (const f of [girl, papa]) { const b = contactBlob(f === girl ? 0.45 : 0.7); f.group.add(b); f.blob = b; }
   girlMouth = addFace(girl, 'girl').mouth;
   addFace(papa, 'papa');
+  addApron(papa);
+  // papa wears the same heat gloves
+  for (const side of ['L', 'R']) {
+    const gm = gloveMats();
+    const gv = new Glove(gl, { glove: gm.glove });
+    papa.byName['hand' + side].add(gv.group);
+    const m = new THREE.Matrix4();
+    if (side === 'R') m.makeBasis(V3(0, 0, -1), V3(0, -1, 0), V3(-1, 0, 0)); else m.makeBasis(V3(0, 0, 1), V3(0, -1, 0), V3(1, 0, 0));
+    gv.group.quaternion.setFromRotationMatrix(m);
+    gv.group.position.set(0, 0.01, 0);
+    gv.group.scale.set(side === 'L' ? -0.95 : 0.95, 0.95, 0.95);
+    gv.setGrip(0.3); papaGloves.push(gv);
+  }
   // hanging gloves on the board (pre-dress)
   for (let i = 0; i < 2; i++) {
     const gm = gloveMats();
@@ -188,15 +225,23 @@ async function loadPeople() {
   tongs = makeTongs(); scene.add(tongs); tongs.visible = false;
   placeIntro();
 }
+function contactBlob(size) {
+  const c = document.createElement('canvas'); c.width = c.height = 64;
+  const x = c.getContext('2d'); const gr = x.createRadialGradient(32, 32, 2, 32, 32, 32);
+  gr.addColorStop(0, 'rgba(0,0,0,0.75)'); gr.addColorStop(0.45, 'rgba(0,0,0,0.35)'); gr.addColorStop(1, 'rgba(0,0,0,0)');
+  x.fillStyle = gr; x.fillRect(0, 0, 64, 64);
+  const m = new THREE.Mesh(new THREE.PlaneGeometry(size, size * 0.8).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(c), transparent: true, depthWrite: false, opacity: 0.8 }));
+  m.position.y = 0.004; m.renderOrder = 1; return m;
+}
 function hookGloves() {
   const b = world.board;
   handGloves.forEach((gv, i) => {
-    const p = b.localToWorld(V3(-0.35 + i * 0.09, 1.52, 0.07));
+    const p = b.localToWorld(V3(-0.2 + i * 0.1, 1.26, 0.07));
     gv.group.position.copy(p); gv.group.rotation.set(0.12, 0, Math.PI + (i ? 0.08 : -0.08));
   });
 }
 function hookGogglesPlace() {
-  const p = world.board.localToWorld(V3(0.05, 1.47, 0.06));
+  const p = world.board.localToWorld(V3(0.17, 1.21, 0.06));
   goggles.position.copy(p); goggles.rotation.set(-0.2, 0, 0.1);
 }
 
@@ -234,7 +279,7 @@ function papaReact(kind) {
 // ------------------------------------------------------------------ placement per phase
 function placeFig(fig, x, z, ry) { fig.group.position.set(x, 0, z); fig.group.rotation.y = ry; }
 function placeIntro() {
-  placeFig(girl, 0.05, -2.42, 0.38); poseOf(girl, 'stand');
+  placeFig(girl, 0.0, -2.55, 2.55); poseOf(girl, 'stand');
   placeFig(papa, -1.35, -1.55, 0.75); poseOf(papa, 'stand');
   girl.group.visible = true;
 }
@@ -477,22 +522,24 @@ function updateS1(dt) {
     g.ready = work >= 2 || g.blown > 2.0;
     // hot glass light
     const c = g.worldCenter();
-    world.glassL.position.copy(c);
+    world.glassL.position.copy(c).add(V3(0, g.maxR * 1.8, g.maxR * 1.2));
     blackbody(g.meanHeat(), world.glassL.color);
     const bbI = world.glassL.color.r; world.glassL.color.multiplyScalar(1 / Math.max(bbI, 1e-3));
-    world.glassL.intensity = g.appear * (1.2 + g.maxR * 25) * (1 - g.thin * 0.6);
+    world.glassL.intensity = g.appear * (0.25 + g.maxR * 4) * (1 - g.thin * 0.6);
     world.pipeTip.material.emissive.setRGB(0.5, 0.12, 0.02).multiplyScalar(g.appear * 0.6);
   }
   // papa's eyebrow moment: once, when the bubble gets too big (or after the first piece)
   if (S.gag === 'none' && (S.over || (S.made >= 1 && g && g.appear >= 1))) { S.gag = 'walk'; S.gagT = 0; camPreset = CAM.s1gag; camRate = 1.2; }
   updateGag(dt);
-  // first-person gloves
+  // first-person gloves (put down while the camera pulls back for papa's moment)
+  const wide = camPreset === CAM.s1gag;
+  fpL.group.visible = fpR.group.visible = jacks.visible = !wide;
   updateHands(dt);
   // hints
   if (S.gag === 'ouch') hintAt(world.towel.getWorldPosition(V3()));
   else if (g && g.ready) hintAt(world.pipeTip.getWorldPosition(V3()));
   else if (g && g.blown < 0.6) hintAt(g.worldCenter());
-  else if (g && g.fritUsed.size === 0) hintAt(world.frits[S.made % 4].getWorldPosition(V3()));
+  else if (g && g.fritUsed.size === 0) hintAt(world.frits[S.made % 3].getWorldPosition(V3()));
   else if (g) hintAt(g.worldCenter());
   // heat haze
   if (g) setHeat(0, g.worldCenter(), g.maxR * 2.2, 0.9 * g.meanHeat() * g.appear);
@@ -504,10 +551,10 @@ function updateHands(dt) {
   // right hand + jacks: tip follows the finger while pulling, otherwise rests near the glass
   let tip;
   if (S.grabbing && ptr && ptr.tip) tip = ptr.tip.clone();
-  else if (g) tip = g.worldCenter().addScaledVector(right, g.maxR + 0.05).addScaledVector(upv, -0.01).addScaledVector(fwd, -0.02);
+  else if (g) tip = g.worldCenter().addScaledVector(right, g.maxR + 0.025).addScaledVector(upv, -0.02).addScaledVector(fwd, -0.02);
   else tip = world.pipeTip.getWorldPosition(V3()).addScaledVector(right, 0.08);
   if (S.cutAnim > 0) tip = world.pipeTip.getWorldPosition(V3()).addScaledVector(fwd, -0.01).addScaledVector(upv, 0.01 * Math.sin(S.cutAnim * 30));
-  const dir = right.clone().multiplyScalar(-0.75).addScaledVector(upv, 0.25).addScaledVector(fwd, 0.62).normalize();
+  const dir = right.clone().multiplyScalar(-0.3).addScaledVector(upv, 0.55).addScaledVector(fwd, 0.78).normalize();
   const y = dir, z0 = upv.clone().addScaledVector(y, -upv.dot(y)).normalize(), x = V3().crossVectors(y, z0);
   const m = new THREE.Matrix4().makeBasis(x, y, z0);
   const q = new THREE.Quaternion().setFromRotationMatrix(m);
@@ -524,10 +571,9 @@ function updateHands(dt) {
   // left hand rolls the pipe on the rail
   const roll = Math.sin(world.spin.rotation.x) * 0.03;
   const lp = world.pipe.localToWorld(V3(0.47, 0.0, 0)).add(V3(0, 0.012, roll));
-  const lq = new THREE.Quaternion().setFromRotationMatrix(new THREE.Matrix4().makeBasis(V3(0, 0, -1), V3(-0.25, -0.1, -1).normalize().cross(V3(0, 1, 0)).normalize().negate(), V3(0, 1, 0)));
-  const lm = new THREE.Matrix4().makeBasis(V3(1, 0, 0).applyAxisAngle(V3(0, 1, 0), 0.3), V3(0, 0, -1).applyAxisAngle(V3(0, 1, 0), 0.3), V3(0, 1, 0));
-  fpL.group.quaternion.setFromRotationMatrix(lm);
-  fpL.group.position.copy(lp).add(V3(0.0, 0.025, 0.11));
+  const F = V3(0.3, -0.28, -1).normalize(), Uv = V3(0, 1, 0).addScaledVector(F, -F.y).normalize(), X = V3().crossVectors(F, Uv);
+  fpL.group.quaternion.setFromRotationMatrix(new THREE.Matrix4().makeBasis(X, F, Uv));
+  fpL.group.position.copy(lp).addScaledVector(F, -0.07).addScaledVector(Uv, 0.026);
   fpL.update(dt);
 }
 function cutPiece() {
@@ -763,20 +809,20 @@ function setupColouredLight() {
   const vp = new THREE.Matrix4().multiplyMatrices(sunCam.projectionMatrix, sunCam.matrixWorldInverse);
   const mk = (geo) => {
     const m = new THREE.Mesh(geo, new THREE.ShaderMaterial({
-      uniforms: { tL: { value: lightRT.texture }, vp: { value: vp }, k: { value: 0 } },
-      vertexShader: `uniform mat4 vp; varying vec4 vS; void main(){ vec4 w = modelMatrix * vec4(position, 1.0); vS = vp * w; gl_Position = projectionMatrix * viewMatrix * w; }`,
-      fragmentShader: `uniform sampler2D tL; uniform float k; varying vec4 vS;
+      uniforms: { tL: { value: lightRT.texture }, vp: { value: vp }, k: { value: 0 }, xMax: { value: 9 } },
+      vertexShader: `uniform mat4 vp; varying vec4 vS; varying vec3 vW; void main(){ vec4 w = modelMatrix * vec4(position, 1.0); vW = w.xyz; vS = vp * w; gl_Position = projectionMatrix * viewMatrix * w; }`,
+      fragmentShader: `uniform sampler2D tL; uniform float k; uniform float xMax; varying vec4 vS; varying vec3 vW;
         void main(){ vec2 uv = vS.xy / vS.w * 0.5 + 0.5; vec3 c = vec3(1.0);
           if (uv.x > 0.0 && uv.x < 1.0 && uv.y > 0.0 && uv.y < 1.0) {
             vec3 s = vec3(0.0); float tot = 0.0;
             for (int i = -2; i <= 2; i++) for (int j = -1; j <= 1; j++) { s += texture2D(tL, uv + vec2(float(i) / 1024.0, float(j) / 256.0) * 1.5).rgb; tot += 1.0; }
             c = s / tot; }
-          gl_FragColor = vec4(mix(vec3(1.0), c, k), 1.0); }`,
+          gl_FragColor = vec4(mix(vec3(1.0), c, k * smoothstep(xMax, xMax - 0.15, vW.x)), 1.0); }`,
       blending: THREE.CustomBlending, blendSrc: THREE.DstColorFactor, blendDst: THREE.ZeroFactor, depthWrite: false, transparent: true, polygonOffset: true, polygonOffsetFactor: -2
     }));
     m.renderOrder = 2; scene.add(m); overlay.push(m); return m;
   };
-  mk(new THREE.PlaneGeometry(3.6, 6.2).rotateX(-Math.PI / 2).translate(2.1, 0.002, 0));
+  mk(new THREE.PlaneGeometry(3.6, 6.2).rotateX(-Math.PI / 2).translate(2.1, 0.002, 0)).material.uniforms.xMax.value = (world.sillX - 0.16) - world.sillY * (world.sunDir.x / world.sunDir.y) + 0.02;
   mk(new THREE.PlaneGeometry(0.34, 5.8).rotateX(-Math.PI / 2).translate(world.sillX + 0.02, world.sillY + 0.0015, 0));
   for (const p of S.pieces) casterScene.add(p.makeCaster());
 }
@@ -809,7 +855,7 @@ function s3Move() {
   const p = S.hold;
   // on the sill top plane if the ray reaches it, otherwise a vertical plane
   const top = planeHit(V3(0, world.sillY, 0), V3(0, 1, 0));
-  if (top && top.x > world.sillX - 0.22 && top.x < world.sillX + 0.2 && Math.abs(top.z) < 2.3) { p.target = V3(world.sillX + 0.02, world.sillY, clamp(top.z, -2.2, 2.2)); p.onSill = true; }
+  if (top && top.x > world.sillX - 0.3 && top.x < world.sillX + 0.2 && Math.abs(top.z) < 2.3) { p.target = V3(world.sillX - 0.08, world.sillY, clamp(top.z, -2.2, 2.2)); p.onSill = true; }
   else {
     const n = camera.getWorldDirection(V3()).setY(0).normalize().negate();
     const h = planeHit(V3(3.3, 0.8, 0.8), n);
@@ -890,6 +936,7 @@ function updateFigures(dt) {
     girl.add.chest.x = Math.sin(clock.t * 1.7) * 0.015; girl.add.head.y = Math.sin(clock.t * 0.6) * 0.06;
     girl.update(dt);
     handGloves.forEach(g => g.update(dt));
+    papaGloves.forEach(g => g.update(dt));
   }
   if (papa) {
     papaTimer -= dt;
@@ -975,9 +1022,9 @@ function debugJump(to) {
       if (to === 's3') {
         S.pieces.forEach((p, i) => { p.setHeat(0); if (i === 0) { p.crack.fill(0.8); p.geo.attributes.crack.needsUpdate = true; } p.slot = { kind: 'shelf' }; });
         goS3(); S.transitioning = false; S.sunrise = 1; snapCam();
-        S.pieces.forEach((p, i) => { p.home = V3(world.sillX + 0.02, world.sillY, -0.7 + i * 0.55); p.group.position.copy(p.home); p.placed = true; p.lastSill = true; });
+        S.pieces.forEach((p, i) => { p.home = V3(world.sillX - 0.08, world.sillY, -0.7 + i * 0.55); p.group.position.copy(p.home); p.placed = true; p.lastSill = true; });
       }
     }
   }
 }
-window.__debug = { S, world, camera, CAM, get girl() { return girl; }, get papa() { return papa; }, snapCam, setCam: (k) => { camPreset = CAM[k]; snapCam(); } };
+window.__debug = { S, world, camera, CAM, scr: (v) => screenOf(v), get handGloves() { return handGloves; }, get goggles() { return goggles; }, get girl() { return girl; }, get papa() { return papa; }, snapCam, setCam: (k) => { camPreset = CAM[k]; snapCam(); } };
