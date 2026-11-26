@@ -314,7 +314,7 @@ vec3 bb(float t){ if (t < 0.1) return vec3(0.0); float k = clamp((t - 0.1) / 0.9
           // light through coloured glass: lighter tint than the glass looks, bright focused core
           vec3 tl = mix(vec3(1.0), c / max(max(c.r, max(c.g, c.b)), 0.05), 0.62) * mix(1.0, 0.8, dot(c, vec3(0.33)) < 0.3 ? 1.0 : 0.0);
           float d = abs(dot(normalize(vN), -sunDir));
-          float lens = 0.82 + 1.9 * pow(d, 9.0) - 0.25 * smoothstep(0.35, 0.0, d);
+          float lens = 0.92 + 1.7 * pow(d, 9.0);
           float cr = texture2D(crk, vUv * vec2(3.0, 1.5)).r * vCr;
           lens = mix(lens, 0.75 + 1.4 * cr, vCr * 0.7);
           gl_FragColor = vec4(tl * lens, 1.0);

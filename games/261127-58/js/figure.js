@@ -155,7 +155,7 @@ export function personMats(kind) {
 }
 export function gloveMats() {
   return {
-    glove: organic('suede', { color: 0x9a8670, roughness: 1, scale: 10, bump: 0.7, sheen: 0.45, sheenColor: 0xb8a48a, sheenRoughness: 0.75 }),
+    glove: organic('suede', { color: 0x76706a, roughness: 1, scale: 10, bump: 0.7, sheen: 0.45, sheenColor: 0xb8a48a, sheenRoughness: 0.75 }),
     sleeve: organic('knit', { color: 0x5f7590, roughness: 1, scale: 14, bump: 1.0, sheen: 0.35, sheenColor: 0x8a9ab0, sheenRoughness: 0.5 }),
   };
 }

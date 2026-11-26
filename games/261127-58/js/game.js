@@ -32,10 +32,11 @@ const audio = new Audio();
 // preset: target, dir (camera = target + dir*dist), dist, need (w,h metres to frame)
 const CAM = {
   intro: { t: V3(0.1, 0.82, -2.6), dir: V3(0.22, 0.2, 1).normalize(), dist: 3.4, need: [2.4, 1.85] },
-  s1: { t: V3(0.55, 0.845, 0.15), dir: V3(-0.28, 0.5, 1).normalize(), dist: 0.66, need: [0.6, 0.4] },
+  s1: { t: V3(0.52, 0.845, 0.15), dir: V3(-0.28, 0.5, 1).normalize(), dist: 0.66, need: [0.6, 0.4] },
   s1gag: { t: V3(0.8, 1.2, -0.1), dir: V3(-0.5, 0.08, 0.86).normalize(), dist: 2.1, need: [1.3, 1.3] },
   s2: { t: V3(2.3, 0.82, -1.7), dir: V3(-0.1, 0.3, 1).normalize(), dist: 2.7, need: [2.6, 1.35] },
   s3: { t: V3(2.95, 0.5, 0.15), dir: V3(-0.78, 0.38, 0.5).normalize(), dist: 2.8, need: [2.3, 1.5] },
+  thumb: { t: V3(3.72, 0.93, -0.1), dir: V3(-0.8, 0.62, 0.3).normalize(), dist: 1.0, need: [0.95, 0.6] },
   end: { t: V3(3.0, 0.7, 0.2), dir: V3(-0.85, 0.36, 0.5).normalize(), dist: 3.1, need: [3.0, 1.9] },
 };
 const rig = { t: CAM.intro.t.clone(), pos: V3(), fov: 36, k: 1, focus: 2.5 };
@@ -45,7 +46,7 @@ function camGoal(p) {
   const portrait = aspect < 1;
   const minF = portrait ? 40 : 27, maxF = portrait ? 56 : 39;
   let d = p.dist;
-  const halfH = Math.max(p.need[1] / 2, p.need[0] / 2 / aspect);
+  const halfH = Math.max(p.need[1] / 2 * (portrait ? 1.15 : 1), p.need[0] * (portrait ? 0.6 : 1) / 2 / aspect);
   let fov = 2 * Math.atan(halfH / d) * 180 / Math.PI;
   if (fov > maxF) { d = halfH / Math.tan(maxF * Math.PI / 360); fov = maxF; }
   if (fov < minF) { fov = minF; d = halfH / Math.tan(minF * Math.PI / 360); d = Math.max(d, p.dist * 0.9); }
@@ -661,8 +662,8 @@ function goS2() {
   fpL.group.visible = fpR.group.visible = false; jacks.visible = false;
   world.spin.visible = true;
   girl.group.visible = true;
-  placeFig(girl, 1.85, -1.3, 1.35); poseOf(girl, 'stand');
-  placeFig(papa, 3.75, -1.25, -1.9); poseOf(papa, 'watch');
+  placeFig(girl, 1.98, -2.42, 0.25); poseOf(girl, 'stand');
+  placeFig(papa, 3.85, -2.35, -0.9); poseOf(papa, 'watch');
   if (papaTowel) papaTowel.visible = true;
   tongs.visible = true;
   S.pieces.forEach((p, i) => { p.fly = null; p.group.position.copy(world.traySlots[i]); p.slot = { kind: 'tray', i }; p.home = world.traySlots[i].clone(); });
@@ -772,7 +773,7 @@ function updateS2(dt) {
       const dirv = sh.clone().sub(c).normalize();
       ik.target.copy(c).addScaledVector(dirv, 0.34); ik.target.y = Math.max(ik.target.y, 0.5);
       ik.on = true; ik.weight = smooth(ik.weight, 1, 8, dt);
-      girl.group.position.x = smooth(girl.group.position.x, clamp(c.x - 0.55, 1.4, 2.4), 2, dt);
+      girl.group.position.x = smooth(girl.group.position.x, clamp(c.x - 0.3, 1.3, 2.9), 2, dt);
       const hw = girl.byName.handR.getWorldPosition(V3());
       tongs.visible = true; tongs.position.copy(hw);
       tongs.quaternion.setFromUnitVectors(V3(0, 1, 0), c.clone().sub(hw).normalize());
