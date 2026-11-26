@@ -39,7 +39,7 @@ export function makeCamellia(seed = 1) {
   const rnd = () => ((s = (s * 9301 + 49297) % 233280) / 233280);
   for (let b = 0; b < 3; b++) {
     const a = (b - 1) * 0.35 + (rnd() - 0.5) * 0.2;
-    const pts = [new THREE.Vector3(0, 0, 0), new THREE.Vector3(Math.sin(a) * 0.04, 0.12, Math.cos(a) * 0.01), new THREE.Vector3(Math.sin(a) * 0.09, 0.25 + rnd() * 0.05, 0.02 * (rnd() - 0.5))];
+    const pts = [new THREE.Vector3(0, 0, 0), new THREE.Vector3(Math.sin(a) * 0.03, 0.08, Math.cos(a) * 0.01), new THREE.Vector3(Math.sin(a) * 0.07, 0.15 + rnd() * 0.04, 0.02 * (rnd() - 0.5))];
     const curve = new THREE.CatmullRomCurve3(pts);
     const stem = new THREE.Mesh(new THREE.TubeGeometry(curve, 12, 0.0035, 6), bark);
     stem.castShadow = true; g.add(stem);
@@ -89,7 +89,7 @@ export class TableStage {
     const jugM = new THREE.MeshPhysicalMaterial({ color: 0x8e9a8c, roughness: 0.2, clearcoat: 1, clearcoatRoughness: 0.05, normalMap: tex('grain', 'n', { repeat: [2, 2] }), normalScale: new THREE.Vector2(0.2, 0.2) });
     this.jug = new THREE.Group(); this.jug.position.set(-0.26, top, -0.1); g.add(this.jug);
     lathe([[0, 0], [0.04, 0], [0.045, 0.01], [0.052, 0.07], [0.035, 0.13], [0.03, 0.15], [0.034, 0.16], [0.03, 0.162], [0.026, 0.14], [0.044, 0.07], [0.038, 0.012], [0, 0.014]], 36, jugM, this.jug);
-    const fl = makeCamellia(3); fl.position.y = 0.1; this.jug.add(fl);
+    const fl = makeCamellia(3); fl.position.y = 0.08; this.jug.add(fl);
     contactShadow(g, -0.26, -0.1, 0.16, 0.16, 0.6, top + 0.001);
     // スープの鍋（ほうろう）
     const potM = new THREE.MeshPhysicalMaterial({ color: 0x9b2f22, roughness: 0.25, clearcoat: 1, clearcoatRoughness: 0.08 });
@@ -276,8 +276,8 @@ export class TableStage {
       if (!src) { s.material.opacity = 0; continue; }
       const ph = (s.userData.ph + this.t * 0.22 * (0.7 + s.userData.sz * 0.3)) % 1;
       s.position.set(src.x + Math.sin(ph * 7 + s.userData.ph * 30) * 0.03 * ph, src.y + ph * 0.28, src.z + Math.cos(ph * 5 + s.userData.ph * 10) * 0.02 * ph);
-      s.scale.setScalar((0.02 + ph * 0.09) * s.userData.sz);
-      s.material.opacity = Math.sin(ph * Math.PI) * 0.16;
+      s.scale.setScalar((0.015 + ph * 0.06) * s.userData.sz);
+      s.material.opacity = Math.sin(ph * Math.PI) * 0.08 * Math.min(1, ph * 4);
     }
   }
   exit() { for (const s of this.steam) s.material.opacity = 0; }

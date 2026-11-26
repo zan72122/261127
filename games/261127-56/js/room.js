@@ -405,14 +405,14 @@ export function buildRoom(scene) {
   const peepM = new THREE.MeshBasicMaterial({ color: 0x000000 });
   const peep = mesh(new THREE.CircleGeometry(0.012, 20), peepM, 0, 0.12, 0.052, door, false, false);
   // 操作盤（側面）
-  const ctrl = new THREE.Group(); ctrl.position.set(kw / 2 + 0.06, ky + kh - 0.16, 0.1); kg.add(ctrl);
-  mesh(boxGeo(0.09, 0.22, 0.2, 0.3), mPaint, 0, 0, 0, ctrl);
-  const dial = new THREE.Group(); dial.position.set(0.0, 0.02, 0.104); ctrl.add(dial);
+  const ctrl = new THREE.Group(); door.add(ctrl);
+  mesh(boxGeo(0.2, 0.1, 0.03, 0.3), mPaint, 0, 0, 0, ctrl);
+  const dial = new THREE.Group(); dial.position.set(0.03, 0.0, 0.016); ctrl.add(dial);
   const dialM = new THREE.MeshPhysicalMaterial({ color: 0x202020, roughness: 0.4, clearcoat: 0.4 });
   const dk = mesh(new THREE.CylinderGeometry(0.028, 0.03, 0.025, 28), dialM, 0, 0, 0.012, dial); dk.rotation.x = Math.PI / 2;
   const tick = mesh(boxGeo(0.004, 0.022, 0.004, 0.1), new THREE.MeshStandardMaterial({ color: 0xeeeeee, roughness: 0.5 }), 0, 0.012, 0.026, dial);
-  ctrl.rotation.y = Math.PI / 2; ctrl.position.x = kw / 2 + 0.11; ctrl.position.z = 0.12;
-  const lamp = mesh(new THREE.SphereGeometry(0.008, 12, 8), new THREE.MeshStandardMaterial({ color: 0x220000, emissive: 0xff2200, emissiveIntensity: 0 }), 0, -0.06, 0.1, ctrl, false, false);
+  ctrl.position.set(kw / 2 - 0.16, -kh / 2 + 0.19, 0.065);
+  const lamp = mesh(new THREE.SphereGeometry(0.008, 12, 8), new THREE.MeshStandardMaterial({ color: 0x220000, emissive: 0xff2200, emissiveIntensity: 0 }), -0.06, 0.0, 0.018, ctrl, false, false);
   contactShadow(room, POS.kiln.x, POS.kiln.z, 0.9, 0.9, 0.65);
   anim.kiln = { group: kg, doorPivot, dial, lamp, ifb, peepM, handle, shelfY: ky + 0.17, inner: new THREE.Vector3() };
 

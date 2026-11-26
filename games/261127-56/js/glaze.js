@@ -68,7 +68,7 @@ export class GlazeStage {
       U.uDry.value = 1; U.uBisque.value = 1;
       // さかさまに持つ（高台を指でつまむ）
       const h = C.clayHolder;
-      h.position.set(POS.tubs.x, 0.62 + C.clay.H, POS.tubs.z + 0.02);
+      h.position.set(POS.tubs.x, 0.52 + C.clay.H, POS.tubs.z + 0.02);
       C.clay.mesh.rotation.set(Math.PI, 0, 0); C.clay.mesh.position.set(0, 0, 0);
       this.target.copy(h.position);
       this.hover = h.position.y;
@@ -114,6 +114,7 @@ export class GlazeStage {
   }
   up(p) {
     this.holding = false; this.target.y = this.hover;
+    const tb = this.ctx.anim.tubs; this.target.x = Math.max(tb[0].x + 0.16, Math.min(tb[2].x - 0.16, this.target.x));
     // 釉薬をかけたあと、器をトンとたたく → 窯へ
     const C = this.ctx;
     if (this.dips >= 1 && this.downOnPot && C.clock - this.downT < 0.35 && Math.hypot(p.x - this.downXY[0], p.y - this.downXY[1]) < 14 && this.inTub < 0) {
@@ -280,7 +281,8 @@ class KilnStage {
   }
   hintTarget() {
     const K = this.ctx.anim.kiln;
-    if (this.sub === 'door' || this.sub === 'cooled') return K.handle.getWorldPosition(new THREE.Vector3());
+    if (this.sub === 'door') return K.group.localToWorld(new THREE.Vector3(0, 0.6, 0.32));
+    if (this.sub === 'cooled') return K.handle.getWorldPosition(new THREE.Vector3());
     if (this.sub === 'dial') return K.dial.getWorldPosition(new THREE.Vector3());
     if (this.sub === 'open' && this.t > 3) return this.ctx.clayHolder.localToWorld(new THREE.Vector3(0, this.ctx.clay.H * 0.6, 0));
     return null;
