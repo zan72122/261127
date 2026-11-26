@@ -42,8 +42,8 @@ scene.fog = new THREE.Fog(0xd8d4c4, 4, 14);
   const m = new THREE.MeshBasicMaterial({ color: 0xffffff, fog: false });
   m.color.setScalar(1.0);
   tex('backdrop', true, t => { m.map = t; m.needsUpdate = true; }, { color: '#b8bc98', pri: 9 });
-  const bd = new THREE.Mesh(new THREE.PlaneGeometry(11, 5.5), m);
-  bd.position.set(0, -0.744 + 2.75 - 0.5, -3.4); scene.add(bd);
+  const bd = new THREE.Mesh(new THREE.PlaneGeometry(8, 4), m);
+  bd.position.set(0, -0.1, -2.1); scene.add(bd);
   world.backdrop = bd;
   // 地面（石畳）
   const gm = pbr('pavers', { color: '#8a8070', repeat: [5, 4] });

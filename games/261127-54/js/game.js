@@ -6,6 +6,7 @@ import { makeKnife, makeTowel, pbr, roundBox, clothSheet, makePlatter, contactBl
 import { SKIN, lin, Body, getPersonMaterial } from './people.js';
 
 const UP = new THREE.Vector3(0, 1, 0);
+const BIG = 0.072; // 大皿にのせられる大きさ
 const tmp = new THREE.Vector3(), tmp2 = new THREE.Vector3();
 const ease = (t) => t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
 const clamp = THREE.MathUtils.clamp;
@@ -44,28 +45,58 @@ export class Game {
   makeArms() {
     const P = this.w.people;
     const girlSkin = { s: 0.64, fr: 1.12, skin: SKIN.girl, tip: SKIN.girlTip, nail: lin('#efcfc2'), res: 0.0021 };
-    const sleeve = { type: 'long', col: lin('#c98f7c'), col2: lin('#b97e6c'), at: 0.62 };
+    const sleeve = { type: 'short', col: lin('#c98f7c'), col2: lin('#b97e6c'), at: 0.5 };
     // 包丁を持つ右手：甲は右上、刃は前
     const fwd = new THREE.Vector3(0, 0, -1), right = new THREE.Vector3(1, 0, 0);
     this.knifeB = (b) => { const Zh = b.clone().negate(); const Yh = new THREE.Vector3().addScaledVector(UP, 0.75).addScaledVector(new THREE.Vector3().crossVectors(b, UP).normalize(), 0.66).normalize(); const Xh = new THREE.Vector3().crossVectors(Yh, Zh).normalize(); return [Xh, new THREE.Vector3().crossVectors(Zh, Xh), Zh]; };
     const kb = this.knifeB(fwd);
-    const armW = new THREE.Vector3(0.45, 0.42, 0.78).normalize();
-    const upW = new THREE.Vector3(0.35, 0.75, 0.55).normalize();
+    const armW = new THREE.Vector3(0.42, 0.22, 0.88).normalize();
+    const upW = new THREE.Vector3(0.3, 0.3, 0.9).normalize();
     this.girlR = P.makeArm(Object.assign({}, girlSkin, { side: 'R', sleeve, arm: toLocal(kb, armW), upper: toLocal(kb, upW), fore: 0.26, upLen: 0.3 }), []);
     // つまむ右手：手のひらは下、指先は前下
     this.pinchB = basis(new THREE.Vector3(-0.15, -0.55, -0.82), new THREE.Vector3(0.05, 0.85, -0.5));
-    const pinArm = new THREE.Vector3(0.3, 0.5, 0.8).normalize();
+    const pinArm = new THREE.Vector3(0.28, 0.25, 0.93).normalize();
     this.girlRP = P.makeArm(Object.assign({}, girlSkin, { side: 'R', sleeve, arm: toLocal(this.pinchB, pinArm), upper: toLocal(this.pinchB, upW), fore: 0.26, upLen: 0.3 }), []);
     // ふきんを押さえる平らな手
     this.flatB = basis(new THREE.Vector3(-0.1, -0.25, -0.96), new THREE.Vector3(0, 1, -0.2));
-    this.girlRF = P.makeArm(Object.assign({}, girlSkin, { side: 'R', sleeve, arm: toLocal(this.flatB, new THREE.Vector3(0.25, 0.45, 0.85).normalize()), upper: toLocal(this.flatB, upW), fore: 0.26, upLen: 0.3 }), []);
+    this.girlRF = P.makeArm(Object.assign({}, girlSkin, { side: 'R', sleeve, arm: toLocal(this.flatB, new THREE.Vector3(0.22, 0.22, 0.95).normalize()), upper: toLocal(this.flatB, upW), fore: 0.26, upLen: 0.3 }), []);
     // 拍手：左右の手のひらが向き合う
     this.clapRB = basis(new THREE.Vector3(-0.25, 0.75, -0.6), new THREE.Vector3(1, 0.1, 0.2));
     this.clapLB = basis(new THREE.Vector3(0.25, 0.75, -0.6), new THREE.Vector3(-1, 0.1, 0.2));
     this.girlCR = P.makeArm(Object.assign({}, girlSkin, { side: 'R', sleeve, arm: toLocal(this.clapRB, new THREE.Vector3(0.35, -0.55, 0.75).normalize()), upper: toLocal(this.clapRB, new THREE.Vector3(0.3, -0.2, 0.9).normalize()), fore: 0.26, upLen: 0.3 }), []);
     this.girlCL = P.makeArm(Object.assign({}, girlSkin, { side: 'L', sleeve, arm: toLocal(this.clapLB, new THREE.Vector3(-0.35, -0.55, 0.75).normalize()), upper: toLocal(this.clapLB, new THREE.Vector3(-0.3, -0.2, 0.9).normalize()), fore: 0.26, upLen: 0.3 }), []);
-    this.armQueue = [[this.girlR, 'grip'], [this.girlRP, 'pinch'], [this.girlRF, 'flat'], [this.girlCR, 'flat'], [this.girlCL, 'flat']];
+    this.makePapa(); this.makeCustomerKit(); this.makeFamily();
+    this.armQueue = [[this.girlR, 'grip'], [this.girlRP, 'pinch'], [this.girlRF, 'flat'], [this.papaR, 'flat'], [this.papaL, 'flat'], [this.girlCR, 'flat'], [this.girlCL, 'flat'], [this.ghost, 'point']];
+    for (const a of this.custArms) this.armQueue.push([a, 'pinch']);
+    for (const a of this.family) { this.armQueue.push([a, 'reach']); this.armQueue.push([a, 'pinch']); }
     this.handGrip = new THREE.Vector3(0.068 * 0.64, -0.028 * 0.64, 0);
+  }
+  makePapa() {
+    const P = this.w.people;
+      const papaSkin = { s: 1.0, fr: 1.0, skin: SKIN.papa, tip: SKIN.papaTip, nail: lin('#e4bca8'), res: 0.0028 };
+      const sl = { type: 'rolled', col: lin('#5a7090'), col2: lin('#6a80a0'), at: 0.35 };
+      this.pressB = basis(new THREE.Vector3(0.0, -0.35, 0.94), new THREE.Vector3(0, 0.95, 0.3));
+      const armW = new THREE.Vector3(0, 0.55, -0.83).normalize();
+      this.papaR = P.makeArm(Object.assign({}, papaSkin, { side: 'R', sleeve: sl, arm: toLocal(this.pressB, armW), upper: toLocal(this.pressB, new THREE.Vector3(0.2, 0.3, -0.93).normalize()), fore: 0.27, upLen: 0.3 }), []);
+      this.papaL = P.makeArm(Object.assign({}, papaSkin, { side: 'L', sleeve: sl, arm: toLocal(this.pressB, armW), upper: toLocal(this.pressB, new THREE.Vector3(-0.2, 0.3, -0.93).normalize()), fore: 0.27, upLen: 0.3 }), []);
+    
+  }
+  makeFamily() {
+    const P = this.w.people;
+      this.reachB = (dir) => basis(dir.clone().setY(-0.4).normalize(), new THREE.Vector3(0, 1, 0));
+      const mk = (spec, from) => {
+        const B = this.reachB(from.clone().negate());
+        const a = P.makeArm(Object.assign({ side: 'R', nail: lin('#e8c8b8'), arm: toLocal(B, from.clone().setY(0.35).normalize()), upper: toLocal(B, from.clone().setY(0.25).normalize()), fore: 0.26, upLen: 0.3, res: 0.0026 }, spec), []);
+        a.B = B; a.from = from; return a;
+      };
+      this.family = [
+        mk({ s: 1.0, skin: SKIN.papa, tip: SKIN.papaTip, sleeve: { type: 'rolled', col: lin('#5a7090'), col2: lin('#6a80a0'), at: 0.35 }, voice: 'papa' }, new THREE.Vector3(-0.8, 0, -0.6).normalize()),
+        mk({ s: 0.9, skin: SKIN.mama, tip: SKIN.mamaTip, sleeve: { type: 'long', col: lin('#c8b8a0'), at: 0.3 }, voice: 'mama' }, new THREE.Vector3(0.8, 0, -0.6).normalize()),
+        mk({ s: 0.66, fr: 1.1, skin: SKIN.kid2, tip: SKIN.kid2Tip, sleeve: { type: 'short', col: lin('#8aa0b0') }, voice: 'kid' }, new THREE.Vector3(-1, 0, 0.15).normalize()),
+        mk({ s: 0.62, fr: 1.12, skin: SKIN.girl, tip: SKIN.girlTip, sleeve: { type: 'short', col: lin('#d8a8a0') }, voice: 'kid' }, new THREE.Vector3(1, 0, 0.1).normalize()),
+      ];
+      this.family.forEach((a, i) => { a.voice = [ 'papa', 'mama', 'kid', 'kid'][i];  });
+    
   }
   makeGirl() {
     const b = new Body({ h: 1.1, kid: true, skin: SKIN.girl, top: lin('#c98f7c'), bottom: lin('#c98f7c'), dress: true, hair: lin('#2a1c14'), shoe: lin('#d8d2c8'), socks: lin('#f0ece4'), tie: lin('#d0a040') });
@@ -186,7 +217,7 @@ export class Game {
     this.glow.renderOrder = 10;
     this.w.scene.add(this.glow);
     // 白い手袋の手（指さし）
-    const gm = new THREE.MeshPhysicalMaterial({ color: 0xffffff, roughness: 0.75, sheen: 1, sheenColor: new THREE.Color(1, 1, 1), transparent: true, opacity: 0.0, depthWrite: false });
+    const gm = new THREE.MeshPhysicalMaterial({ color: 0xffffff, roughness: 0.8, sheen: 1, sheenColor: new THREE.Color(1, 1, 1), emissive: new THREE.Color(0.35, 0.35, 0.35), transparent: true, opacity: 0.0, depthWrite: true });
     this.ghostB = basis(new THREE.Vector3(-0.2, -0.75, -0.62), new THREE.Vector3(0.1, 0.6, -0.8));
     this.ghost = this.w.people.makeArm({ s: 0.56, fr: 1.1, skin: [1, 1, 1], tip: [1, 1, 1], nail: [1, 1, 1], side: 'R', sleeve: { type: 'none' }, arm: toLocal(this.ghostB, new THREE.Vector3(0.3, 0.6, 0.75).normalize()), fore: 0.09, upLen: 0.0, res: 0.0026 }, []);
     this.ghost.mesh.material = gm; this.ghost.mesh.castShadow = false;
@@ -208,7 +239,7 @@ export class Game {
     // 数秒さわらなければ白い手が見本をみせる
     const gOn = show && this.idle > 4.5 && this.ghost.geoms.point;
     const go = this.ghostMat.opacity;
-    this.ghostMat.opacity = gOn ? Math.min(0.6, go + dt * 1.5) : Math.max(0, go - dt * 3);
+    this.ghostMat.opacity = gOn ? Math.min(0.88, go + dt * 1.5) : Math.max(0, go - dt * 3);
     this.ghost.root.visible = this.ghostMat.opacity > 0.01;
     if (this.ghost.root.visible && h) {
       this.ghost.setPose('point');
@@ -233,7 +264,7 @@ export class Game {
     const pos = (e) => { const r = el.getBoundingClientRect(); return [e.clientX - r.left, e.clientY - r.top]; };
     el.addEventListener('pointerdown', (e) => {
       if (P.down) return;
-      el.setPointerCapture && el.setPointerCapture(e.pointerId);
+      try { el.setPointerCapture && el.setPointerCapture(e.pointerId); } catch (err) { }
       P.id = e.pointerId; P.down = true; [P.x, P.y] = pos(e); P.sx = P.x; P.sy = P.y; P.t0 = performance.now(); P.path = [[P.x, P.y]]; P.moved = 0;
       this.idle = 0;
       this.scene && this.onDown && this.onDown(P);
@@ -300,7 +331,7 @@ export class Game {
 
   // ======================================================== 0. はじまり：前掛けをつける
   frame_intro() {
-    const pts = [new THREE.Vector3(-0.62, 0.3, 0.36), new THREE.Vector3(0.45, -0.1, -0.5), new THREE.Vector3(0.05, -0.744, 0.62), new THREE.Vector3(0.05, 0.4, 0.62), new THREE.Vector3(-0.6, -0.3, 0.36)];
+    const pts = [new THREE.Vector3(-0.72, 0.25, 0.36), new THREE.Vector3(0.3, -0.1, -0.5), new THREE.Vector3(0.05, -0.6, 0.62), new THREE.Vector3(0.05, 0.4, 0.62), new THREE.Vector3(-0.72, -0.3, 0.36)];
     return this.w.frame(pts, new THREE.Vector3(0.12, 0.42, 1).normalize(), { margin: 0.88, center: new THREE.Vector3(-0.15, -0.02, 0.15) });
   }
   enter_intro() {
@@ -312,7 +343,7 @@ export class Game {
       const s = this.toScreen(this.apron.position.clone().add(new THREE.Vector3(0, 0.05, 0)));
       if (hit || Math.hypot(s[0] - P.x, s[1] - P.y) < 90) this.putApron();
     };
-    this.setHint({ type: 'tap', at: () => this.apron.position.clone().add(new THREE.Vector3(0, 0.02, 0.05)), size: 0.3 });
+    this.setHint({ type: 'tap', at: () => this.apron.position.clone().add(new THREE.Vector3(0, 0.02, 0.05)), size: 0.22 });
   }
   putApron() {
     this.flags.apron = true; this.setHint(null); this.busy = true;
@@ -575,14 +606,6 @@ export class Game {
   startPapa(melon) {
     this.flags.papa = true; this.busy = true; this.papaActive = true; this.setHint(null);
     const P = this.w.people;
-    if (!this.papaL) {
-      const papaSkin = { s: 1.0, fr: 1.0, skin: SKIN.papa, tip: SKIN.papaTip, nail: lin('#e4bca8'), res: 0.0028 };
-      const sl = { type: 'rolled', col: lin('#5a7090'), col2: lin('#6a80a0'), at: 0.35 };
-      this.pressB = basis(new THREE.Vector3(0.0, -0.35, 0.94), new THREE.Vector3(0, 0.95, 0.3));
-      const armW = new THREE.Vector3(0, 0.55, -0.83).normalize();
-      this.papaR = P.makeArm(Object.assign({}, papaSkin, { side: 'R', sleeve: sl, arm: toLocal(this.pressB, armW), upper: toLocal(this.pressB, new THREE.Vector3(0.2, 0.3, -0.93).normalize()), fore: 0.27, upLen: 0.3 }), ['flat']);
-      this.papaL = P.makeArm(Object.assign({}, papaSkin, { side: 'L', sleeve: sl, arm: toLocal(this.pressB, armW), upper: toLocal(this.pressB, new THREE.Vector3(-0.2, 0.3, -0.93).normalize()), fore: 0.27, upLen: 0.3 }), ['flat']);
-    }
     const hands = [this.papaR, this.papaL];
     hands.forEach(h => { h.setPose('flat'); h.root.visible = true; h.root.quaternion.copy(quatFrom(this.pressB)); });
     const top = melon.group.position.clone(); top.y += melon.radius * 0.95;
@@ -781,7 +804,7 @@ export class Game {
     if (!c) { this.shopDone(); return; }
     this.cust = c; c.t = 0; c.state = 'in';
     c.arm = this.custArms[this.queue.indexOf(c) % this.custArms.length];
-    c.arm.setPose('fist'); c.arm.root.visible = true;
+    c.arm.setPose('pinch'); c.arm.root.visible = true;
     const col = CAT_COLORS[c.cat];
     // 風船の色は断面の色に近い落ち着いた色
     const bc = [[0.62, 0.08, 0.09], [0.85, 0.36, 0.06], [0.85, 0.66, 0.12], [0.30, 0.50, 0.10], [0.86, 0.85, 0.80]][c.cat];
@@ -792,7 +815,7 @@ export class Game {
   }
   custAnchor() {
     const pl = this.w.platter.position;
-    return this.w.portrait ? new THREE.Vector3(pl.x + 0.12, 0.12, pl.z - 0.42) : new THREE.Vector3(pl.x + 0.06, 0.12, pl.z - 0.3);
+    return this.w.portrait ? new THREE.Vector3(0.2, 0.16, -0.28) : new THREE.Vector3(pl.x + 0.06, 0.12, pl.z - 0.3);
   }
   update_shop(dt) {
     this.anim && this.anim(dt);
@@ -808,8 +831,8 @@ export class Game {
       if (c.react) { c.react.t += dt; const rt = c.react.t; if (c.react.kind === 'ok') hand.y += Math.abs(Math.sin(rt * 9)) * 0.025 * Math.max(0, 1 - rt); else hand.x += Math.sin(rt * 14) * 0.01 * Math.max(0, 1 - rt); if (rt > 1.6) c.react = null; }
       const q = quatFrom(this.custB);
       c.arm.root.quaternion.copy(q);
-      const fistC = new THREE.Vector3(0.07 * c.arm.spec.s, -0.02 * c.arm.spec.s, 0);
-      c.arm.root.position.copy(hand).sub(fistC.clone().applyQuaternion(q));
+      const pc = c.arm.tip('pinch', 0).add(c.arm.tip('pinch', 4)).multiplyScalar(0.5);
+      c.arm.root.position.copy(hand).sub(pc.applyQuaternion(q));
       // 風船は手の上でゆれる
       const sway = Math.sin(this.w.time * 1.1) * 0.03;
       let tilt = 0, hop = 0;
@@ -831,7 +854,8 @@ export class Game {
       if (want) this.setHint({ type: 'drag', at: () => want.group.position.clone().add(new THREE.Vector3(0, want.radius * 0.5, 0)), to: () => this.slotPos(c.arc, c.got).add(new THREE.Vector3(0, 0.02, 0)), size: want.radius * 2.8 });
       else {
         const wf = this.crateFruits.find(p => p.state === 'crate' && FRUITS[p.key].cat === c.cat) || this.crateFruits.find(p => p.state === 'crate');
-        const onB = this.boardWholeOrBig();
+        const big = this.w.pieces.find(p => p.state === 'rest' && !p.placed && p.level > 0 && p.radius > BIG && FRUITS[p.key].cat === c.cat);
+        const onB = big || this.boardWholeOrBig();
         if (onB) this.setHint({ type: 'swipe', at: () => onB.group.position.clone().add(new THREE.Vector3(0, onB.radius * 0.6, 0)), size: onB.radius * 2.6, dir: new THREE.Vector3(1, 0, -0.1).normalize(), len: onB.radius * 2.4 });
         else if (wf) this.setHint({ type: 'tap', at: () => wf.group.position.clone().add(new THREE.Vector3(0, wf.radius * 0.8, 0)), size: wf.radius * 3 });
       }
@@ -842,8 +866,8 @@ export class Game {
   bestPiece(cat) {
     let best = null, bs = -1e9;
     for (const p of this.w.pieces) {
-      if (p.state !== 'rest' || p.placed || p.held || p.level === 0 || p.fleshTris === 0) continue;
-      const s = (FRUITS[p.key].cat === cat ? 10 : 0) + p.faceUp() + (p.radius < 0.07 ? 1 : 0);
+      if (p.state !== 'rest' || p.placed || p.held || p.level === 0 || p.fleshTris === 0 || p.radius > BIG) continue;
+      const s = (FRUITS[p.key].cat === cat ? 10 : 0) + p.faceUp() - p.radius * 10;
       if (s > bs) { bs = s; best = p; }
     }
     return best && FRUITS[best.key].cat === cat ? best : null;
@@ -891,6 +915,13 @@ export class Game {
     const pos = p.group.position;
     const pl = this.w.platter.position;
     if (this.scene === 'shop' && this.cust && this.cust.state === 'wait' && Math.hypot(pos.x - pl.x, pos.z - pl.z) < 0.24) {
+      if (p.radius > BIG) {
+        // 大きすぎる：お客さんは「あれ？」→ まな板にもどる（もっと小さく切ろう）
+        this.cust.react = { kind: 'are', t: 0 }; this.w.sound.voice('are', this.cust.arm.voice);
+        p.groundY = 0; p.settleTo(p.group.quaternion, clamp(pos.x - pl.x, -0.12, 0.12), 0.0, 0.5, 0, 0.06);
+        p.onLand = () => this.w.sound.thud(0.6);
+        return;
+      }
       this.placeOnPlatter(p);
       return;
     }
@@ -935,8 +966,9 @@ export class Game {
   // ======================================================== 3. 食卓
   frame_table() {
     const T = this.tablePos;
-    const pts = [T.clone().add(new THREE.Vector3(-0.32, 0, 0.3)), T.clone().add(new THREE.Vector3(0.32, 0, 0.3)), T.clone().add(new THREE.Vector3(-0.3, 0.05, -0.28)), T.clone().add(new THREE.Vector3(0.3, 0.05, -0.28))];
-    const dir = this.w.portrait ? new THREE.Vector3(0.0, 1.05, 0.72) : new THREE.Vector3(0.0, 0.8, 0.85);
+    const wd = this.w.portrait ? 0.2 : 0.32;
+    const pts = [T.clone().add(new THREE.Vector3(-wd, 0, 0.38)), T.clone().add(new THREE.Vector3(wd, 0, 0.38)), T.clone().add(new THREE.Vector3(-wd, 0.05, -0.26)), T.clone().add(new THREE.Vector3(wd, 0.05, -0.26))];
+    const dir = this.w.portrait ? new THREE.Vector3(0.0, 0.92, 0.82) : new THREE.Vector3(0.0, 0.8, 0.85);
     return this.w.frame(pts, dir, { margin: 0.95 });
   }
   enter_table() {
@@ -968,7 +1000,7 @@ export class Game {
     const tm = pbr('counter', { color: '#8a6a48', tint: '#c0a080', repeat: [1.2, 1] });
     const top = new THREE.Mesh(roundBox(1.8, 0.045, 1.0, 0.01, 2), tm); top.position.y = -0.024 - 0.0225; top.receiveShadow = true; top.castShadow = true; g.add(top);
     // 麻のランナー
-    const run = clothSheet(0.5, 1.0, 0.004, pbr('burlap', { color: '#c8b08a', tint: '#e8d8c0', repeat: [2, 4] }), 9, 30);
+    const run = clothSheet(0.5, 1.0, 0.004, pbr('towel', { color: '#d8ccb4', tint: '#d8c8a8', repeat: [3, 6] }), 9, 30);
     run.position.set(0, -0.024, 0); g.add(run);
     // 自分のお皿
     const plate = makePlatter(0.11); plate.position.set(0, -0.024, 0.27); g.add(plate);
@@ -989,21 +1021,6 @@ export class Game {
   startFamily() {
     const P = this.w.people;
     const T = this.tablePos;
-    if (!this.family) {
-      this.reachB = (dir) => basis(dir.clone().setY(-0.4).normalize(), new THREE.Vector3(0, 1, 0));
-      const mk = (spec, from) => {
-        const B = this.reachB(from.clone().negate());
-        const a = P.makeArm(Object.assign({ side: 'R', nail: lin('#e8c8b8'), arm: toLocal(B, from.clone().setY(0.35).normalize()), upper: toLocal(B, from.clone().setY(0.25).normalize()), fore: 0.26, upLen: 0.3, res: 0.0026 }, spec), []);
-        a.B = B; a.from = from; return a;
-      };
-      this.family = [
-        mk({ s: 1.0, skin: SKIN.papa, tip: SKIN.papaTip, sleeve: { type: 'rolled', col: lin('#5a7090'), col2: lin('#6a80a0'), at: 0.35 }, voice: 'papa' }, new THREE.Vector3(-0.8, 0, -0.6).normalize()),
-        mk({ s: 0.9, skin: SKIN.mama, tip: SKIN.mamaTip, sleeve: { type: 'long', col: lin('#c8b8a0'), at: 0.3 }, voice: 'mama' }, new THREE.Vector3(0.8, 0, -0.6).normalize()),
-        mk({ s: 0.66, fr: 1.1, skin: SKIN.kid2, tip: SKIN.kid2Tip, sleeve: { type: 'short', col: lin('#8aa0b0') }, voice: 'kid' }, new THREE.Vector3(-1, 0, 0.15).normalize()),
-        mk({ s: 0.62, fr: 1.12, skin: SKIN.girl, tip: SKIN.girlTip, sleeve: { type: 'short', col: lin('#d8a8a0') }, voice: 'kid' }, new THREE.Vector3(1, 0, 0.1).normalize()),
-      ];
-      this.family.forEach((a, i) => { a.voice = [ 'papa', 'mama', 'kid', 'kid'][i]; a.ensure('reach'); a.ensure('pinch'); });
-    }
     this.takeQ = 0; this.takeN = 0; this.taking = null;
     this.after(1.0, () => this.w.sound.voice('wa', 'mama'));
     this.after(1.3, () => this.w.sound.clap(3));

@@ -25,13 +25,13 @@ const STAR_GLSL = `float starS(float ph){ float c = 0.5+0.5*cos(5.0*ph); return 
 const FLESH = {
   watermelon: `
     vec3 q = p / uR; float r = length(q); float dp = 1.0 - r;
-    vec3 wc; vec4 w = worley(p*290.0, wc);
+    vec3 wc; vec4 w = worley(p*400.0, wc);
     float n1 = fbm3(p*60.0); float n2 = vn(p*2200.0);
     float cell = clamp(1.0 - w.x*1.1, 0.0, 1.0);
     vec3 red = mix(s2l(vec3(0.74,0.06,0.09)), s2l(vec3(0.92,0.24,0.24)), clamp(w.z*0.5 + cell*0.4 + n1*0.4 - 0.25, 0.0, 1.0));
     red *= mix(0.86, 1.0, smoothstep(0.0, 0.12, w.y - w.x));
     red = mix(red, s2l(vec3(0.96,0.46,0.42)), smoothstep(0.55,0.84,r)*0.4);
-    col = red; rough = 0.1 + (1.0-cell)*0.3; h = cell*cell*0.0007 + n2*0.00008; coat = 0.55; glow = 0.08 + 0.12*cell;
+    col = red; rough = 0.1 + (1.0-cell)*0.3; h = cell*cell*0.00035 + n2*0.00008; coat = 0.55; glow = 0.08 + 0.12*cell;
     float tr = smoothstep(0.085, 0.13, dp + n1*0.012);
     vec3 rind = mix(s2l(vec3(0.62,0.78,0.45)), s2l(vec3(0.93,0.95,0.80)), smoothstep(0.018,0.07,dp));
     col = mix(rind, col, tr); rough = mix(0.45, rough, tr); h = mix(fbm3(p*300.0)*0.0002, h, tr); coat *= tr; glow *= tr;
@@ -40,10 +40,10 @@ const FLESH = {
     // 種：ふたつの殻にならぶ黒い涙形
     for(int k=0;k<2;k++){
       float ph = atan(q.z, q.x); float th = acos(clamp(q.y/max(r,1e-4),-1.0,1.0));
-      float NP = 26.0 - float(k)*6.0, NT = 13.0 - float(k)*3.0;
+      float NP = 36.0 - float(k)*8.0, NT = 16.0 - float(k)*4.0;
       float ip = floor(ph/6.2832*NP + float(k)*0.5), it = floor(th/3.1416*NT);
       vec3 hs = h33(vec3(ip, it, 5.0+float(k)*9.0));
-      if(hs.x > 0.2 && it > 0.0 && it < NT-1.0){
+      if(hs.x > 0.08 && it > 0.0 && it < NT-1.0){
         float pc = (ip - float(k)*0.5 + 0.5 + (hs.y-0.5)*0.4)/NP*6.2832, tc = (it + 0.5 + (hs.z-0.5)*0.4)/NT*3.1416;
         float rs = (k==0 ? 0.66 : 0.46) + hs.x*0.08;
         vec3 er = vec3(sin(tc)*cos(pc), cos(tc), sin(tc)*sin(pc));
@@ -155,7 +155,7 @@ const FLESH = {
       float dd = abs(dot(q, nn) + (vn(p*80.0+float(i))-0.5)*0.15);
       memb = min(memb, dd);
     }
-    float mb = smoothstep(0.018, 0.006, memb);
+    float mb = smoothstep(0.011, 0.004, memb);
     vec3 mc = mix(s2l(vec3(0.90,0.78,0.50)), s2l(vec3(0.97,0.90,0.68)), vn(p*1200.0));
     col = mix(col, mc, mb); rough = mix(rough, 0.6, mb); h = mix(h, vn(p*1500.0)*0.0002, mb); coat *= 1.0-mb; glow *= 1.0-mb;
     float pz = smoothstep(0.09, 0.12, dp + vn(p*500.0)*0.02);
@@ -164,11 +164,11 @@ const FLESH = {
   pineapple: `
     vec3 q = p / uR; float rho = length(q.xz); float y = q.y; float ph = atan(q.z, q.x);
     float nn = pow(pow(rho,3.0)+pow(abs(y),3.0), 1.0/3.0); float dp = 1.0 - nn;
-    float fib = vn(vec3(ph*30.0, y*70.0, rho*4.0));
-    float fib2 = vn(vec3(ph*110.0, y*200.0, rho*8.0));
+    float fib = vn(vec3(ph*34.0, y*90.0, rho*3.0)); fib = fib*fib*(3.0-2.0*fib);
+    float fib2 = vn(vec3(ph*120.0, y*260.0, rho*6.0));
     vec3 wc0; vec4 jw = worley(p*500.0, wc0);
     float cell = clamp(1.0 - jw.x*1.2, 0.0, 1.0);
-    col = mix(s2l(vec3(0.94,0.68,0.12)), s2l(vec3(1.0,0.82,0.30)), clamp(fib*0.45 + fib2*0.2 + cell*0.35, 0.0, 1.0));
+    col = mix(s2l(vec3(0.90,0.60,0.08)), s2l(vec3(1.0,0.84,0.34)), clamp(fib*0.8 + fib2*0.3 + cell*0.25 - 0.15, 0.0, 1.0));
     rough = 0.12 + (1.0-cell)*0.2; coat = 0.6; h = (fib*0.4+fib2*0.3)*0.00025 + cell*0.0002;
     float core = smoothstep(0.2, 0.15, rho + fib*0.02);
     vec3 cc = mix(s2l(vec3(0.94,0.80,0.40)), s2l(vec3(0.98,0.88,0.55)), vn(vec3(ph*20.0, y*200.0, rho*40.0)));

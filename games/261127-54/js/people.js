@@ -1,6 +1,6 @@
 // 人：手と腕（いちばん大きく映るので写実を優先）・後ろ姿の全身
 import * as THREE from '../lib/three.module.min.js';
-import { roundCone, ellipsoid, roundBox, mesh } from './sdf.js';
+import { roundCone, ellipsoid, roundBox, cappedCone, mesh } from './sdf.js';
 import { COMMON } from './glsl.js';
 
 const L = (hex) => { const c = new THREE.Color(hex); return [c.r, c.g, c.b]; }; // sRGB→線形（Color は線形で保持）
@@ -223,8 +223,8 @@ export function bodyPrims(b) {
   out.push(ellipsoid([0, waistY, 0], [tw * 0.92, 0.08 * s, td * 0.95], b.dress ? 1 : (b.pants ? 5 : 1), b.dress ? cl : bt, 0.04));
   if (b.dress) {
     // スカート（A ライン、すそのひだ）
-    const pleat = (x, y, z) => 0.006 * Math.sin(Math.atan2(z, x) * 14) * Math.min(1, (waistY - y) / 0.15);
-    out.push(roundCone([0, waistY, 0], [0, hipY - 0.17 * s, 0], 0.11 * s, 0.185 * s, 1, cl, 0.03, pleat));
+    const pleat = (x, y, z) => { const a = Math.atan2(z, x); return (0.004 * Math.sin(a * 11 + Math.sin(a * 3) * 0.8) + 0.0015 * Math.sin(a * 23)) * Math.min(1, Math.max(0, (waistY - y) / 0.2)); };
+    out.push(cappedCone([0, 0, 0], waistY + 0.02, hipY - 0.15 * s, 0.1 * s, 0.17 * s, 1, cl, 0.03, pleat, 0.006));
   } else if (b.pants) {
     out.push(ellipsoid([0, hipY + 0.02, 0], [tw * 0.95, 0.1 * s, td], 5, bt, 0.04));
     // ベルトと裾から出たシャツ
@@ -281,7 +281,7 @@ export function headPrims(b) {
   // 耳
   for (const sx of [-1, 1]) out.push(ellipsoid([sx * hr[0] * 0.98, hc[1] - 0.005, 0.0], [0.01, 0.024, 0.016], 0, b.skin, 0.006));
   // 髪
-  const strands = (x, y, z) => 0.0016 * Math.sin(Math.atan2(x, -z) * 70 + y * 20) + 0.0008 * Math.sin(Math.atan2(x, -z) * 190);
+  const strands = (x, y, z) => { const a = Math.atan2(x, -z); return 0.0004 * Math.sin(a * 60 + y * 25 + Math.sin(a * 7) * 2) + 0.0003 * Math.sin(a * 170 + y * 40) + 0.0003 * Math.sin(a * 23 - y * 60); };
   out.push(ellipsoid([0, hc[1] + 0.012, -0.012], [hr[0] + 0.012, hr[1] + 0.01, hr[2] + 0.01], 3, b.hair, 0.01, null, strands));
   if (kid) {
     // 後頭部を覆う髪と、ふたつ結び
@@ -354,7 +354,7 @@ export class Body {
 }
 
 // ---- 人の管理 ------------------------------------------------------------
-export const SKIN = { girl: L('#e8c0a0'), girlTip: L('#e7ad98'), papa: L('#cf9f7c'), papaTip: L('#c98c74'), mama: L('#eec7aa'), mamaTip: L('#e8b3a0'), kid2: L('#d8a882'), kid2Tip: L('#d0937c') };
+export const SKIN = { girl: L('#dfb08c'), girlTip: L('#dca08a'), papa: L('#cf9f7c'), papaTip: L('#c98c74'), mama: L('#eec7aa'), mamaTip: L('#e8b3a0'), kid2: L('#d8a882'), kid2Tip: L('#d0937c') };
 export class People {
   constructor(world) {
     this.world = world;

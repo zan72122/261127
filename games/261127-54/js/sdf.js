@@ -53,6 +53,25 @@ export function roundBox(c0, h, rad, m, c, k = 0.01, rot = null, disp = null) {
   const R = Math.hypot(...h) + 0.02;
   return { f, m, c, k, bb: [c0[0] - R, c0[1] - R, c0[2] - R, c0[0] + R, c0[1] + R, c0[2] + R] };
 }
+// 縦向きの円すい台（y0 で半径 r0、y1 で r1）
+export function cappedCone(c0, y0, y1, r0, r1, m, c, k = 0.01, disp = null, round = 0.004) {
+  const yb = Math.min(y0, y1), yt = Math.max(y0, y1);
+  const rb = y0 < y1 ? r0 : r1, rt = y0 < y1 ? r1 : r0;
+  const h = (yt - yb) / 2, cy = c0[1] + (yt + yb) / 2;
+  const k2x = rt - rb, k2y = 2 * h, k2l = k2x * k2x + k2y * k2y;
+  const f = (x, y, z) => {
+    const qx = Math.hypot(x - c0[0], z - c0[2]), qy = y - cy;
+    const cax = qx - Math.min(qx, qy < 0 ? rb : rt), cay = Math.abs(qy) - h;
+    const t = Math.min(Math.max(((rt - qx) * k2x + (h - qy) * k2y) / k2l, 0), 1);
+    const cbx = qx - rt + k2x * t, cby = qy - h + k2y * t;
+    const s = (cbx < 0 && cay < 0) ? -1 : 1;
+    let d = s * Math.sqrt(Math.min(cax * cax + cay * cay, cbx * cbx + cby * cby)) - round;
+    if (disp) d += disp(x, y, z);
+    return d;
+  };
+  const R = Math.max(r0, r1) + 0.03;
+  return { f, m, c, k, bb: [c0[0] - R, c0[1] + yb - 0.03, c0[2] - R, c0[0] + R, c0[1] + yt + 0.03, c0[2] + R] };
+}
 // 差（くりぬき）
 export function subtract(prim, k = 0.004) { prim.sub = true; prim.k = k; return prim; }
 
