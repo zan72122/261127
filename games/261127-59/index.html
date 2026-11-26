@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="robots" content="noindex">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#c9b48a">
+<title>おちばを はいて</title>
+<style>
+  html, body { margin: 0; height: 100%; overflow: hidden; background: #cdbf9f; touch-action: none; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; overscroll-behavior: none; }
+  #c { position: fixed; inset: 0; width: 100vw; height: 100vh; display: block; touch-action: none; }
+  #boot { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; background: radial-gradient(circle at 50% 40%, #f3e4c2 0%, #d8b97e 55%, #a9824c 100%); transition: opacity .8s; z-index: 5; }
+  #boot.hide { opacity: 0; pointer-events: none; }
+  #boot .leaf { width: 22vmin; height: 22vmin; animation: sway 1.6s ease-in-out infinite alternate; }
+  @keyframes sway { from { transform: rotate(-14deg) translateY(-2vmin); } to { transform: rotate(14deg) translateY(2vmin); } }
+  #hand { position: fixed; left: 0; top: 0; width: 64px; height: 64px; pointer-events: none; opacity: 0; transition: opacity .5s; z-index: 4; filter: drop-shadow(0 3px 4px rgba(0,0,0,.35)); }
+  #hand.show { opacity: .95; }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div id="boot"><svg class="leaf" viewBox="0 0 100 100" aria-hidden="true"><path d="M50 92 L50 60 M50 60 C20 58 8 40 12 20 C30 34 40 30 50 8 C60 30 70 34 88 20 C92 40 80 58 50 60Z" fill="#d9531e" stroke="#8a2c10" stroke-width="2" stroke-linejoin="round"/></svg></div>
+<svg id="hand" viewBox="0 0 64 64" aria-hidden="true"><path d="M26 6c3 0 5 2 5 5v18l2-1c3-1 5 0 6 2l1 1c2-1 5 0 6 2 2-1 5 0 6 3v12c0 8-6 14-14 14h-6c-5 0-9-3-11-7L12 40c-1-3 1-5 4-5 2 0 3 1 4 2l1 2V11c0-3 2-5 5-5z" fill="#fff" stroke="#5a4a3a" stroke-width="2.2" stroke-linejoin="round"/></svg>
+<script type="module" src="js/game.js"></script>
+</body>
+</html>
