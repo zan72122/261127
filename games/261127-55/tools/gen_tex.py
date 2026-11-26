@@ -90,9 +90,9 @@ def asphalt():
     N = 1024
     h = np.zeros((N, N)); idm = np.zeros((N, N)); tint = np.zeros((N, N, 3))
     rng = np.random.default_rng(1)
-    n_st = 9000
+    n_st = 26000
     for i in range(n_st):
-        r = rng.uniform(1.6, 6.5) if rng.random() < 0.85 else rng.uniform(6, 10)
+        r = rng.uniform(1.1, 3.6) if rng.random() < 0.9 else rng.uniform(3.6, 6)
         cx, cy = rng.uniform(0, N), rng.uniform(0, N)
         k = int(r * 2 + 3) | 1
         yy, xx = np.mgrid[0:k, 0:k] - k // 2
@@ -101,18 +101,18 @@ def asphalt():
         xr = xx * math.cos(ang) + yy * math.sin(ang)
         yr = (-xx * math.sin(ang) + yy * math.cos(ang)) / ex
         d = np.sqrt(xr * xr + yr * yr) / r
-        dome = np.clip(1 - d * d, 0, 1) ** 0.6 * (0.6 + 0.4 * r / 10)
+        dome = np.clip(1 - d * d, 0, 1) ** 0.5 * (0.55 + 0.45 * r / 6)
         ys = (np.arange(k) + int(cy) - k // 2) % N
         xs = (np.arange(k) + int(cx) - k // 2) % N
         sub = h[np.ix_(ys, xs)]
         m = dome > sub
         sub2 = np.where(m, dome, sub)
         h[np.ix_(ys, xs)] = sub2
-        g = rng.uniform(0.30, 0.62)
-        warm = rng.uniform(-0.04, 0.05)
+        g = rng.uniform(0.25, 0.43)
+        warm = rng.uniform(-0.02, 0.03)
         col = np.array([g + warm, g + warm * 0.4, g - warm * 0.6])
-        if rng.random() < 0.06: col = np.array([0.72, 0.70, 0.66])  # 白い石英
-        if rng.random() < 0.05: col = np.array([0.42, 0.33, 0.28])  # 赤茶の石
+        if rng.random() < 0.035: col = np.array([0.56, 0.55, 0.52])  # 白っぽい石
+        if rng.random() < 0.04: col = np.array([0.36, 0.30, 0.27])  # 赤茶の石
         t = tint[np.ix_(ys, xs)]
         t[m] = col
         tint[np.ix_(ys, xs)] = t
@@ -123,12 +123,12 @@ def asphalt():
     hm = h * 1.0 + binder_n * 0.15 - pit * 0.35
     # 石の表面のざらつき
     hm += fnoise(N, N, 0.8, fmin=150, seed=4) * 0.08
-    binder_col = np.array([0.20, 0.20, 0.205])
+    binder_col = np.array([0.185, 0.185, 0.19])
     col = np.where(idm[..., None] > 0, tint, binder_col[None, None, :])
     col = col * (0.85 + 0.3 * fnoise(N, N, 1.2, fmin=40, seed=5))[..., None]
     # 風化：全体を明るい灰色へ（歩道の色）、低周波ムラ
     low = fnoise(N, N, 3.0, seed=6)
-    col = col * 0.75 + 0.18 + (low[..., None] - 0.5) * 0.08
+    col = col * 0.9 + 0.05 + (low[..., None] - 0.5) * 0.06
     col = col * (1 - pit[..., None] * 0.5)
     ao = cavity_ao(hm, 4, 3.0) * 0.6 + cavity_ao(hm, 12, 1.5) * 0.4
     col = col * (0.7 + 0.3 * ao[..., None])
@@ -569,8 +569,55 @@ def sparkle():
     soft = np.clip(1 - r, 0, 1) ** 2
     save('soft.png', np.stack([soft, soft, soft, soft], -1))
 
+# ---------- 17. 髪の流れ（縦の筋） ----------
+def hairflow():
+    W, H = 256, 512
+    n = R.standard_normal((H, W))
+    F = np.fft.fft2(n)
+    fy = np.fft.fftfreq(H)[:, None]; fx = np.fft.fftfreq(W)[None, :]
+    st = norm01(np.real(np.fft.ifft2(F * np.exp(-(fy * 60) ** 2) * np.exp(-(fx * 2) ** 2 * 0))))
+    st2 = norm01(np.real(np.fft.ifft2(np.fft.fft2(R.standard_normal((H, W))) * np.exp(-(fy * 20) ** 2) * np.exp(-(fx * 40) ** 2))))
+    hm = st * 0.7 + st2 * 0.3
+    save('hairflow_nrm.jpg', normal_from_height(hm, 4))
+    save('hairflow_col.jpg', np.stack([0.75 + 0.35 * hm] * 3, -1))
+
+
+# ---------- 18. 遠くの木（カード） ----------
+def treecards():
+    S = 512
+    rng = np.random.default_rng(181)
+    for name, base, var in [('tree_pink.png', (0.93, 0.76, 0.80), 0.12), ('tree_green.png', (0.16, 0.26, 0.11), 0.35)]:
+        img = np.zeros((S, S, 4))
+        yy, xx = np.mgrid[0:S, 0:S].astype(float)
+        # 幹
+        tw = 10
+        trunk = (np.abs(xx - S / 2 - (yy - S) * 0.03) < tw * (1 + (S - yy) / S * 0.5)) & (yy > S * 0.55)
+        img[trunk, :3] = [0.17, 0.12, 0.10]; img[trunk, 3] = 1
+        # 樹冠：小さな葉（花）の房をたくさん。中ほど暗く、上が明るい
+        for k in range(900):
+            cx = S / 2 + rng.normal(0, S * 0.17); cy = S * 0.36 + rng.normal(0, S * 0.11)
+            if ((cx - S / 2) / (S * 0.42)) ** 2 + ((cy - S * 0.36) / (S * 0.3)) ** 2 > 1: continue
+            r = rng.uniform(S * 0.012, S * 0.035)
+            x0, x1 = int(max(0, cx - r - 2)), int(min(S, cx + r + 2)); y0, y1 = int(max(0, cy - r - 2)), int(min(S, cy + r + 2))
+            sub_y, sub_x = np.mgrid[y0:y1, x0:x1]
+            d = np.sqrt((sub_x - cx) ** 2 + (sub_y - cy) ** 2) / r
+            m = d < 1
+            top = 1 - (cy - S * 0.12) / (S * 0.55)
+            shade = 0.55 + 0.55 * top + rng.uniform(-0.12, 0.12) - d * 0.12
+            col = np.array(base) * np.clip(shade, 0.35, 1.25)[..., None]
+            sub = img[y0:y1, x0:x1]
+            sub[m, :3] = col[m]; sub[m, 3] = 1
+            img[y0:y1, x0:x1] = sub
+        a = img[..., 3]
+        speck = fnoise(S, S, 0.5, fmin=90, seed=7)
+        edge = blur(a, 2.0)
+        a = np.where((edge < 0.98) & (speck < 0.45), 0, a)
+        img[..., 3] = np.clip(blur(a, 0.7) * 1.2, 0, 1)
+        save(name, img)
+
+
 if __name__ == '__main__':
     import sys
-    todo = sys.argv[1:] or ['asphalt', 'grass', 'bark', 'blossoms', 'wood', 'carpaint', 'tire', 'metal', 'knit', 'denim', 'cotton', 'skin', 'hair', 'straw', 'cardboard', 'pebble', 'chalk', 'sparkle']
+    todo = sys.argv[1:] or ['asphalt', 'grass', 'bark', 'blossoms', 'wood', 'carpaint', 'tire', 'metal', 'knit', 'denim', 'cotton', 'skin', 'hair', 'straw', 'cardboard', 'pebble', 'chalk', 'sparkle', 'hairflow', 'treecards']
     for t in todo:
         globals()[t]()

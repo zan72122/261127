@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,minimum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="robots" content="noindex">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#c9d6df">
+<title>ぬったら ほんもの</title>
+<style>
+html,body{margin:0;padding:0;width:100%;height:100%;overflow:hidden;background:#c9d3d8;
+  touch-action:none;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;
+  overscroll-behavior:none;-webkit-tap-highlight-color:transparent}
+#c{position:fixed;left:0;top:0;width:100%;height:100%;display:block;touch-action:none}
+#load{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;
+  background:radial-gradient(circle at 50% 45%,#e9eef0 0%,#c9d3d8 70%);transition:opacity .6s}
+#load.hide{opacity:0;pointer-events:none}
+#load i{width:74px;height:74px;border-radius:50%;border:7px solid rgba(255,255,255,.95);border-top-color:rgba(255,255,255,.15);
+  animation:spin 1s linear infinite;box-shadow:0 0 12px rgba(0,0,0,.08)}
+@keyframes spin{to{transform:rotate(360deg)}}
+#hint{position:fixed;left:0;top:0;pointer-events:none;opacity:0;transition:opacity .4s;z-index:5;will-change:transform}
+#hint.on{opacity:.92}
+#hint svg{display:block;animation:tapme 1.1s ease-in-out infinite;transform-origin:42% 8%}
+@keyframes tapme{0%,100%{transform:translate(0,0) scale(1)}50%{transform:translate(0,10px) scale(.94)}}
+#fade{position:fixed;inset:0;background:#fff;opacity:0;pointer-events:none;transition:opacity .35s;z-index:4}
+#fade.on{opacity:1}
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div id="fade"></div>
+<div id="load"><i></i></div>
+<script type="module" src="./js/main.js"></script>
+</body>
+</html>
