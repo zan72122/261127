@@ -262,9 +262,11 @@ def gen_oak(W=2048, H=1024):
     wear = np.clip(fftnoise(H, W, 3.0, seed=78) * 0.5 + 0.2, 0, 1)
     rough = np.clip(rough + wear * 0.08, 0, 1)
     ao = ao_from_height(blur_wrap(hgt, 1.0), 3, 1.0) * (1 - 0.4 * sg)
-    save_rgb(col, 'oak_c.jpg', 86)
-    save_rgb(normal_from_height(blur_wrap(hgt, 0.7) - sc * 0.15, 3.0), 'oak_n.jpg', 88)
-    save_orm(ao, rough, 0.0, 'oak_orm.jpg')
+    save_rgb(col, 'oak_c.jpg', 82)
+    nrm = normal_from_height(blur_wrap(hgt, 0.7) - sc * 0.15, 3.0)
+    Image.fromarray(nrm).resize((W // 2, H // 2), Image.LANCZOS).save(os.path.join(OUT, 'oak_n.jpg'), quality=86)
+    orm = (np.stack([ao, rough, np.zeros_like(ao)], -1).clip(0, 1) * 255).astype(np.uint8)
+    Image.fromarray(orm).resize((W // 2, H // 2), Image.LANCZOS).save(os.path.join(OUT, 'oak_orm.jpg'), quality=84)
     print('oak done')
 
 # ---------------------------------------------------------------- plaster wall

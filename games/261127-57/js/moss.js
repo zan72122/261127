@@ -58,7 +58,7 @@ export function trackPoint(u, out = new THREE.Vector3()) {
   out.set(TRACK.cx + Math.cos(a) * TRACK.rx, 0, TRACK.cz + Math.sin(a) * TRACK.rz);
   return out;
 }
-function trackDist(x, z) {
+export function trackDist(x, z) {
   // approximate distance to ellipse
   const dx = (x - TRACK.cx) / TRACK.rx, dz = (z - TRACK.cz) / TRACK.rz;
   const r = Math.hypot(dx, dz);
@@ -204,6 +204,7 @@ export class Moss {
 
   setHiRes() {
     this.terrainMat.map = tex('moss_dry_c');
+    this.terrainMat.map.repeat.copy(this.terrainMat.normalMap.repeat);
     this.terrainUniforms.uWetMap.value = tex('moss_wet_c');
     this.terrainMat.needsUpdate = true;
   }
@@ -370,7 +371,7 @@ export class Moss {
           float show = smoothstep(0.72 + aRnd * 0.18, 0.98 + aRnd * 0.1, w) * (1.0 - smoothstep(0.05, 0.2, S.g)) * (1.0 - S.b);
           vec3 p = position; p.y += w * 0.0035;
           vec4 mv = modelViewMatrix * vec4(p, 1.0);
-          float size = (0.0007 + aRnd * aRnd * 0.0011) * show;
+          float size = (0.0009 + aRnd * aRnd * 0.0016) * show;
           gl_PointSize = size * uScale / -mv.z;
           vA = show; vR = aRnd;
           vec3 sv = (viewMatrix * vec4(uSunDir, 0.0)).xyz;
@@ -395,7 +396,7 @@ export class Moss {
           // sun glint
           vec2 gp = vSun * 0.45;
           float tw = 0.75 + 0.25 * sin(uTime * 3.0 + vR * 40.0);
-          float glint = exp(-dot(q - gp, q - gp) * 90.0) * 6.0 * tw;
+          float glint = exp(-dot(q - gp, q - gp) * 70.0) * 9.0 * tw;
           col += uSunCol * glint;
           col *= 1.0 - 0.55 * smoothstep(0.82, 1.0, sqrt(r2)) * (1.0 - n.y);
           float a = vA * (0.55 + 0.45 * rim + glint);

@@ -1,8 +1,8 @@
 // びんのなかのもり — main: renderer, layout, camera, input, tools, scene flow.
 import * as THREE from '../lib/three.module.min.js';
-import { tex, whenAll, loadPeople, TEX_FILES, setAniso } from './assets.js';
+import { tex, whenAll, loadPeople, TEX_FILES, FIRST, setAniso } from './assets.js';
 import { buildEnvironment, buildRoom, buildLights, contactShadow, SUN_DIR } from './room.js';
-import { Moss, R as MOSS_R, BASE_Y, creekDist, creekDir, trackPoint, HOUSE, groundH } from './moss.js';
+import { Moss, R as MOSS_R, BASE_Y, creekDist, creekDir, trackPoint, trackDist, HOUSE, groundH } from './moss.js';
 import { Jar, JAR } from './jar.js';
 import { makeMaterials, makeSprayer, makeDropper, makeMagnifier, pebbleGeometries, twigGeometry, Placer, makeHouse, makeTrack, makeTrain, makeRuleCard, makeDish, makeCup } from './props.js';
 import { Hand, Figure, peopleMaterials } from './people.js';
@@ -41,7 +41,7 @@ const world = new THREE.Group();
 scene.add(world);
 
 async function boot() {
-  const first = TEX_FILES.filter((n) => !['moss_dry_c', 'moss_wet_c'].includes(n)).map((n) => tex(n));
+  const first = FIRST.map((n) => tex(n));
   const peopleP = loadPeople();
   scene.environment = buildEnvironment(renderer);
   scene.environmentIntensity = 0.9;
@@ -53,8 +53,9 @@ async function boot() {
   renderer.compile(scene, camera);
   requestAnimationFrame(loop);
   setTimeout(() => { document.getElementById('veil').style.opacity = '0'; }, 120);
-  // hi-res moss arrives later
-  whenAll([tex('moss_dry_c'), tex('moss_wet_c')]).then(() => moss.setHiRes());
+  // everything else streams in (placeholders until then); hi-res moss swaps in last
+  const rest = TEX_FILES.filter((n) => !FIRST.includes(n) && !['moss_dry_c', 'moss_wet_c'].includes(n)).map((n) => tex(n));
+  whenAll(rest).then(() => whenAll([tex('moss_dry_c'), tex('moss_wet_c')])).then(() => { moss.setHiRes(); window.__loaded = true; });
 }
 
 function build() {
@@ -197,8 +198,8 @@ let portrait = false;
 function layoutTable() {
   // portrait: tools in a row in front of the jar; landscape: on both sides
   const L = portrait ? {
-    spray: [0.15, 0, 0.235, 0.5, 0], dropper: [0.075, 0.0055, 0.33, 1.45, 1], magnifier: [-0.055, 0.006, 0.315, -0.2, 2],
-    pebble: [-0.13, 0, 0.235, 0, 0], twig: [-0.17, 0, 0.135, 0.9, 0], card: [0.17, 0, -0.2, -0.45], cup: [0.18, 0, 0.13], lid: [-0.12, 0.0045, -0.30],
+    spray: [0.165, 0, 0.17, 0.5, 0], dropper: [0.105, 0.0055, 0.255, 2.0, 1], magnifier: [-0.02, 0.006, 0.262, -0.2, 2],
+    pebble: [-0.135, 0, 0.225, 0, 0], twig: [-0.175, 0, 0.10, 0.9, 0], card: [0.19, 0, -0.17, -0.45], cup: [0.19, 0, 0.02], lid: [-0.20, 0.0045, -0.25],
   } : {
     spray: [0.255, 0, 0.03, 0.6, 0], dropper: [0.23, 0.0055, 0.165, 0.7, 1], magnifier: [-0.235, 0.006, 0.02, -0.3, 2],
     pebble: [-0.22, 0, 0.16, 0, 0], twig: [-0.27, 0, -0.10, 1.1, 0], card: [0.27, 0, -0.18, -0.5], cup: [0.33, 0, -0.08], lid: [-0.40, 0.0045, -0.23],
@@ -260,7 +261,7 @@ const shots = {
 function playPts() {
   const p = [V3(-0.165, 0.27, 0), V3(0.165, 0.27, 0), V3(0, 0.27, -0.16), V3(-0.165, 0.0, 0.02), V3(0.165, 0.0, 0.02), V3(0, 0.0, 0.17), V3(0.08, 0.315, 0.12)];
   for (const t of Object.values(tools)) {
-    const r = t.name === 'spray' ? 0.03 : t.r * 0.8;
+    const r = t.name === 'spray' ? 0.03 : t.name === 'dropper' ? 0.06 : t.name === 'magnifier' ? 0.07 : t.r * 0.8;
     for (const o of [V3(r, 0.01, 0), V3(-r, 0.01, 0), V3(0, 0.01, r), V3(0, t.name === 'spray' ? 0.16 : 0.02, 0)]) p.push(t.home.clone().add(o));
   }
   return p;
@@ -268,7 +269,7 @@ function playPts() {
 const cam = { pos: V3(0, 0.4, 1.8), tgt: V3(0, 0, 0), from: null, to: null, t: 1, dur: 1.6, shot: 'intro' };
 function shotPose(name) {
   const s = shots[name];
-  const dir = s.dir.clone().normalize();
+  const dir = (name === 'play' && portrait ? V3(0, -0.66, -1) : s.dir).clone().normalize();
   const right = dir.clone().cross(UP).normalize();
   const up = right.clone().cross(dir).normalize();
   const tanV = Math.tan(THREE.MathUtils.degToRad(camera.fov / 2));
@@ -703,7 +704,6 @@ function smoothTool(obj, pos, q, dt, k) {
 
 // spray pump: a cone of fine mist
 function pump(obj, dir) {
-  G.pumps = (G.pumps || 0) + 1;
   sfx.spray();
   const tip = obj.userData.tip.clone().applyMatrix4(obj.matrixWorld);
   const n = 150;
@@ -737,14 +737,13 @@ function pump(obj, dir) {
 // particle collisions: moss, glass, table
 function collide(x, y, z, kind, size) {
   const r = Math.hypot(x, z);
-  G.cc = G.cc || {}; const key = r < JAR.ri - 0.001 ? (y < BASE_Y + 0.05 ? 'low' : 'in') : (r < JAR.r + 0.002 && y < JAR.h && y > 0 ? 'glass' : 'out'); G.cc[key] = (G.cc[key] || 0) + 1;
   if (r < JAR.ri - 0.001) {
     if (jar.lidState === 1 && y > JAR.h - 0.004) return true;
     if (y < BASE_Y + 0.05) {
       const h = moss.heightAt(x, z) + 0.002;
       if (y <= h) {
         if (kind === 0) moss.addWet(x, z, 0.012 + size * 4, 0.0085);
-        else if (G.dadT > 0) { moss.addWater(x, z, 0.00055, 0.010); if (Math.random() < 0.05) sfx.drip(); }
+        else if (G.dadT > 0) { moss.addWater(x, z, 0.00016, 0.010); if (Math.random() < 0.05) sfx.drip(); }
         else moss.addWet(x, z, 0.03, 0.005);
         return true;
       }
@@ -763,6 +762,7 @@ function placeAlong(kind, p) {
   if (Math.hypot(p.x - HOUSE.x, p.z - HOUSE.z) < 0.026) return;
   if (kind === 'pebble') {
     if (G.lastPlace && G.lastPlace.distanceTo(p) < 0.0085) return;
+    if (trackDist(p.x, p.z) < 0.0075) { G.lastPlace = p.clone(); return; } // keep the rails clear (a level crossing)
     const s = 0.0032 + Math.random() * 0.0028;
     const q = new THREE.Quaternion().setFromEuler(new THREE.Euler((Math.random() - 0.5) * 0.3, Math.random() * 6.28, (Math.random() - 0.5) * 0.3));
     const pos = V3(p.x + (Math.random() - 0.5) * 0.002, moss.heightAt(p.x, p.z) + s * 0.18, p.z + (Math.random() - 0.5) * 0.002);
@@ -783,7 +783,7 @@ function placeAlong(kind, p) {
       return;
     }
     if (d < 0.024) return;
-    if (creekDist(mid.x, mid.z) < 0.012) { G.lastTwig = p.clone(); return; }
+    if (creekDist(mid.x, mid.z) < 0.012 || trackDist(mid.x, mid.z) < 0.012) { G.lastTwig = p.clone(); return; }
     const ang = Math.atan2(p.z - G.lastTwig.z, p.x - G.lastTwig.x);
     const q = new THREE.Quaternion().setFromEuler(new THREE.Euler(0, -ang + (Math.random() - 0.5) * 0.2, (Math.random() - 0.5) * 0.1));
     twigs.add(V3(mid.x, moss.heightAt(mid.x, mid.z) + 0.0012, mid.z), q, V3(1, 1, 1), null);
@@ -1135,6 +1135,8 @@ function adapt(dt) {
 
 // ------------------------------------------------------------------ main loop
 const clock = new THREE.Clock();
+let FRAME = 0;
+const FAST = !!Q.get('fast');
 function loop() {
   requestAnimationFrame(loop);
   const dt = Math.min(0.05, clock.getDelta());
@@ -1155,6 +1157,8 @@ function loop() {
   }
   updateHints(DBG ? 0.3 : dt);
   if (G.huhWobble > 0) { G.huhWobble -= dt; hand.group.rotateZ(Math.sin(G.huhWobble * 20) * 0.08 * G.huhWobble); }
+  FRAME++;
+  if (FAST && FRAME % 20) return;
   renderLens();
   renderer.render(scene, camera);
   if (!DBG) adapt(dt);
@@ -1189,7 +1193,8 @@ window.__api = {
   setCam: (p, t) => { cam.pos.set(...p); cam.tgt.set(...t); cam.t = 1; cam.shot = null; },
   handPos: () => hand.group.position.toArray(),
   look: (k = 0.45) => { const h = hand.group.position.clone(); const c = camera.position.clone(); const p = c.lerp(h, k); cam.pos.copy(p); cam.tgt.copy(h); cam.t = 1; cam.shot = null; },
-  emitTest: () => { particles.emit(0, V3(0, 0.2, 0), V3(0, 0, 0), 2, 0.005, 1); const i = particles.free.length; const before = particles.life.filter((x) => x > 0).length; particles.update(0.016, collide); return [before, particles.life.filter((x) => x > 0).length, i]; },
+  handPos: () => hand.group.position.toArray(),
+  look: (k = 0.45) => { const h = hand.group.position.clone(); const c = camera.position.clone(); const p = c.lerp(h, k); cam.pos.copy(p); cam.tgt.copy(h); cam.t = 1; cam.shot = null; },
   parts: () => { let n = 0; for (let i = 0; i < particles.cap; i++) if (particles.life[i] > 0) n++; const t = tools.spray.obj.userData.tip.clone().applyMatrix4(tools.spray.obj.matrixWorld); return { n, tip: t.toArray(), free: particles.free.length, pump: G.pumpT, press: G.pressing, tp: G.touchPoint && G.touchPoint.toArray() }; },
   stats: () => ({ cov: moss.coverage(0.4), flood: moss.flood(), stones: stones.count, bridges: G.bridges.length, held: G.held, fog: jar.fogAmt, wipe: G.wipeLen }),
 };

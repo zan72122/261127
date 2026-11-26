@@ -272,10 +272,14 @@ def write_all():
     for name, m in meshes.items():
         e = {}
         e['count'] = len(m['v'])
-        e['pos'] = put(m['v'].ravel())
+        lo = m['v'].min(0); hi = m['v'].max(0); c = (lo + hi) / 2; s = (hi - lo) / 2 + 1e-9
+        e['posq'] = dict(o=[float(x) for x in c], s=[float(x) for x in s])
+        e['pos'] = put(np.round((m['v'] - c) / s * 32767).astype(np.int16).ravel())
         nq = np.round(m['n'] * 127).astype(np.int8)
         e['nrm'] = put(nq.ravel())
-        e['uv'] = put(m['uv'].ravel())
+        lo = m['uv'].min(0); hi = m['uv'].max(0); c = (lo + hi) / 2; s = (hi - lo) / 2 + 1e-9
+        e['uvq'] = dict(o=[float(x) for x in c], s=[float(x) for x in s])
+        e['uv'] = put(np.round((m['uv'] - c) / s * 32767).astype(np.int16).ravel())
         e['mat'] = put(m['mat'])
         e['index'] = put(m['f'].ravel())
         e['icount'] = int(m['f'].size)
@@ -407,7 +411,7 @@ def make_sleeve(name='sleeve', r0=0.026, r1=0.042, L=0.42, cuff=0.022, folds=7):
     prims = [cone(a, b, r0, r1, mat=COAT, k=0, disp=disp)]
     # rolled cuff ring
     prims.append(cone(a + V(0, 0.003, 0), a - V(0, cuff, 0), r0 + 0.004, r0 + 0.0045, mat=COAT, k=0.004))
-    prims.append(Prim('cone', (a + V(0, 0.012, 0), a - V(0, 0.4, 0), r0 - 0.0035, r1 - 0.004), sub=True))
+    prims.append(Prim('cone', (a + V(0, 0.012, 0), a - V(0, 0.4, 0), r0 - 0.0075, r1 - 0.009), sub=True))
     v, f = build(prims, 0.0011, pad=0.006)
     v = smooth(v, f, 3)
     v, f = decimate(v, f, 16000)
