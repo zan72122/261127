@@ -120,7 +120,19 @@ resetCycle();
 function logEv(k,extra){S.events.push(Object.assign({k,t:+S.t.toFixed(2),cycle:S.cycle},extra||{}));if(S.events.length>400)S.events.shift();}
 
 // derived geometry
-function slopeAng(){return 0.13+0.07*S.near;}
+function slopeAng(){
+  let a=0.13+0.07*S.near;
+  // a nearby friend holds the over-long sleeve end down toward the pocket
+  if(S.near>0.4&&S.sleeve>40){
+    const L=S.sleeve,pk=pocketGeom();
+    if(HAND.x+L*Math.cos(a)>pk.x+pk.hw-6){
+      const need=Math.acos(clamp((pk.x-HAND.x)/L,-1,1));
+      const maxA=Math.asin(clamp((pk.top-10-HAND.y)/L,-1,1));
+      const tg=Math.min(need,maxA);if(tg>a)a=lerp(a,tg,smooth(0.4,0.85,S.near));
+    }
+  }
+  return a;
+}
 function sleeveEnd(){const a=slopeAng();return {x:HAND.x+S.sleeve*Math.cos(a),y:HAND.y+S.sleeve*Math.sin(a)};}
 function beamAng(){return BEAM_K*S.tilt;}
 function beamY(x){return PIV.y-(x-PIV.x)*Math.tan(beamAng());}
@@ -378,7 +390,7 @@ function computeHint(){
   if(S.mitten<1||(!isDam()&&S.sleeve<LMAX&&sleeveShort()))return {g:0,look:S.sleeve>3?sleeveEnd():HAND};
   if(S.mitten<MIT_MAX&&nextAKnit())return {g:0,look:sleeveEnd()};
   if(S.pocketD<PD_MAX&&yarnOK(2))return {g:1,look:pocketGeom()};
-  return {g:(S.t%16<8)?0:1,look:(S.t%16<8)?sleeveEnd():pocketGeom()};
+  return {g:0,look:sleeveEnd()};
 }
 
 // ================= update =================
@@ -435,7 +447,7 @@ function update(dt){
   }
   if(S.pond>pondCap())S.pond=pondCap();
   // pocket leak
-  if(S.pocketN>0){S.leakT-=dt;if(S.leakT<=0){S.leakT=1.4;S.pocketN--;const pk=pocketGeom();addBall({m:'f',src:'B',x:pk.x,y:pk.top+pk.h,vx:rand(-8,8),vy:30,sP:true,sF:true,r:5.5});}}
+  if(S.pocketN>0){S.leakT-=dt;if(S.leakT<=0){S.leakT=0.95;S.pocketN--;const pk=pocketGeom();addBall({m:'f',src:'B',x:pk.x,y:pk.top+pk.h,vx:rand(-8,8),vy:30,sP:true,sF:true,r:5.5});}}
   else S.leakT=1.4;
   if(S.pocketN>cap)S.pocketN=cap;
   // fires
@@ -1117,7 +1129,7 @@ function render(){
   // scarf during ending (workshop part)
   if(S.end&&S.end.t<2.4){
     const k=smooth(0,1.4,S.end.t);
-    const pts=[{x:SPOOL_C.x,y:SPOOL_C.y+10},{x:GIRL.x,y:GIRL.foot-162}];
+    const pts=[{x:SPOOL_C.x-30,y:SPOOL_C.y+20},{x:40,y:170},{x:84,y:282},{x:GIRL.x,y:GIRL.foot-160}];
     pts.push({x:pf.x-4,y:pf.y-102});
     if(S.helper)pts.splice(2,0,{x:HELP.x,y:HELP.foot-62});
     const n=Math.max(2,Math.round(pts.length*k));drawScarf(pts.slice(0,n),S.end.scarf);
