@@ -62,11 +62,11 @@ const SHOTS = {
   wheel: { pos: [0.05, 0.86, -0.08], look: [0.05, 0.52, -0.56], f: 42, pPos: [0.05, 0.9, 0.0], pLook: [0.05, 0.5, -0.56] },
   wheelWide: { pos: [0.55, 1.0, 0.15], look: [0.05, 0.52, -0.56], f: 38 },
   dry: { pos: [-0.7, 0.75, -0.25], look: [-1.2, 0.5, -0.78], f: 45 },
-  glaze: { pos: [1.05, 0.92, -0.68], look: [1.05, 0.5, -1.45], f: 36, pPos: [1.05, 1.0, -0.42], pLook: [1.05, 0.5, -1.45] },
+  glaze: { pos: [1.05, 0.92, -0.68], look: [1.05, 0.5, -1.45], f: 36, pPos: [1.05, 1.08, -0.22], pLook: [1.05, 0.52, -1.45] },
   kiln: { pos: [0.72, 0.95, 0.12], look: [1.85, 0.55, -0.08], f: 38, pPos: [0.55, 1.02, 0.15], pLook: [1.85, 0.55, -0.08] },
   kilnIn: { pos: [1.18, 0.78, -0.02], look: [1.9, 0.48, -0.06], f: 45 },
   thumb: { pos: [-0.86, 0.93, 1.07], look: [-0.95, 0.81, 0.67], f: 50 },
-  table: { pos: [-0.95, 1.1, 1.3], look: [-0.95, 0.78, 0.35], f: 40, pPos: [-0.95, 1.32, 1.36], pLook: [-0.95, 0.6, 0.45] },
+  table: { pos: [-0.95, 1.1, 1.3], look: [-0.95, 0.78, 0.35], f: 40, pPos: [-0.95, 1.26, 1.42], pLook: [-0.95, 0.74, 0.48] },
 };
 const cam = { pos: new THREE.Vector3(), look: new THREE.Vector3(), fromPos: new THREE.Vector3(), fromLook: new THREE.Vector3(), toPos: new THREE.Vector3(), toLook: new THREE.Vector3(), t: 1, dur: 1, f0: 40, f1: 40, shot: null };
 function shotVec(s) {
@@ -447,6 +447,15 @@ const wheelStage = {
     clay.dry(dt);
     // 形の判定
     this.stats = clay.stats();
+    // 器が高くなったらカメラも少し引いて上を向く
+    {
+      const Hh = clay.slump > 0.1 ? 0.06 : clay.H;
+      const ly = POS.wheelHeadY + Math.max(0.05, Hh * 0.55);
+      const S1 = SHOTS.wheel;
+      S1.look[1] = ly; S1.pos[1] = ly + 0.34 + Hh * 0.25; S1.pos[2] = -0.08 + Math.max(0, Hh - 0.1) * 0.9;
+      S1.pLook[1] = ly - 0.02; S1.pPos[1] = ly + 0.38 + Hh * 0.3; S1.pPos[2] = 0.0 + Math.max(0, Hh - 0.1) * 1.1;
+      focusTarget.y += (ly - focusTarget.y) * 0.1;
+    }
     if (this.sub === 'shape' && this.stats.open && this.stats.top > 0.06) gameState.firstShape += dt * (finger.active ? 1 : 0.3);
     if (this.sub === 'shape' && !gameState.mishapDone && gameState.firstShape > 6 && !finger.active && clock - lastInput > 0.8) papaMishap();
     this.wireReady = (this.sub === 'shape2' || (this.sub === 'shape' && gameState.mishapDone)) && this.stats.kind !== 'lump' && (this.stats.top > 0.035);
@@ -640,7 +649,7 @@ function updateHands(dt) {
     const n = finger.cN.clone().normalize();
     const useLeft = n.dot(right) < -0.35;
     const act = useLeft ? hands.cup : hands.press, sup = useLeft ? hands.press : hands.cup;
-    let fwd = camDir.clone().add(new THREE.Vector3(0, 0.25, 0));
+    let fwd = camDir.clone().add(new THREE.Vector3(0, 0.45, 0));
     fwd.addScaledVector(n, -fwd.dot(n));
     if (fwd.lengthSq() < 0.08) { fwd = new THREE.Vector3(0, n.y > 0.5 ? 0 : 1, n.y > 0.5 ? 0 : 0).add(camDir.clone().multiplyScalar(n.y > 0.5 ? 1 : 0)); fwd.addScaledVector(n, -fwd.dot(n)); }
     if (n.y > 0.5 || finger.zone === 'inner' || finger.zone === 'floor') { fwd = camDir.clone().add(new THREE.Vector3(0, -0.6, 0)); fwd.addScaledVector(n, -fwd.dot(n) * 0.6); }
@@ -655,7 +664,7 @@ function updateHands(dt) {
     const lr = Math.max(0.03, sampleOuterR(ly)) + 0.003;
     const lt = base.clone().addScaledVector(right, side * lr).add(new THREE.Vector3(0, ly, 0)).addScaledVector(camDir, -0.012);
     const sn = right.clone().multiplyScalar(side);
-    const sf = camDir.clone().add(new THREE.Vector3(0, 0.35, 0)); sf.addScaledVector(sn, -sf.dot(sn)); sf.normalize();
+    const sf = camDir.clone().multiplyScalar(0.8).add(new THREE.Vector3(0, 0.55, 0)); sf.addScaledVector(sn, -sf.dot(sn)); sf.normalize();
     placeHand(sup, lt, sf, sn, useLeft ? TIP : CUP_PAD, k);
   } else {
     // 休めている手：手前の水受けのふち
@@ -845,5 +854,5 @@ function viewHand(name, yaw = 0, pitch = 0.6, dist = 0.3) {
   return 'ok';
 }
 if (DEBUG) {
-  window.__game = { viewHand, screenOf: (x, y, z) => { const v = new THREE.Vector3(x, y, z).project(camera); return [(v.x * 0.5 + 0.5) * W, (-v.y * 0.5 + 0.5) * H]; }, get stage() { return stage.name; }, get sub() { return stage.sub; }, hintPos: () => { const t = hint.target && hint.target(); return t ? [t.x, t.y, t.z] : null; }, simStroke, updateFinger, goStage, wheelStage, introStage, dryStage, glazeStage, tableStage, clay, finger, setShot, gameState, wearApron, papaMishap, cutWithWire, reballTap, wetHands, people, hands, camera, scene, post, L, renderer, wheel, ctx, restartGame, setFocal: (f) => { focal = f; applyFocal(); } };
+  window.__game = { setCustomShot: (sh) => { SHOTS.custom = sh; setShot('custom', 0); focusTarget.set(sh.look[0], sh.look[1], sh.look[2]); }, viewHand, screenOf: (x, y, z) => { const v = new THREE.Vector3(x, y, z).project(camera); return [(v.x * 0.5 + 0.5) * W, (-v.y * 0.5 + 0.5) * H]; }, get stage() { return stage.name; }, get sub() { return stage.sub; }, hintPos: () => { const t = hint.target && hint.target(); return t ? [t.x, t.y, t.z] : null; }, simStroke, updateFinger, goStage, wheelStage, introStage, dryStage, glazeStage, tableStage, clay, finger, setShot, gameState, wearApron, papaMishap, cutWithWire, reballTap, wetHands, people, hands, camera, scene, post, L, renderer, wheel, ctx, restartGame, setFocal: (f) => { focal = f; applyFocal(); } };
 }

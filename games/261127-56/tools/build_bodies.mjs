@@ -109,11 +109,11 @@ function sleevePrims(S, z0, z1, kind) {
     if (kind === 'roll') d += 0.0025 * Math.sin(a * 5 + zz * 40);
     return d * S;
   };
-  const n = 8;
+  const n = 12;
   for (let i = 0; i <= n; i++) {
     const z = z0 + (z1 - z0) * i / n;
     const t = i / n;
-    let rx = 0.036 + 0.006 * t, ry = 0.029 + 0.005 * t;
+    let rx = 0.036 + 0.014 * t, ry = 0.029 + 0.012 * t;
     if (i <= 1) { rx += 0.004; ry += 0.004; } // 折り返しの厚み
     outer.push({ p: ellipsoid([0, 0.0015 * S, z * S], [rx * S, ry * S, 0.035 * S], null, { disp }), k: 0.025 * S });
     if (i <= 1) inner.push({ p: ellipsoid([0, 0.0015 * S, (z + 0.012) * S], [(rx - 0.0042) * S, (ry - 0.0042) * S, 0.03 * S]), k: 0.01 * S });
@@ -134,7 +134,7 @@ const POSES = {
 function buildHand(name, poseName, S, mirror, sleeveKind, h) {
   const { skin, nails } = handPrims({ pose: POSES[poseName], scale: S });
   skin.push({ p: plane([0, 0, -1], 0.08 * S), op: 'i', k: 0 }); // 袖の中は作らない
-  const sl = sleevePrims(S, -0.05, -0.17, sleeveKind);
+  const sl = sleevePrims(S, -0.05, -0.42, sleeveKind);
   const fSkin = compose(skin), fNail = compose(nails), fSl = compose(sl);
   const fAll = (x, y, z) => Math.min(fSkin(x, y, z), fNail(x, y, z), fSl(x, y, z));
   const mx = mirror ? -1 : 1;
@@ -143,7 +143,7 @@ function buildHand(name, poseName, S, mirror, sleeveKind, h) {
   const t0 = Date.now();
   const gS = polygonize(wrap(fSkin), bmin, bmax, h, { aoField: wrap(fAll), aoStep: 0.003 * S, aoK: 0.75 });
   const gN = polygonize(wrap(fNail), bmin, bmax, h * 0.7, { aoField: wrap(fAll), aoStep: 0.002 * S });
-  const gL = polygonize(wrap(fSl), [-0.06 * S, -0.05 * S, -0.18 * S], [0.06 * S, 0.05 * S, -0.04 * S], h * 2.0, { aoField: wrap(fAll), aoStep: 0.004 * S });
+  const gL = polygonize(wrap(fSl), [-0.075 * S, -0.065 * S, -0.44 * S], [0.075 * S, 0.065 * S, -0.04 * S], h * 2.4, { aoField: wrap(fAll), aoStep: 0.004 * S });
   if (mirror) for (const g of [gS, gN, gL]) flipWinding(g);
   const meshes = [
     { name: 'skin', part: 'hand', mat: 'skin', geo: gS },

@@ -95,7 +95,7 @@ export class TableStage {
     const potM = new THREE.MeshPhysicalMaterial({ color: 0x9b2f22, roughness: 0.25, clearcoat: 1, clearcoatRoughness: 0.08 });
     this.soup = new THREE.Group(); this.soup.position.set(0.27, top, -0.1); g.add(this.soup);
     lathe([[0, 0], [0.1, 0], [0.11, 0.01], [0.112, 0.11], [0.118, 0.115], [0.114, 0.118], [0.104, 0.112], [0.102, 0.012], [0, 0.012]], 40, potM, this.soup);
-    const soupM = new THREE.MeshPhysicalMaterial({ color: 0xc2660e, roughness: 0.42, clearcoat: 0.25, clearcoatRoughness: 0.2, normalMap: tex('plaster', 'n', { repeat: [3, 3] }), normalScale: new THREE.Vector2(0.25, 0.25) });
+    const soupM = new THREE.MeshStandardMaterial({ color: 0xa8480a, roughness: 0.78, normalMap: tex('plaster', 'n', { repeat: [3, 3] }), normalScale: new THREE.Vector2(0.25, 0.25), envMapIntensity: 0.3 });
     this.soupM = soupM;
     const ss = new THREE.Mesh(new THREE.CircleGeometry(0.102, 40), soupM); ss.rotation.x = -Math.PI / 2; ss.position.y = 0.085; this.soup.add(ss);
     for (const hx of [-1, 1]) { const hd = new THREE.Mesh(new THREE.TorusGeometry(0.018, 0.005, 8, 16, Math.PI), potM); hd.position.set(hx * 0.12, 0.1, 0); hd.rotation.set(0, hx > 0 ? 0 : Math.PI, Math.PI / 2); this.soup.add(hd); }
@@ -151,8 +151,8 @@ export class TableStage {
       // 家族はテーブルの向こう
       const { papa, mama, girl } = C.people;
       if (girl) girl.root.visible = false;
-      if (papa) { papa.root.visible = true; papa.root.position.set(POS.table.x + 0.32, 0, POS.table.z - 0.66); papa.root.rotation.set(0, 0.12, 0); papa.parts.armR.rotation.set(0, 0, 0.05); papa.parts.armL.rotation.set(0, 0, -0.05); }
-      if (mama) { mama.root.visible = true; mama.root.position.set(POS.table.x - 0.34, 0, POS.table.z - 0.62); mama.root.rotation.set(0, -0.1, 0); }
+      if (papa) { papa.root.visible = true; papa.root.position.set(POS.table.x + 0.36, 0, POS.table.z - 0.8); papa.root.rotation.set(0, 0.12, 0); papa.parts.armR.rotation.set(0, 0, 0.05); papa.parts.armL.rotation.set(0, 0, -0.05); }
+      if (mama) { mama.root.visible = true; mama.root.position.set(POS.table.x - 0.36, 0, POS.table.z - 0.76); mama.root.rotation.set(0, -0.1, 0); }
       C.focusTarget.set(POS.table.x, this.top + 0.06, POS.table.z + 0.1);
       C.post.aperture = 0.0045; C.post.exposure = 0.95;
       C.setHint(() => this.hintTarget(), 0.25);

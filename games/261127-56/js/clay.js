@@ -556,7 +556,7 @@ export function makePotMaterial(clay) {
         vec3 rawC = (gth.r * vec3(0.13, 0.17, 0.25) + gth.g * vec3(0.27, 0.15, 0.07) + gth.b * vec3(0.82, 0.8, 0.74)) / max(tot, 1e-4);
         rawC *= 0.92 + 0.16 * grainC.r;
         // 焼いた後の色（厚みで濃さが変わる）
-        vec3 cBlue = mix(vec3(0.2, 0.34, 0.46), vec3(0.012, 0.05, 0.2), smoothstep(0.08, 0.85, gth.r));
+        vec3 cBlue = mix(vec3(0.17, 0.36, 0.5), vec3(0.008, 0.075, 0.19), smoothstep(0.08, 0.85, gth.r));
         cBlue *= 0.85 + 0.3 * mott;
         vec3 cAme = mix(vec3(0.62, 0.36, 0.1), vec3(0.09, 0.03, 0.012), smoothstep(0.1, 1.0, gth.g));
         vec3 cWhite = mix(vec3(0.7, 0.69, 0.64), vec3(0.83, 0.85, 0.86), smoothstep(0.15, 0.9, gth.b));
@@ -571,8 +571,8 @@ export function makePotMaterial(clay) {
         float crackMask = texture2D(tCrack, vPUv).r * uFired * smoothstep(0.12, 0.3, tot);
         float cr = crackle(vObj * 150.0);
         float crW = fwidth(cr);
-        float crLine = (1.0 - smoothstep(crW * 0.6, crW * 1.6 + 0.025, cr)) * crackMask;
-        fired = mix(fired, fired * 0.35 + vec3(0.03, 0.025, 0.018), crLine * mix(0.65, 1.0, gth.b / max(tot, 1e-4)));
+        float crLine = (1.0 - smoothstep(crW * 0.5, crW * 1.3 + 0.012, cr)) * crackMask;
+        fired = mix(fired, fired * 0.45 + vec3(0.03, 0.025, 0.018), crLine * mix(0.35, 1.0, gth.b / max(tot, 1e-4)));
         vec3 unfired = mix(body, rawC, cov);
         diffuseColor.rgb = mix(unfired, fired, uFired);
         float glossy = mix(0.0, cov, uFired);
