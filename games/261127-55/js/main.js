@@ -139,7 +139,7 @@ const bubble = makeBubble(); bubble.visible = false; scene.add(bubble);
 
 // ---------- カメラの構図 ----------
 const SH = {
-  intro: { t: [-2.2, 0.55, -2.95], yaw: 0.3, pitch: 0.12, rw: 1.5, rh: 0.8, pw: 0.6 },
+  intro: { t: [-2.25, 0.75, -3.0], yaw: 0.3, pitch: 0.1, rw: 1.5, rh: 1.02, pw: 0.6 },
   introBox: { t: [-2.15, 0.5, -3.05], yaw: 0.2, pitch: 0.42, rw: 0.62, rh: 0.45, pw: 0.75 },
   car: { t: [0.0, 0.0, -0.44], yaw: 0.0, pitch: 0.74, rw: 0.92, rh: 0.6, pw: 0.88, pp: 0.1 },
   carWide: { t: [0.0, 0.65, -0.45], yaw: 0.1, pitch: 0.2, rw: 2.1, rh: 1.2, pw: 0.62 },
