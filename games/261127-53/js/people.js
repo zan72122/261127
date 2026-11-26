@@ -18,7 +18,7 @@ export function peopleMaterials() {
   const leatherDark = pbr('leather', { tile: 0.14, metal0: true, color: 0x5a4a3c, normal: 0.6 });
   const rubber = pbr('rubber', { tile: 0.1, metal0: true });
   const skin = new THREE.MeshPhysicalMaterial({ color: 0xe0b394, roughness: 0.55, sheen: 0.4, sheenColor: 0xffd0b0, sheenRoughness: 0.5, normalMap: null });
-  const hair = new THREE.MeshPhysicalMaterial({ map: null, color: 0x3a2618, roughness: 0.42, metalness: 0, sheen: 0.6, sheenColor: 0x8a6040, sheenRoughness: 0.35 });
+  const hair = new THREE.MeshPhysicalMaterial({ map: tex('hair_c.jpg', true, 3), normalMap: tex('hair_n.jpg', false, 3), normalScale: new THREE.Vector2(0.6, 0.6), color: 0xb09080, roughness: 0.42, metalness: 0, sheen: 0.6, sheenColor: 0x8a6040, sheenRoughness: 0.35 });
   const helmet = new THREE.MeshPhysicalMaterial({ color: 0xcfcbc2, roughness: 0.4, metalness: 0.0, clearcoat: 0.8, clearcoatRoughness: 0.18, roughnessMap: tex('wall_orm.jpg', false, 3), normalMap: tex('wall_n.jpg', false, 3), normalScale: new THREE.Vector2(0.15, 0.15) });
   const helmetRidge = new THREE.MeshPhysicalMaterial({ color: 0x8c8a84, roughness: 0.3, metalness: 0.8 });
   const shield = new THREE.MeshPhysicalMaterial({ color: 0xd8c890, roughness: 0.04, metalness: 0.2, transparent: true, opacity: 0.32, depthWrite: false, clearcoat: 1 });
@@ -174,7 +174,10 @@ export class Person {
     const seed = this.kind === 'girl' ? 3.1 : 7.7;
     const coatDisp = (t, a) => {
       const hemF = Math.pow(1 - t, 2);
-      let d = hemF * 0.007 * k * (Math.sin(a * 7 + seed) + 0.5 * Math.sin(a * 13 + seed * 2));
+      let d = hemF * 0.01 * k * (Math.sin(a * 7 + seed) + 0.5 * Math.sin(a * 13 + seed * 2));
+      // soft vertical folds over the back and sides, horizontal creases under the arms
+      d += 0.0035 * k * Math.sin(a * 11 + t * 4 + seed) * Math.sin(Math.PI * Math.min(1, Math.max(0, (t - 0.25) / 0.6)));
+      d += 0.0025 * k * Math.sin(t * 70 + a) * Math.exp(-Math.pow((t - 0.78) / 0.05, 2)) * Math.pow(Math.abs(Math.cos(a)), 3);
       // horizontal waist wrinkles
       d += Math.exp(-Math.pow((t - 0.32) / 0.08, 2)) * 0.0035 * k * Math.sin(t * 90 + a * 2);
       // front placket groove (front is +Z => a = PI/2 in our frame where binormal ~ z)
@@ -269,7 +272,7 @@ export class Person {
     this.arms = {};
     for (const s of ['R', 'L']) {
       const ag = tube({ path: dummy(5), radial: 18, segs: 22, caps: true, capBulge: 0.95, bands: [[0.62, 0.7]],
-        radius: (t) => D.armR * smoothKeys([[0, 1.18], [0.25, 1.1], [0.5, 0.97], [0.8, 0.93], [1, 0.86]], t), disp: sleeveDisp });
+        radius: (t) => D.armR * smoothKeys([[0, 0.92], [0.1, 1.12], [0.28, 1.08], [0.5, 0.97], [0.8, 0.93], [1, 0.86]], t), disp: sleeveDisp });
       const arm = new THREE.Mesh(ag, [this.mCoat, M.reflect]);
       let karm = null;
       if (this.kind === 'girl') {
@@ -325,20 +328,20 @@ export class Person {
     const shG = new THREE.CylinderGeometry(R * 1.12, R * 1.18, R * 0.55, 32, 1, true, -Math.PI * 0.32, Math.PI * 0.64);
     const sh = new THREE.Mesh(shG, M.shield); sh.position.set(0, R * 0.42, R * 0.06); sh.rotation.x = -0.25; g.add(sh);
     // shikoro neck curtain
-    const cuG = new THREE.CylinderGeometry(R * 0.98, R * 1.2, R * 0.95, 40, 6, true, Math.PI * 0.62, Math.PI * 1.76);
+    const cuG = new THREE.CylinderGeometry(R * 0.98, R * 1.3, R * 0.82, 48, 6, true, Math.PI * 0.62, Math.PI * 1.76);
     const p = cuG.attributes.position;
     for (let i = 0; i < p.count; i++) {
       const x = p.getX(i), y = p.getY(i), z = p.getZ(i); const a = Math.atan2(x, z);
       const lowness = 0.5 - y / (R * 0.95);
-      const f = 1 + 0.035 * lowness * Math.sin(a * 9);
+      const f = 1 + 0.06 * lowness * Math.sin(a * 9) + 0.02 * lowness * Math.sin(a * 23);
       p.setXYZ(i, x * f, y, z * f);
     }
     cuG.computeVertexNormals();
     const cuMat = this.mCoat.clone(); cuMat.side = THREE.DoubleSide; wettable(cuMat);
     this.mCurtain = cuMat;
-    const cu = new THREE.Mesh(cuG, cuMat); cu.position.y = -R * 0.42; g.add(cu);
-    const stG = new THREE.CylinderGeometry(R * 1.165, R * 1.19, R * 0.1, 40, 1, true, Math.PI * 0.62, Math.PI * 1.76);
-    const st = new THREE.Mesh(stG, M.reflect); st.position.y = -R * 0.8; g.add(st);
+    const cu = new THREE.Mesh(cuG, cuMat); cu.position.y = -R * 0.36; g.add(cu);
+    const stG = new THREE.CylinderGeometry(R * 1.245, R * 1.265, R * 0.07, 48, 1, true, Math.PI * 0.62, Math.PI * 1.76);
+    const st = new THREE.Mesh(stG, M.reflect); st.position.y = -R * 0.62; g.add(st);
     g.position.set(0, D.headR[1] * 0.42, -D.headR[2] * 0.05);
     g.rotation.x = -0.06;
     g.traverse((o) => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
@@ -460,7 +463,7 @@ export class Person {
     // shoulders (local)
     for (const s of ['R', 'L']) {
       const sx = s === 'R' ? -1 : 1;
-      const shoulder = _v6.set(sx * D.shW * (this.dressed.coat ? 0.92 : 0.8), D.shY - D.hipY - 0.025 * k + shrug * 0.025 * k, -0.005).applyMatrix4(cm);
+      const shoulder = _v6.set(sx * D.shW * (this.dressed.coat ? 0.86 : 0.8), D.shY - D.hipY - 0.035 * k + shrug * 0.025 * k, -0.005).applyMatrix4(cm);
       let T, pole = _v7.set(sx * 0.6, -0.6, -0.5).normalize();
       if (this.hold && this.hold[s]) {
         T = this.toLocal(this.hold[s].p);

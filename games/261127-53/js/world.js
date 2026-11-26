@@ -371,7 +371,7 @@ function buildSign() {
   [[875, 250, 50], [835, 270, 38], [915, 272, 38], [860, 200, 36], [900, 210, 30], [880, 160, 26]].forEach(([cx, cy, r]) => { x.beginPath(); x.arc(cx, cy, r, 0, 7); x.fill(); });
   const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4;
   const bm = new THREE.MeshStandardMaterial({ map: t, roughness: 0.42, metalness: 0.05, normalMap: tex('steel_n.jpg', false, 0.5), normalScale: new THREE.Vector2(0.4, 0.4) });
-  const board = new THREE.Mesh(roundedBox(1.6, 0.8, 0.03, 0.01), [bm]);
+  const board = new THREE.Mesh(roundedBox(1.6, 0.8, 0.03, 0.01), bm);
   // map uv for the front face to full canvas
   const p = board.geometry.attributes.position, uv = board.geometry.attributes.uv, n = board.geometry.attributes.normal;
   for (let i = 0; i < p.count; i++) uv.setXY(i, (p.getX(i) + 0.8) / 1.6, (p.getY(i) + 0.4) / 0.8);

@@ -304,7 +304,7 @@ scenes.s1 = {
     // hose follows the nozzle tail
     const tail = nozzle.localToWorld(new V(0, 0, -0.2));
     hosePts[0].copy(tail); hosePts[1].copy(nozzle.localToWorld(new V(0, -0.05, -0.45))); hosePts[1].y = Math.max(0.2, hosePts[1].y - 0.15);
-    hosePts[2].set(girl.root.position.x + 0.15, 0.04, girl.root.position.z + 0.55);
+    hosePts[2].set(girl.root.position.x + 0.38, 0.04, girl.root.position.z + 0.42);
     updateTube(hoseGeo, hosePts);
     // emit water
     if (this.spray > 0.2) {
@@ -789,7 +789,7 @@ scenes.s3 = {
     W.setSunFocus(new V(12.5, 0, 6), 15);
     G.focus = 8; G.focusRange = 14;
     // dad with a hose to the right
-    this.dadHome = CAM3.clone().addScaledVector(D3, 3.6).addScaledVector(R3, 1.05); this.dadHome.y = 0;
+    this.dadHome = CAM3.clone().addScaledVector(D3, 3.8).addScaledVector(R3, 0.75); this.dadHome.y = 0;
     dad.root.position.copy(this.dadHome); dad.root.rotation.y = Math.atan2(D3.x, D3.z) + 0.9;
     dad.setWet(0); this.dadWet = 0;
     hose3.visible = true; noz3.visible = true; rainbow.visible = true;
@@ -827,7 +827,9 @@ scenes.s3 = {
     const fwd = new V(); G.camera.getWorldDirection(fwd);
     placeFP(fwd);
     const lookMain = CAM3.clone().addScaledVector(D3, 15).addScaledVector(R3, -2.5).add(new V(0, 4.6, 0));
-    if (this.phase === 'sunset' && this.pt > 2.8) { this.phase = 'open'; this.pt = 0; setCam(CAM3, lookMain, 38, 0.9, false, 24); }
+    const lookGag = CAM3.clone().addScaledVector(D3, 6).addScaledVector(R3, 0.55).add(new V(0, 0.55, 0));
+    if (this.phase === 'sunset' && this.pt > 2.8) { this.phase = 'open'; this.pt = 0; setCam(CAM3, lookGag, 40, 1.0, false, 22, 1.0); }
+    if (this.phase === 'ladder' && this.pt < 0.05) setCam(CAM3, lookMain, 38, 0.7, false, 24, 0.6);
     const dadHands = dad.root.localToWorld(new V(0, dad.D.hipY + 0.12, 0.42));
     // hose end motion per phase
     const free = this.endP;
@@ -842,7 +844,8 @@ scenes.s3 = {
       const tt = this.pt;
       const c = dad.root.position.clone();
       const a = tt * 2.3 + Math.sin(tt * 3.1) * 1.2;
-      free.set(c.x + Math.cos(a) * 1.0, 0.35 + 0.35 * Math.abs(Math.sin(tt * 4.2)), c.z + Math.sin(a) * 1.0);
+      const rr = 1.0 + 0.45 * Math.sin(tt * 1.7);
+      free.set(c.x + Math.cos(a) * rr, 0.3 + 0.55 * Math.abs(Math.sin(tt * 4.2)), c.z + Math.sin(a) * rr);
       const toDad = c.clone().add(new V(0, 1.0 + Math.sin(tt * 5) * 0.6, 0)).sub(free).normalize();
       this.endDir.lerp(toDad.add(new V(Math.sin(tt * 7) * 0.6, 0.3, Math.cos(tt * 6) * 0.6)).normalize(), 0.3).normalize();
       sprayOn = 1;
@@ -882,8 +885,8 @@ scenes.s3 = {
     this.spray += (sprayOn - this.spray) * (1 - Math.exp(-dt * 8));
     if (this.spray > 0.05) {
       const tip = noz3.localToWorld(new V(0, 0, 0.2));
-      this.emitAcc += dt * 220 * this.spray;
-      while (this.emitAcc > 1) { this.emitAcc -= 1; const v = this.endDir.clone().multiplyScalar(7 + rnd() * 2).add(new V((rnd() - 0.5) * 0.8, (rnd() - 0.5) * 0.8, (rnd() - 0.5) * 0.8)); drops.emit(tip, v, { size: 0.02 + rnd() * 0.02, life: 1.5, alpha: 0.75, kind: 0, src: 1 }); }
+      this.emitAcc += dt * 300 * this.spray;
+      while (this.emitAcc > 1) { this.emitAcc -= 1; const v = this.endDir.clone().multiplyScalar(7.5 + rnd() * 2.5).add(new V((rnd() - 0.5) * 0.8, (rnd() - 0.5) * 0.8, (rnd() - 0.5) * 0.8)); drops.emit(tip.clone().addScaledVector(v, rnd() * dt), v, { size: 0.025 + rnd() * 0.03, life: 1.5, alpha: 0.85, kind: 0, src: 1 }); }
     }
     dad.setWet(this.dadWet);
     if (this.dadWet > 0.3 && rnd() < dt * 20 * this.dadWet) drops.emit(dad.root.localToWorld(new V((rnd() - 0.5) * 0.4, dad.D.hem + rnd() * 0.1, (rnd() - 0.5) * 0.3)), new V(0, -0.5, 0), { size: 0.008 + rnd() * 0.006, life: 1.2, alpha: 0.7, kind: 1 });
@@ -944,7 +947,7 @@ scenes.s3 = {
         }
         A.setLoop('jet', this.ladSpray, 1400); A.setLoop('jetLow', this.ladSpray * 0.6);
       }
-      if (this.phase === 'ladder' && this.pt > 0.5) this.phase = 'free';
+      if (this.phase === 'ladder' && this.pt > 1.5) this.phase = 'free';
     }
     // break-up of the ladder stream into fine mist + mist map
     this.mistAcc += dt;

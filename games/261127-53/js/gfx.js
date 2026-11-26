@@ -33,8 +33,14 @@ export function initGfx(canvas) {
   G.dprMax = Math.min(window.devicePixelRatio || 1, 2);
   G.scale = mobile ? Math.min(G.dprMax, 1.5) : G.dprMax;
   G.postCam = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
+  // float render targets: fall back to 8-bit if the GPU cannot render to half floats
+  const ext = r.extensions;
+  const full = ext.has('EXT_color_buffer_float');
+  const half = full || ext.has('EXT_color_buffer_half_float');
+  G.rtType = half ? THREE.HalfFloatType : THREE.UnsignedByteType;
+  G.samples = full ? 4 : 0;
 
-  const qOpts = { type: THREE.HalfFloatType, minFilter: THREE.LinearFilter, magFilter: THREE.LinearFilter, depthBuffer: false };
+  const qOpts = { type: G.rtType, minFilter: THREE.LinearFilter, magFilter: THREE.LinearFilter, depthBuffer: false };
   G.q1 = new THREE.WebGLRenderTarget(4, 4, qOpts);
   G.q2 = new THREE.WebGLRenderTarget(4, 4, qOpts);
 
@@ -110,7 +116,7 @@ export function resize() {
   if (G.rt) { G.rt.depthTexture.dispose(); G.rt.dispose(); }
   const dt = new THREE.DepthTexture(pw, ph);
   dt.type = THREE.UnsignedIntType;
-  G.rt = new THREE.WebGLRenderTarget(pw, ph, { type: THREE.HalfFloatType, samples: 4, depthTexture: dt, minFilter: THREE.LinearFilter, magFilter: THREE.LinearFilter });
+  G.rt = new THREE.WebGLRenderTarget(pw, ph, { type: G.rtType, samples: G.samples, depthTexture: dt, minFilter: THREE.LinearFilter, magFilter: THREE.LinearFilter });
   const qw = Math.max(2, pw >> 2), qh = Math.max(2, ph >> 2);
   G.q1.setSize(qw, qh); G.q2.setSize(qw, qh);
   G.camera.aspect = w / h;
@@ -125,7 +131,7 @@ export function render(scene, time) {
   if (G.vol && G.vol.enabled) {
     if (!G.rt2 || G.rt2.width !== G.rt.width || G.rt2.height !== G.rt.height) {
       if (G.rt2) G.rt2.dispose();
-      G.rt2 = new THREE.WebGLRenderTarget(G.rt.width, G.rt.height, { type: THREE.HalfFloatType, depthBuffer: false, minFilter: THREE.LinearFilter, magFilter: THREE.LinearFilter });
+      G.rt2 = new THREE.WebGLRenderTarget(G.rt.width, G.rt.height, { type: G.rtType, depthBuffer: false, minFilter: THREE.LinearFilter, magFilter: THREE.LinearFilter });
     }
     const vu = G.vol.mat.uniforms;
     vu.tColor.value = G.rt.texture; vu.tDepth.value = G.rt.depthTexture;
