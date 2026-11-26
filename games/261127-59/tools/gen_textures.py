@@ -65,7 +65,7 @@ def normal_from_height(hgt, strength, wrap=True):
     return ((n * 0.5 + 0.5) * 255).clip(0, 255).astype(np.uint8)
 
 
-def save_rgb(a, name, q=90):
+def save_rgb(a, name, q=86):
     a = np.clip(a, 0, 1) if a.dtype != np.uint8 else a
     if a.dtype != np.uint8:
         a = (a * 255 + 0.5).astype(np.uint8)
@@ -99,38 +99,40 @@ def gen_cobble(N=1024):
     stone_id = -np.ones((N, N), int)
     tone = []
     yy, xx = np.mgrid[0:N, 0:N].astype(float)
-    rows = 10
-    rh = N / rows
+    rows = 9
+    # row boundaries: varying heights, wavy (tileable: wave periods divide N)
+    hs = rng.uniform(0.85, 1.15, rows); hs = hs / hs.sum() * N
+    bounds = np.concatenate([[0], np.cumsum(hs)])
     sid = 0
-    edge_noise = spectral_noise(N, N, 2.6, seed=3) * 0.0035 * px + band_noise(N, N, 40, 120, seed=33) * 0.0012 * px
+    edge_noise = spectral_noise(N, N, 2.6, seed=3) * 0.004 * px + band_noise(N, N, 40, 120, seed=33) * 0.0015 * px
     ripple = spectral_noise(N, N, 1.6, seed=4)
     dist_field = np.full((N, N), -1e9)
+    wave = lambda x, r: (np.sin(x / N * 2 * np.pi * 2 + r * 1.7) * 0.012 + np.sin(x / N * 2 * np.pi * 3 + r) * 0.006) * px
     for r in range(rows):
-        y0 = r * rh
-        # widths summing to N
+        y0, y1 = bounds[r], bounds[r + 1]
         widths = []
         total = 0
         while total < N - 0.16 * px:
-            wv = rng.uniform(0.09, 0.15) * px
-            widths.append(wv)
-            total += wv
+            wv = rng.uniform(0.085, 0.16) * px
+            widths.append(wv); total += wv
         sc = N / sum(widths)
         widths = [w_ * sc for w_ in widths]
         x0 = rng.uniform(0, N)
         for wv in widths:
-            cx = x0 + wv / 2
-            cy = y0 + rh / 2
-            hw = wv / 2 - 0.0045 * px
-            hh = rh / 2 - 0.0045 * px
-            # wrapped coordinates
+            cx = (x0 + wv / 2) % N
+            cy = (y0 + y1) / 2 + (wave(cx, r) + wave(cx, r + 1)) * 0.5
+            gap = rng.uniform(0.0025, 0.0055) * px
+            hw = wv / 2 - gap
+            hh = (y1 - y0) / 2 - gap * rng.uniform(0.8, 1.3)
+            ang = rng.uniform(-0.06, 0.06)
             dx = (xx - cx + N / 2) % N - N / 2
             dy = (yy - cy + N / 2) % N - N / 2
-            # rounded rect sdf (negative inside)
-            rad = 0.022 * px
-            qx = np.abs(dx) - (hw - rad)
-            qy = np.abs(dy) - (hh - rad)
-            ox = np.maximum(qx, 0)
-            oy = np.maximum(qy, 0)
+            rx = dx * np.cos(ang) - dy * np.sin(ang)
+            ry = dx * np.sin(ang) + dy * np.cos(ang)
+            rad = rng.uniform(0.015, 0.03) * px
+            qx = np.abs(rx) - (hw - rad)
+            qy = np.abs(ry) - (hh - rad)
+            ox = np.maximum(qx, 0); oy = np.maximum(qy, 0)
             sd = np.sqrt(ox * ox + oy * oy) + np.minimum(np.maximum(qx, qy), 0) - rad
             sd = sd + edge_noise
             inside = -sd
@@ -160,26 +162,35 @@ def gen_cobble(N=1024):
     H = H + joint * (0.04 * sand)
     # albedo
     base = np.zeros((N, N, 3))
-    granite_a = srgb((128, 124, 118))
-    granite_b = srgb((150, 140, 128))
-    granite_c = srgb((104, 106, 110))
+    granite_a = srgb((122, 116, 108))
+    granite_b = srgb((146, 134, 118))
+    granite_c = srgb((100, 98, 96))
     w1 = (t[ids, 0] * 0.5 + 0.5)[..., None]
     w2 = (t[ids, 1] * 0.5 + 0.5)[..., None]
-    col = lerp(lerp(granite_a, granite_b, w1), granite_c, w2 * 0.5)
+    w3 = t[ids, 2][..., None]
+    col = lerp(lerp(granite_a, granite_b, w1), granite_c, w2 * 0.7)
+    # a few pinkish / bluish / rusty setts like a real old courtyard
+    col = np.where(w3 > 0.85, col * srgb((255, 236, 226)) * 1.05, col)
+    col = np.where((w3 < 0.12), col * srgb((214, 222, 236)) * 0.92, col)
+    rust = smoothstep(1.2, 2.4, spectral_noise(N, N, 2.2, seed=15))[..., None]
+    col = lerp(col, col * srgb((200, 150, 110)), rust * 0.5)
     # granite speckle: black mica, white quartz, pinkish feldspar
     sp = band_noise(N, N, 120, 380, seed=9)
     sp2 = band_noise(N, N, 90, 300, seed=10)
     sp3 = band_noise(N, N, 60, 200, seed=11)
     col = col * (1 + 0.05 * grain[..., None])
-    col = np.where((sp > 1.5)[..., None], col * 0.35, col)
-    col = np.where((sp2 > 1.7)[..., None], col * 0.4 + srgb((215, 210, 200)) * 0.6, col)
+    col = np.where((sp > 1.7)[..., None], col * 0.6, col)
+    col = np.where((sp2 > 1.9)[..., None], col * 0.75 + srgb((190, 184, 172)) * 0.25, col)
     col = np.where((sp3 > 1.8)[..., None], col * 0.6 + srgb((176, 140, 120)) * 0.4, col)
     col = blur_wrap(col, 0.6)
     # dirt in low areas near joints & worn top lighter
-    edge_dirt = (1 - smoothstep(0.0, 0.02, inside))[..., None]
+    edge_dirt = (1 - smoothstep(0.0, 0.009, inside))[..., None]
     dirt_col = srgb((78, 68, 56))
-    col = lerp(col, dirt_col, edge_dirt * 0.45)
-    jcol = lerp(srgb((70, 62, 52)), srgb((96, 88, 72)), (sand * 0.5 + 0.5).clip(0, 1)[..., None])
+    col = lerp(col, dirt_col, edge_dirt * 0.3)
+    jcol = lerp(srgb((92, 80, 64)), srgb((124, 110, 88)), (sand * 0.5 + 0.5).clip(0, 1)[..., None])
+    bits = band_noise(N, N, 140, 320, seed=16)
+    jcol = np.where((bits > 2.2)[..., None], srgb((170, 120, 40)), jcol)
+    jcol = np.where((bits < -2.3)[..., None], srgb((130, 50, 30)), jcol)
     moss = (spectral_noise(N, N, 2.0, seed=12) > 1.1).astype(float) * (band_noise(N, N, 100, 300, seed=13) > 0.2)
     jcol = lerp(jcol, srgb((64, 74, 40)), (moss * 0.6)[..., None])
     col = lerp(col, jcol, joint[..., None])
@@ -188,10 +199,10 @@ def gen_cobble(N=1024):
     # AO from cavity
     hb = blur_wrap(H, 6)
     cav = np.clip((hb - H) * 6, 0, 1)
-    ao = np.clip(1 - cav * 0.8 - joint * 0.35, 0.25, 1)
+    ao = np.clip(1 - cav * 0.6 - joint * 0.22, 0.35, 1)
     rough = np.clip(0.78 + 0.08 * micro - 0.12 * smoothstep(0.02, 0.05, inside) + 0.17 * joint, 0.4, 1.0)
     save_rgb(np.clip(col, 0, 1), 'cobble_albedo.jpg')
-    save_rgb(normal_from_height(H * 255 / 255.0 * 60, 1.0), 'cobble_normal.jpg', 92)
+    save_rgb(normal_from_height(H * 255 / 255.0 * 60, 1.0), 'cobble_normal.jpg', 86)
     save_rgb(np.stack([ao, rough, np.zeros_like(ao)], -1), 'cobble_orm.jpg')
     # joint mask (for wet puddles in joints): store as single channel png
     jm = (np.clip(joint + edge_dirt[..., 0] * 0.4, 0, 1) * 255).astype(np.uint8)
@@ -395,8 +406,8 @@ def gen_leaves():
     img = (np.clip(A, 0, 1) * 255 + 0.5).astype(np.uint8)
     Image.fromarray(img, 'RGBA').save(os.path.join(OUT, 'leaf_atlas.png'), optimize=True)
     Image.fromarray(img, 'RGBA').resize((512, 256), Image.LANCZOS).save(os.path.join(OUT, 'leaf_atlas_s.png'), optimize=True)
-    save_rgb(Nm, 'leaf_normal.jpg', 90)
-    save_rgb(T, 'leaf_trans.jpg', 90)
+    Image.fromarray(Nm).resize((1024, 512), Image.LANCZOS).save(os.path.join(OUT, 'leaf_normal.jpg'), quality=88)
+    Image.fromarray((np.clip(T, 0, 1) * 255).astype(np.uint8)).resize((1024, 512), Image.LANCZOS).save(os.path.join(OUT, 'leaf_trans.jpg'), quality=88)
     print('wrote leaf atlas')
     return cells
 
@@ -561,9 +572,6 @@ def gen_fabric():
     save_rgb(normal_from_height(H, 1.2), 'burlap_normal.jpg')
     col = lerp(srgb((160, 128, 84)), srgb((120, 92, 56)), (0.5 + 0.25 * (wx + wy) + 0.2 * spectral_noise(N, N, 1.5, seed=124)).clip(0, 1)[..., None])
     save_rgb(col, 'burlap_albedo.jpg')
-    # hair strands normal (vertical)
-    H = spectral_noise(N, N, 1.2, seed=125, aniso=(0.04, 1.0))
-    save_rgb(normal_from_height(H, 3.0), 'hair_normal.jpg')
 
 
 def gen_bark(N=512):

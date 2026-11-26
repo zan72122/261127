@@ -3,7 +3,7 @@ import { T, scene, tex } from './core.js';
 import { loadBin, clothMaterial } from './sdf.js';
 import { BONE_PARENT } from './shapes.js';
 
-export const humanMat = clothMaterial({ sheen: 0.25, sheenRoughness: 0.7, sheenColor: new T.Color(0.35, 0.33, 0.3) });
+export const humanMat = clothMaterial({ sheen: 0.25, sheenRoughness: 0.7, sheenColor: new T.Color().setRGB(0.35, 0.33, 0.3, T.SRGBColorSpace) });
 
 export class Person {
   constructor(name) {
@@ -126,11 +126,11 @@ export class Person {
         const k = Math.min(1, t / 0.55);
         const e = k * k;
         r.rotation.x = 0;
-        B[0].rotation.x = 1.38 * e;
-        B[0].position.y = this.rest[0][1] - (this.rest[0][1] - 0.16 * s) * e;
-        B[0].position.z = 0.55 * s * e;
-        B[5].rotation.x = -2.6 * e; B[8].rotation.x = -2.4 * e;
-        B[11].rotation.x = 0.3 * e; B[14].rotation.x = -0.2 * e; B[12].rotation.x = 0.5 * e; B[15].rotation.x = 0.9 * e;
+        B[0].rotation.x = 1.5 * e;
+        B[0].position.y = this.rest[0][1] - (this.rest[0][1] - 0.11 * s) * e;
+        B[0].position.z = 0.6 * s * e;
+        B[5].rotation.x = -2.7 * e; B[8].rotation.x = -2.5 * e;
+        B[11].rotation.x = 0.1 * e; B[14].rotation.x = -0.05 * e; B[12].rotation.x = 0.35 * e; B[15].rotation.x = 0.6 * e;
         B[4].rotation.x = -0.6 * e;
         if (t > 0.6) { B[16].rotation.x = Math.sin(t * 9) * 0.3; B[13].rotation.x = Math.cos(t * 7) * 0.2; }
         break;
@@ -139,9 +139,9 @@ export class Person {
         const k = Math.min(1, t / 1.1);
         const e = 1 - (1 - k) * (1 - k);
         const inv = 1 - e;
-        B[0].rotation.x = 1.38 * inv;
-        B[0].position.y = 0.16 * s + (this.rest[0][1] - 0.16 * s) * e;
-        B[0].position.z = 0.55 * s * inv;
+        B[0].rotation.x = 1.5 * inv;
+        B[0].position.y = 0.11 * s + (this.rest[0][1] - 0.11 * s) * e;
+        B[0].position.z = 0.6 * s * inv;
         B[5].rotation.x = -1.2 * inv; B[8].rotation.x = -1.2 * inv;
         B[11].rotation.x = -0.9 * Math.sin(e * Math.PI); B[12].rotation.x = 1.4 * Math.sin(e * Math.PI);
         break;
@@ -208,12 +208,12 @@ export class Person {
 // pillbox bellhop cap (felt + gold braid + chin strap) for the girl
 export function makeCap() {
   const g = new T.Group();
-  const felt = new T.MeshStandardMaterial({ color: new T.Color(0.36, 0.05, 0.07), roughness: 0.92, normalMap: tex('twill_normal.jpg'), normalScale: new T.Vector2(0.6, 0.6) });
+  const felt = new T.MeshStandardMaterial({ color: new T.Color().setRGB(0.36, 0.05, 0.07, T.SRGBColorSpace), roughness: 0.92, normalMap: tex('twill_normal.jpg'), normalScale: new T.Vector2(0.6, 0.6) });
   const prof = [];
   const R = 0.062, H = 0.052;
   prof.push(new T.Vector2(0.0, H), new T.Vector2(R - 0.012, H), new T.Vector2(R - 0.003, H - 0.003), new T.Vector2(R, H - 0.012), new T.Vector2(R + 0.003, 0.004), new T.Vector2(R + 0.002, 0), new T.Vector2(R - 0.004, 0));
   const body = new T.Mesh(new T.LatheGeometry(prof, 40), felt);
-  const gold = new T.MeshStandardMaterial({ color: new T.Color(0.78, 0.6, 0.3), metalness: 1, roughness: 0.38, normalMap: tex('knit_normal.jpg'), normalScale: new T.Vector2(0.8, 0.8) });
+  const gold = new T.MeshStandardMaterial({ color: new T.Color().setRGB(0.78, 0.6, 0.3, T.SRGBColorSpace), metalness: 1, roughness: 0.38, normalMap: tex('knit_normal.jpg'), normalScale: new T.Vector2(0.8, 0.8) });
   const band = new T.Mesh(new T.CylinderGeometry(R + 0.0045, R + 0.0055, 0.012, 40, 1, true), gold);
   band.position.y = 0.01;
   const top = new T.Mesh(new T.TorusGeometry(R - 0.01, 0.0025, 6, 40), gold);

@@ -22,17 +22,20 @@ export function mesh(sdf, bmin, bmax, step, attr) { return toGeometry(surfaceNet
 export async function loadBin(url) {
   const buf = await (await fetch(url)).arrayBuffer();
   const h = new Uint32Array(buf, 0, 4); // N, nInd, hasSkin, pad
-  const N = h[0], NI = h[1], skin = h[2];
-  let o = 16;
+  const N = h[0], NI = h[1], skin = h[2] & 1, u16 = h[2] & 2;
+  const bb = new Float32Array(buf, 16, 6);
+  let o = 40;
   const take = (Ctor, n) => { const a = new Ctor(buf.slice(o, o + n * Ctor.BYTES_PER_ELEMENT)); o += n * Ctor.BYTES_PER_ELEMENT; o = (o + 3) & ~3; return a; };
-  const pos = take(Float32Array, N * 3);
+  const q = take(Uint16Array, N * 3);
+  const pos = new Float32Array(N * 3);
+  for (let i = 0; i < N * 3; i++) { const k = i % 3; pos[i] = bb[k] + (q[i] / 65535) * bb[3 + k]; }
   const nor8 = take(Int8Array, N * 3), col8 = take(Uint8Array, N * 3), mat8 = take(Uint8Array, N), r8 = take(Uint8Array, N);
   const nor = new Float32Array(N * 3), col = new Float32Array(N * 3), mat = new Float32Array(N), rough = new Float32Array(N);
   for (let i = 0; i < N * 3; i++) { nor[i] = nor8[i] / 127; col[i] = col8[i] / 255; }
   for (let i = 0; i < N; i++) { mat[i] = mat8[i]; rough[i] = r8[i] / 255; }
   let skinI = null, skinW = null;
   if (skin) { skinI = new Uint16Array(take(Uint8Array, N * 4)); const w8 = take(Uint8Array, N * 4); skinW = new Float32Array(N * 4); for (let i = 0; i < N * 4; i++) skinW[i] = w8[i] / 255; }
-  const ind = take(Uint32Array, NI);
+  const ind = u16 ? take(Uint16Array, NI) : take(Uint32Array, NI);
   return toGeometry({ pos, nor, col, mat, rough, skinI, skinW, ind });
 }
 // Material for SDF meshes: per-vertex albedo/roughness + procedural micro-relief by fabric type
@@ -66,16 +69,17 @@ export function clothMaterial(opts = {}) {
           if (id < 5.5) { float a = an.x > an.z ? p.z : p.x; return (sin(a*1800.0)*sin(p.y*1800.0))*0.3 + vn(p*400.0)*0.3 + vn(p*50.0)*0.3; }
           if (id < 6.5) { float a = an.x > an.z ? p.z : p.x; return sin((a - p.y)*1500.0)*0.4 + vn(p*500.0)*0.4; } // denim
           if (id < 7.5) return vn(p*200.0)*0.15;
+          if (id > 8.5) return vn(p*30.0)*0.04;
           return vn(p*700.0)*0.5 + vn(p*90.0)*0.3; // felt
         }`)
       .replace('#include <roughnessmap_fragment>', '#include <roughnessmap_fragment>\nroughnessFactor = vRough;')
-      .replace('#include <metalnessmap_fragment>', '#include <metalnessmap_fragment>\nmetalnessFactor = vMat > 6.5 && vMat < 7.5 ? 1.0 : 0.0;')
+      .replace('#include <metalnessmap_fragment>', '#include <metalnessmap_fragment>\nmetalnessFactor = (vMat > 6.5 && vMat < 7.5) || (vMat > 10.5 && vMat < 11.5) ? 1.0 : vMat > 8.5 && vMat < 9.5 ? 0.25 : 0.0;')
       .replace('#include <normal_fragment_maps>', `#include <normal_fragment_maps>
         {
           float id = floor(vMat + 0.5);
           float hgt = relief(vRest, id);
           vec2 dh = vec2(dFdx(hgt), dFdy(hgt));
-          float amp = id < 0.5 ? 0.0012 : id < 1.5 ? 0.006 : id < 3.5 ? 0.005 : 0.004;
+          float amp = id > 8.5 ? 0.0004 : id < 0.5 ? 0.0012 : id < 1.5 ? 0.012 : id < 3.5 ? 0.005 : 0.004;
           float fade = 1.0 / (1.0 + length(dh) * 1.5);
           normal = perturbArb(-vViewPosition, normal, dh * amp * 60.0 * fade, faceDirection);
         }`);

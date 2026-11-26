@@ -7,8 +7,8 @@ const GLOVE = [0.74, 0.73, 0.70];
 const WOOL = [0.34, 0.055, 0.07];
 const GOLD = [0.78, 0.6, 0.3];
 const R = 0.0145;
-export const sharedCloth = clothMaterial({ sheen: 0.8, sheenColor: new T.Color(0.75, 0.75, 0.75) });
-export const woolCloth = clothMaterial({ sheen: 0.5, sheenColor: new T.Color(0.42, 0.14, 0.13), sheenRoughness: 0.7 });
+export const sharedCloth = clothMaterial({ sheen: 0.35, sheenRoughness: 0.8, sheenColor: new T.Color().setRGB(0.6, 0.6, 0.58, T.SRGBColorSpace) });
+export const woolCloth = clothMaterial({ sheen: 0.5, sheenColor: new T.Color().setRGB(0.42, 0.14, 0.13, T.SRGBColorSpace), sheenRoughness: 0.7 });
 
 export const rig = {
   group: new T.Group(),
@@ -38,7 +38,7 @@ function makeSleeve() {
     const s = i / SLV_SEG;
     const a = (j / SLV_RAD) * Math.PI * 2;
     // gold braid band near the wrist, brass button
-    const braid = s > 0.035 && s < 0.06;
+    const braid = s > 0.03 && s < 0.042;
     const c = (braid ? GOLD : WOOL).map((v) => Math.pow(v, 2.2));
     col[k * 3] = c[0]; col[k * 3 + 1] = c[1]; col[k * 3 + 2] = c[2];
     mat[k] = braid ? 7 : 2; rough[k] = braid ? 0.38 : 0.86;
@@ -102,7 +102,7 @@ function handleGeo(len) {
   return g;
 }
 export const broomUniforms = { uBend: { value: new T.Vector3() } };
-function buildBroom() {
+export function buildBroom() {
   const grp = new T.Group();
   const h = new T.Mesh(handleGeo(1.28), bambooMat());
   h.position.y = 0.3; h.castShadow = true;
@@ -129,7 +129,7 @@ function buildBroom() {
   const col = new Float32Array(tg.attributes.position.count * 3);
   for (let i = 0; i < tg.attributes.position.count; i++) {
     const v = 0.75 + Math.random() * 0.45, yy = tg.attributes.position.getY(i);
-    col[i * 3] = 0.42 * v; col[i * 3 + 1] = 0.33 * v * (0.9 + yy * 0.3); col[i * 3 + 2] = 0.2 * v;
+    col[i * 3] = Math.pow(0.5 * v, 2.2); col[i * 3 + 1] = Math.pow(0.38 * v * (0.9 + yy * 0.3), 2.2); col[i * 3 + 2] = Math.pow(0.22 * v, 2.2);
   }
   tg.setAttribute('color', new T.BufferAttribute(col, 3));
   const twigMat = new T.MeshStandardMaterial({ vertexColors: true, roughness: 0.72 });
@@ -152,7 +152,7 @@ function buildBroom() {
   }
   return grp;
 }
-function buildRake() {
+export function buildRake() {
   const grp = new T.Group();
   const h = new T.Mesh(handleGeo(1.25), bambooMat());
   h.position.y = 0.34; h.castShadow = true;
@@ -171,7 +171,7 @@ function buildRake() {
   const cross = new T.TubeGeometry(new T.CatmullRomCurve3([new T.Vector3(-0.15, 0.17, 0.006), new T.Vector3(0, 0.185, 0.008), new T.Vector3(0.15, 0.17, 0.006)]), 12, 0.004, 5, false);
   parts.push(cross);
   const g = mergeGeometries(parts);
-  const m = new T.Mesh(g, new T.MeshStandardMaterial({ map: tex('bamboo_albedo.jpg', { srgb: true }), normalMap: tex('bamboo_normal.jpg'), roughness: 0.5, color: new T.Color(1.0, 0.95, 0.85) }));
+  const m = new T.Mesh(g, new T.MeshStandardMaterial({ map: tex('bamboo_albedo.jpg', { srgb: true }), normalMap: tex('bamboo_normal.jpg'), roughness: 0.5, color: new T.Color().setRGB(1.0, 0.95, 0.85, T.SRGBColorSpace) }));
   m.castShadow = true;
   grp.add(m);
   return grp;
@@ -224,7 +224,7 @@ export function updateRig(dt, t) {
   const flatR = _W.set(camR.x, 0, camR.z).normalize();
   for (let s = 0; s < 2; s++) {
     const sx = s === 0 ? 0.17 : -0.17;
-    shoulders[s].copy(camera.position).addScaledVector(flatR, sx).addScaledVector(up, -0.3).addScaledVector(flatF, -0.02);
+    shoulders[s].copy(camera.position).addScaledVector(flatR, sx).addScaledVector(up, -0.27).addScaledVector(flatF, -0.05);
   }
   const tool = rig.tool === 'broom' ? rig.broom : rig.tool === 'rake' ? rig.rake : null;
   rig.broom.visible = rig.tool === 'broom';
@@ -232,29 +232,28 @@ export function updateRig(dt, t) {
   const useTool = tool && rig.pose === 'tool';
   for (const h of rig.hands) { h.grip.visible = useTool; h.open.visible = !useTool; }
   if (useTool) {
-    // handle from contact point up toward chest anchor
-    const anchor = _a.copy(camera.position).addScaledVector(up, -0.5).addScaledVector(flatF, 0.16).addScaledVector(flatR, 0.2);
-    const D = _D.copy(anchor).sub(rig.P);
+    // lower hand at a child's natural reach; the handle runs from the broom head on the ground through it
+    const H1 = new T.Vector3().copy(camera.position).addScaledVector(flatF, 0.5).addScaledVector(up, -0.37).addScaledVector(flatR, 0.09);
+    const D = _D.copy(H1).sub(rig.P);
     const dist = D.length();
     D.normalize();
-    // keep handle from becoming too flat
-    if (D.y < 0.35) { D.y = 0.35; D.normalize(); }
-    // orient tool: local Y = D, local X = width axis (horizontal, perpendicular), Z = X x Y
     const Wd = _b.crossVectors(D, up).normalize().negate();
     const Z = _c.crossVectors(Wd, D).normalize();
     _m.makeBasis(Wd, D, Z);
     tool.quaternion.setFromRotationMatrix(_m);
     tool.position.copy(rig.P).addScaledVector(D, -0.005);
+    // the tool's handle is long enough to reach past the hands
+    const base = tool === rig.broom ? 0.3 : 0.34;
+    const hl = Math.max(1.0, dist + 0.42 - base);
+    tool.children[0].scale.y = hl / (tool === rig.broom ? 1.28 : 1.25);
     // bend twigs opposite to motion
     const vloc = new T.Vector3(rig.vel.dot(Wd), rig.press, rig.vel.dot(Z));
     broomUniforms.uBend.value.lerp(new T.Vector3(-Math.max(-1, Math.min(1, vloc.x * 0.6)), rig.press, -Math.max(-1, Math.min(1, vloc.z * 0.6))), 1 - Math.exp(-dt * 12));
-    const base = tool === rig.broom ? 0.3 : 0.34;
-    const gR = Math.max(base + 0.25, Math.min(base + 0.6, dist - 0.62));
-    const grips = [gR, gR + 0.3];
+    const grips = [dist, dist + 0.27];
     for (let s = 0; s < 2; s++) {
-      const h = rig.hands[s === 0 ? 0 : 1];
+      const h = rig.hands[s];
       const gp = new T.Vector3().copy(rig.P).addScaledVector(D, grips[s]);
-      const toArm = new T.Vector3().copy(shoulders[s === 0 ? 0 : 1]).sub(gp);
+      const toArm = new T.Vector3().copy(shoulders[s]).sub(gp);
       setHandFrame(h, gp, D, toArm);
     }
   } else {
@@ -287,7 +286,8 @@ export function updateRig(dt, t) {
         axis.copy(flatR).multiplyScalar(-1);
         toArm = new T.Vector3().copy(shoulders[s]).sub(base);
       } else {
-        base.addScaledVector(up, Math.sin(t * 1.3 + s) * 0.006);
+        // resting: hands low, mostly below the frame
+        base.addScaledVector(up, -0.16 + Math.sin(t * 1.3 + s) * 0.006).addScaledVector(flatF, -0.05).addScaledVector(flatR, 0.05 * sgn);
         axis.copy(flatF).add(up.clone().multiplyScalar(0.3)).normalize();
       }
       setHandFrame(h, base, axis, toArm);
@@ -301,7 +301,7 @@ export function updateRig(dt, t) {
     if (s === 1) wl.z *= -1;
     const wrist = wl.applyMatrix4(h.grp.matrixWorld);
     const sh = shoulders[s];
-    const elbow = new T.Vector3().lerpVectors(wrist, sh, 0.5).addScaledVector(up, -0.12).addScaledVector(flatR, (s === 0 ? 1 : -1) * 0.07);
+    const elbow = new T.Vector3().lerpVectors(wrist, sh, 0.5).addScaledVector(up, -0.08).addScaledVector(flatR, (s === 0 ? 1 : -1) * 0.06);
     updateSleeve(rig.sleeves[s], wrist, elbow, sh, null, t * 0.0);
   }
 }

@@ -45,7 +45,7 @@ sctx.fillStyle = 'rgba(255,255,255,0)'; sctx.fillRect(0, 0, 512, 608);
 export const stainTex = new T.CanvasTexture(stainCanvas);
 stainTex.colorSpace = T.SRGBColorSpace; stainTex.flipY = false;
 function worldToStain(x, z) { return [((x - F.minX) / F.W) * 512, ((z - F.minZ) / F.D) * 608]; }
-export function paintStains(atlasImg, count = 520) {
+export function paintStains(atlasImg, count = 1600) {
   const cw = atlasImg.width / 4, ch = atlasImg.height / 2;
   for (let n = 0; n < count; n++) {
     const x = F.minX + Math.random() * F.W, z = F.minZ + Math.random() * F.D;
@@ -53,7 +53,7 @@ export function paintStains(atlasImg, count = 520) {
     const cell = [0, 1, 2, 3, 4, 5][Math.floor(Math.random() * 6)];
     const s = (0.07 + Math.random() * 0.05) / F.W * 512 * 1.15;
     sctx.save(); sctx.translate(sx, sy); sctx.rotate(Math.random() * 6.28);
-    sctx.globalAlpha = 0.22 + Math.random() * 0.3;
+    sctx.globalAlpha = 0.3 + Math.random() * 0.45;
     sctx.drawImage(atlasImg, (cell % 4) * cw, Math.floor(cell / 4) * ch, cw, ch, -s / 2, -s / 2, s, s);
     sctx.restore();
   }
@@ -71,7 +71,7 @@ function cobbleMaterial() {
     m.needsUpdate = true;
   };
   setMaps('_s');
-  m.normalScale.set(1.1, 1.1);
+  m.normalScale.set(0.9, 0.9);
   m.aoMapIntensity = 1.0;
   m.userData.upgrade = () => {
     let n = 0;
@@ -101,9 +101,12 @@ function cobbleMaterial() {
         gJoint = texture2D(uJoint, vMapUv).r;
         // wet stone: darker & more saturated, joints hold water longest
         gWet = clamp(fm.g * (0.75 + 0.6*gJoint) + fm.g*0.1, 0.0, 1.0);
-        diffuseColor.rgb *= mix(vec3(1.0), vec3(0.42,0.40,0.38), gWet);
+        diffuseColor.rgb *= mix(vec3(1.0), vec3(0.50,0.47,0.43), gWet);
         // tannin prints left by leaves
-        diffuseColor.rgb = mix(diffuseColor.rgb, diffuseColor.rgb * (st.rgb*1.35+0.08), st.a * (0.55 + 0.45*gWet));
+        diffuseColor.rgb = mix(diffuseColor.rgb, diffuseColor.rgb * (st.rgb*1.5+0.1), st.a * (0.6 + 0.4*gWet));
+        // large-scale patina: some stones dirtier/warmer, slightly uneven wetness
+        float pat = texture2D(uField, fuv * 7.0 + 0.37).b;
+        diffuseColor.rgb *= 0.86 + 0.28 * pat;
         // flattened wet leaf litter
         vec3 lit = texture2D(uLitter, vWXZ * 1.45).rgb;
         float L = dot(lit, vec3(0.3,0.5,0.2));
@@ -112,11 +115,11 @@ function cobbleMaterial() {
         gLit *= step(0.01, gCov);
         diffuseColor.rgb = mix(diffuseColor.rgb, lit * 0.9, gLit);`)
       .replace('#include <roughnessmap_fragment>', `#include <roughnessmap_fragment>
-        roughnessFactor = mix(roughnessFactor, mix(0.26, 0.06, gJoint), gWet * (1.0 - gLit));
+        roughnessFactor = mix(roughnessFactor, mix(0.24, 0.08, gJoint), gWet * (1.0 - gLit));
         roughnessFactor = mix(roughnessFactor, 0.5, gLit);`)
       .replace('#include <normal_fragment_maps>', `
         vec3 mapN = texture2D( normalMap, vNormalMapUv ).xyz * 2.0 - 1.0;
-        mapN.xy *= normalScale * (1.0 - 0.55*gWet*gJoint);
+        mapN.xy *= normalScale * (1.0 - 0.55*gWet*gJoint) * (1.0 - 0.3*gWet);
         vec3 ln = texture2D(uLitterN, vWXZ * 1.45).xyz * 2.0 - 1.0;
         mapN = normalize(mix(mapN, ln, gLit));
         normal = normalize( tbn * mapN );`)
@@ -159,17 +162,43 @@ const moundGeo = new T.PlaneGeometry(F.W, F.D, GW - 1, GH - 1).rotateX(-Math.PI 
   const p = moundGeo.attributes.position, uv = moundGeo.attributes.uv;
   for (let i = 0; i < p.count; i++) uv.setXY(i, (p.getX(i) + F.minX + F.W / 2) * 1.45, (p.getZ(i) + F.minZ + F.D / 2) * 1.45);
 }
-const moundMat = new T.MeshStandardMaterial({ roughness: 0.82, metalness: 0, color: 0xd8d0c8 });
+const moundMat = new T.MeshStandardMaterial({ roughness: 0.82, metalness: 0, color: 0xd8d0c8, vertexColors: true });
+moundMat.onBeforeCompile = (sh) => {
+  sh.fragmentShader = sh.fragmentShader.replace('#include <color_fragment>', `
+    // vColor = average colour of the leaves heaped here; keep the litter's light/dark detail
+    float lum = dot(diffuseColor.rgb, vec3(0.3, 0.55, 0.15));
+    diffuseColor.rgb = mix(diffuseColor.rgb, vColor * (0.35 + 1.6 * lum), 0.85);`);
+};
 moundMat.map = tex('litter_albedo_s.jpg', { srgb: true });
 moundMat.normalMap = tex('litter_normal.jpg');
 moundMat.normalScale.set(1.4, 1.4);
+const moundCol = new Float32Array(GW * GH * 3).fill(0.5);
+moundGeo.setAttribute('color', new T.BufferAttribute(moundCol, 3));
 export const mound = new T.Mesh(moundGeo, moundMat);
 mound.position.set(F.minX + F.W / 2, 0, F.minZ + F.D / 2);
 mound.castShadow = true; mound.receiveShadow = true;
 scene.add(mound);
 // vertex index -> grid cell: PlaneGeometry vertices ordered row-major from top (y+) which after rotateX(-90) is z-
+const PAL = [[0.78, 0.52, 0.06], [0.55, 0.06, 0.03], [0.30, 0.15, 0.06]];
+const colCnt = new Float32Array(GW * GH * 3);
 function updateMound() {
   const p = moundGeo.attributes.position;
+  colCnt.fill(0);
+  for (let i = 0; i < MAXL; i++) {
+    if (L.st[i] !== 0) continue;
+    const gi = Math.floor((L.x[i] - F.minX) / CELL), gj = Math.floor((L.z[i] - F.minZ) / CELL);
+    for (let dj = -2; dj <= 2; dj++) for (let di = -2; di <= 2; di++) {
+      const a = gi + di, b = gj + dj;
+      if (a < 0 || b < 0 || a >= GW || b >= GH) continue;
+      colCnt[(b * GW + a) * 3 + L.col[i]] += 1;
+    }
+  }
+  for (let k = 0; k < GW * GH; k++) {
+    const c0 = colCnt[k * 3], c1 = colCnt[k * 3 + 1], c2 = colCnt[k * 3 + 2], t = c0 + c1 + c2;
+    if (t < 0.5) continue;
+    for (let ch = 0; ch < 3; ch++) moundCol[k * 3 + ch] = (PAL[0][ch] * c0 + PAL[1][ch] * c1 + PAL[2][ch] * c2) / t;
+  }
+  moundGeo.attributes.color.needsUpdate = true;
   for (let j = 0; j < GH; j++) for (let i = 0; i < GW; i++) {
     const h = hgt[j * GW + i];
     p.setY(j * GW + i, h > 0.012 ? h * 0.9 - 0.006 : -0.03);
@@ -531,11 +560,16 @@ export function pickUp(x, z, radius, anchor) {
   return carry.list.length;
 }
 export function dropCarried(vx, vz, spread) {
+  // the armful explodes forward: leaves are flung over a wide fan and flutter down
+  const sp = Math.hypot(vx, vz) || 1, fx = vx / sp, fz = vz / sp;
   for (const i of carry.list) {
     L.st[i] = 1;
-    L.vx[i] = vx * (0.6 + Math.random() * 0.9) + (Math.random() - 0.5) * spread;
-    L.vz[i] = vz * (0.6 + Math.random() * 0.9) + (Math.random() - 0.5) * spread;
-    L.vy[i] = 0.8 + Math.random() * 2.6;
+    const fwd = Math.random() * 2.6, side = (Math.random() - 0.5) * spread * (0.4 + fwd * 0.5);
+    L.x[i] += fx * fwd * 0.5 - fz * side * 0.5; L.z[i] += fz * fwd * 0.5 + fx * side * 0.5;
+    L.y[i] += Math.random() * 0.8;
+    L.vx[i] = fx * fwd * 1.4 - fz * side * 1.2;
+    L.vz[i] = fz * fwd * 1.4 + fx * side * 1.2;
+    L.vy[i] = 1.2 + Math.random() * 2.8;
     L.wy[i] = (Math.random() - 0.5) * 10; L.wx[i] = (Math.random() - 0.5) * 12; L.wz[i] = (Math.random() - 0.5) * 12;
   }
   carry.list.length = 0;
@@ -613,4 +647,72 @@ export function step(dt, t) {
   if (gridDirty && gridTimer <= 0) { recomputeGrid(); gridTimer = 0.06; }
   updateMatrices(false);
   if (mapDirty) syncMap();
+}
+
+// a leaf detaches from a tree canopy and flutters down
+export function dropFromTree(x, y, z, color) {
+  const i = takeReserve(); if (i < 0) return -1;
+  setLeafType(i, color);
+  L.st[i] = 1; L.x[i] = x; L.y[i] = y; L.z[i] = z; L.vx[i] = 0; L.vy[i] = -0.2; L.vz[i] = 0;
+  L.wy[i] = (Math.random() - 0.5) * 4; L.wx[i] = (Math.random() - 0.5) * 6; L.wz[i] = (Math.random() - 0.5) * 6;
+  L.fr[i] = Math.random(); L.placed[i] = 0;
+  return i;
+}
+// count resting leaves of each colour inside a disc
+export function countInDisc(x, z, r) {
+  const c = [0, 0, 0];
+  for (let i = 0; i < MAXL; i++) {
+    if (L.st[i] !== 0) continue;
+    const dx = L.x[i] - x, dz = L.z[i] - z;
+    if (dx * dx + dz * dz < r * r) c[L.col[i]]++;
+  }
+  return c;
+}
+// strongest pile (max height) inside a rect
+export function biggestPile(x0, z0, x1, z1) {
+  let best = 0, bx = 0, bz = 0;
+  for (let j = 0; j < GH; j++) for (let i = 0; i < GW; i++) {
+    const x = F.minX + (i + 0.5) * CELL, z = F.minZ + (j + 0.5) * CELL;
+    if (x < x0 || x > x1 || z < z0 || z > z1) continue;
+    const h = hgt[j * GW + i];
+    if (h > best) { best = h; bx = x; bz = z; }
+  }
+  return { h: best, x: bx, z: bz };
+}
+// most leaf-covered spot inside a rect (coverage or loose leaves) for hints
+export function dirtiestSpot(x0, z0, x1, z1) {
+  let best = -1, bx = 0, bz = 0;
+  for (let z = z0 + 0.2; z < z1; z += 0.3) for (let x = x0 + 0.15; x < x1; x += 0.3) {
+    const v = coverageIn(x - 0.15, z - 0.15, x + 0.15, z + 0.15) * 3 + looseLeavesIn(x - 0.15, z - 0.15, x + 0.15, z + 0.15) / 20;
+    if (v > best) { best = v; bx = x; bz = z; }
+  }
+  return { v: best, x: bx, z: bz };
+}
+// leaves near the car get blown aside
+export function carWake(x, z, halfW, halfL, speed) {
+  if (speed < 0.3) return;
+  for (let i = 0; i < MAXL; i++) {
+    if (L.st[i] !== 0) continue;
+    const dx = L.x[i] - x, dz = L.z[i] - z;
+    if (Math.abs(dx) > halfW + 0.35 || Math.abs(dz) > halfL + 0.3) continue;
+    if (Math.random() > 0.25) continue;
+    L.st[i] = 1; L.vy[i] = 0.4 + Math.random() * 0.8 * speed * 0.4;
+    const side = dz >= 0 ? 1 : -1; // car travels along +x
+    L.vz[i] = side * (0.8 + Math.random()) * speed * 0.5; L.vx[i] = speed * (0.3 + Math.random() * 0.5);
+    L.wy[i] = (Math.random() - 0.5) * 8; L.wx[i] = (Math.random() - 0.5) * 10; L.wz[i] = (Math.random() - 0.5) * 10;
+    L.y[i] += 0.01;
+  }
+}
+
+// set a mat down: leaves underneath are shoved out to its rim
+export function clearDisc(x, z, r) {
+  for (let i = 0; i < MAXL; i++) {
+    if (L.st[i] !== 0) continue;
+    const dx = L.x[i] - x, dz = L.z[i] - z, d = Math.hypot(dx, dz);
+    if (d >= r) continue;
+    const a = d > 1e-3 ? Math.atan2(dz, dx) : Math.random() * 6.28;
+    const nr = r + 0.02 + Math.random() * 0.08;
+    L.x[i] = x + Math.cos(a) * nr; L.z[i] = z + Math.sin(a) * nr; L.dirty[i] = 1;
+  }
+  gridDirty = true;
 }

@@ -4,14 +4,14 @@ import { roundCone, roundBox, ellipsoid, smin, smax, noise3 } from './sdfcore.js
 
 // ------------------------------------------------------------ gloved hand (white cotton, gripping a 29mm handle)
 const R = 0.0145;
-const GLOVE = [0.78, 0.765, 0.72];
+const GLOVE = [0.6, 0.585, 0.55];
 function fingerPts(y, scale, open) {
   if (open) return [[0.024, y, 0.022], [0.022, y, 0.05 * scale], [0.018, y, 0.074 * scale], [0.012, y, 0.092 * scale]];
   const angs = [42, 98, 168, 232];
   const pts = [];
   for (let i = 0; i < 4; i++) {
     const a = (angs[i] * Math.PI) / 180;
-    const r = i === 0 ? 0.034 : R + 0.0083 * scale;
+    const r = i === 0 ? 0.033 : R + 0.0074 * scale;
     pts.push([Math.cos(a) * r, y, Math.sin(a) * r]);
   }
   if (scale < 0.9) pts[3] = [pts[2][0] * 0.45 + pts[3][0] * 0.55, y, pts[2][2] * 0.45 + pts[3][2] * 0.55];
@@ -28,11 +28,11 @@ export function handShape(open) {
     let d = roundBox(x, y, z, [0.03, 0.0, -0.002], [0.011, 0.03, 0.027], 0.009);
     for (let f = 0; f < 4; f++) {
       const p = fingers[f];
-      const rr = 0.0082 * (f === 3 ? 0.88 : 1);
+      const rr = 0.0071 * (f === 3 ? 0.9 : 1);
       let fd = roundCone(x, y, z, p[0], p[1], rr * 1.05, rr);
       fd = smin(fd, roundCone(x, y, z, p[1], p[2], rr, rr * 0.95), 0.003);
       fd = smin(fd, roundCone(x, y, z, p[2], p[3], rr * 0.95, rr * 0.86), 0.003);
-      d = f === 0 ? smin(d, fd, 0.006) : smin(d, fd, 0.0022);
+      d = f === 0 ? smin(d, fd, 0.005) : smin(d, fd, 0.0015);
     }
     let td = roundCone(x, y, z, thumb[0], thumb[1], 0.011, 0.0095);
     for (let i = 1; i < thumb.length - 1; i++) td = smin(td, roundCone(x, y, z, thumb[i], thumb[i + 1], 0.0095, 0.0085), 0.003);
@@ -295,4 +295,54 @@ export function personShape(kind, gloved = false) {
   const head = { sdf: makeSdf(headParts), attr: (x, y, z) => { const a = headAttr(x, y, z); delete a.bones; return a; },
     bmin: [hc[0] - 0.13, J.neck[1] - 0.02, hc[2] - 0.2], bmax: [hc[0] + 0.13, hc[1] + 0.14, hc[2] + 0.13], step: 0.0032, offset: J.neckTop };
   return { sdf, attr, bmin: [-wspan, -0.01, -0.2 * (child ? 0.7 : 1)], bmax: [wspan, Hh, 0.22 * (child ? 0.75 : 1)], step: child ? 0.0085 : 0.011, bones, head };
+}
+
+// ------------------------------------------------------------ guest car (compact classic saloon), faces +Z
+// mat ids: 9 paint, 10 glass, 11 chrome, 12 rubber/black trim, 13 lamp lens
+export function carShape() {
+  const L = 2.0, W = 0.84;
+  const wheels = [[0.74, 0.31, 1.3], [-0.74, 0.31, 1.3], [0.74, 0.31, -1.32], [-0.74, 0.31, -1.32]];
+  const body = (x, y, z) => {
+    let d = roundBox(x, y, z, [0, 0.6, 0], [W, 0.3, L], 0.16);
+    // tapered nose/tail: round off top front & rear
+    d = smax(d, (y - 0.86) + (Math.abs(z) - 1.55) * 0.35, 0.12);
+    // cabin with sloped windscreen & rear window
+    let c = roundBox(x, y, z, [0, 1.12, -0.18], [W - 0.1 - (y - 0.85) * 0.25, 0.33, 1.05], 0.14);
+    c = smax(c, (z - 0.55) * 0.82 + (y - 0.85) * 0.7, 0.06); // windscreen rake
+    c = smax(c, -(z + 1.05) * 0.9 + (y - 0.85) * 0.55, 0.06); // rear window
+    d = smin(d, c, 0.06);
+    // wheel arches
+    for (const w of wheels) d = smax(d, -(Math.hypot(y - w[1], z - w[2]) - 0.38), 0.03);
+    // bumpers
+    d = smin(d, roundBox(x, y, z, [0, 0.42, L + 0.02], [W - 0.02, 0.07, 0.06], 0.05), 0.01);
+    d = smin(d, roundBox(x, y, z, [0, 0.42, -L - 0.02], [W - 0.02, 0.07, 0.06], 0.05), 0.01);
+    // side mirrors
+    for (const s of [-1, 1]) d = smin(d, ellipsoid(x, y, z, [s * (W + 0.07), 0.98, 0.42], [0.07, 0.05, 0.04]), 0.02);
+    return d;
+  };
+  const sdf = (x, y, z) => body(x, y, z);
+  const attr = (x, y, z) => {
+    let color = [0.05, 0.08, 0.16], mat = 9, rough = 0.32;
+    const ax = Math.abs(x);
+    // glass greenhouse above beltline
+    if (y > 0.9 && y < 1.4 && !(y > 1.36 && ax < W - 0.18)) {
+      const pillarA = Math.abs(z - 0.4 + (y - 0.9) * 0.9) < 0.05 && ax > W - 0.3;
+      const pillarB = Math.abs(z + 0.3) < 0.05 && ax > W - 0.3;
+      const pillarC = Math.abs(z + 1.0 - (y - 0.9) * 0.6) < 0.07 && ax > W - 0.3;
+      if (!pillarA && !pillarB && !pillarC) { color = [0.02, 0.025, 0.03]; mat = 10; rough = 0.04; }
+    }
+    if (y > 0.3 && y < 0.52 && Math.abs(z) > L - 0.04) { color = [0.75, 0.75, 0.76]; mat = 11; rough = 0.15; }
+    // grille & lamps
+    if (z > L - 0.12 && y > 0.52 && y < 0.72) {
+      if (ax > 0.5 && ax < 0.74) { color = [0.95, 0.93, 0.85]; mat = 13; rough = 0.05; }
+      else if (ax < 0.4) { color = [0.15, 0.15, 0.16]; mat = 11; rough = 0.3; }
+    }
+    if (z < -L + 0.12 && y > 0.55 && y < 0.72 && ax > 0.5 && ax < 0.76) { color = [0.5, 0.05, 0.04]; mat = 13; rough = 0.1; }
+    // door shut lines & handles
+    if (ax > W - 0.05 && y > 0.4 && y < 0.88 && (Math.abs(z - 0.42) < 0.006 || Math.abs(z + 0.42) < 0.006 || Math.abs(z + 1.2) < 0.006)) { color = [0.01, 0.01, 0.015]; mat = 12; rough = 0.8; }
+    if (ax > W - 0.05 && Math.abs(y - 0.78) < 0.015 && (Math.abs(z - 0.2) < 0.06 || Math.abs(z + 0.65) < 0.06)) { color = [0.75, 0.75, 0.76]; mat = 11; rough = 0.15; }
+    if (y < 0.3) { color = [0.03, 0.03, 0.03]; mat = 12; rough = 0.8; }
+    return { color, mat, rough };
+  };
+  return { sdf, attr, bmin: [-1.0, 0.12, -2.15], bmax: [1.0, 1.55, 2.15], step: 0.02, wheels };
 }

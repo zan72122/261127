@@ -28,16 +28,16 @@ function makeMats() {
   mats.brick.normalScale.set(1.2, 1.2);
   mats.stone = new T.MeshStandardMaterial({ map: tex('stone_albedo.jpg', { srgb: true }), normalMap: tex('stone_normal.jpg'), roughness: 0.78 });
   mats.wood = new T.MeshStandardMaterial({ map: tex('wood_albedo.jpg', { srgb: true }), normalMap: tex('wood_normal.jpg'), roughnessMap: tex('wood_orm.jpg'), roughness: 1 });
-  mats.paint = new T.MeshStandardMaterial({ color: new T.Color(0.86, 0.85, 0.80), normalMap: tex('wood_normal.jpg'), normalScale: new T.Vector2(0.25, 0.25), roughness: 0.42 });
-  mats.green = new T.MeshStandardMaterial({ color: new T.Color(0.07, 0.17, 0.12), normalMap: tex('wood_normal.jpg'), normalScale: new T.Vector2(0.3, 0.3), roughness: 0.38 });
-  mats.brass = new T.MeshStandardMaterial({ color: new T.Color(0.80, 0.62, 0.32), metalness: 1, roughness: 0.32, normalMap: tex('stone_normal.jpg'), normalScale: new T.Vector2(0.15, 0.15) });
-  mats.iron = new T.MeshStandardMaterial({ color: new T.Color(0.06, 0.06, 0.06), metalness: 0.9, roughness: 0.45, normalMap: tex('stone_normal.jpg'), normalScale: new T.Vector2(0.3, 0.3) });
-  mats.glass = new T.MeshPhysicalMaterial({ color: new T.Color(0.04, 0.05, 0.05), metalness: 0, roughness: 0.03, clearcoat: 1, clearcoatRoughness: 0.02, reflectivity: 0.6 });
-  mats.canvas = new T.MeshStandardMaterial({ color: new T.Color(0.10, 0.24, 0.16), normalMap: tex('twill_normal.jpg'), normalScale: new T.Vector2(0.7, 0.7), roughness: 0.9 });
+  mats.paint = new T.MeshStandardMaterial({ color: new T.Color().setRGB(0.86, 0.85, 0.80, T.SRGBColorSpace), normalMap: tex('wood_normal.jpg'), normalScale: new T.Vector2(0.25, 0.25), roughness: 0.42 });
+  mats.green = new T.MeshStandardMaterial({ color: new T.Color().setRGB(0.07, 0.17, 0.12, T.SRGBColorSpace), normalMap: tex('wood_normal.jpg'), normalScale: new T.Vector2(0.3, 0.3), roughness: 0.38 });
+  mats.brass = new T.MeshStandardMaterial({ color: new T.Color().setRGB(0.80, 0.62, 0.32, T.SRGBColorSpace), metalness: 1, roughness: 0.32, normalMap: tex('stone_normal.jpg'), normalScale: new T.Vector2(0.15, 0.15) });
+  mats.iron = new T.MeshStandardMaterial({ color: new T.Color().setRGB(0.06, 0.06, 0.06, T.SRGBColorSpace), metalness: 0.9, roughness: 0.45, normalMap: tex('stone_normal.jpg'), normalScale: new T.Vector2(0.3, 0.3) });
+  mats.glass = new T.MeshPhysicalMaterial({ color: new T.Color().setRGB(0.04, 0.05, 0.05, T.SRGBColorSpace), metalness: 0, roughness: 0.03, clearcoat: 1, clearcoatRoughness: 0.02, reflectivity: 0.6 });
+  mats.canvas = new T.MeshStandardMaterial({ color: new T.Color().setRGB(0.10, 0.24, 0.16, T.SRGBColorSpace), normalMap: tex('twill_normal.jpg'), normalScale: new T.Vector2(0.7, 0.7), roughness: 0.9 });
   mats.bark = new T.MeshStandardMaterial({ map: tex('bark_albedo.jpg', { srgb: true }), normalMap: tex('bark_normal.jpg'), normalScale: new T.Vector2(1.6, 1.6), roughness: 0.95 });
   mats.burlap = new T.MeshStandardMaterial({ map: tex('burlap_albedo.jpg', { srgb: true }), normalMap: tex('burlap_normal.jpg'), normalScale: new T.Vector2(1.5, 1.5), roughness: 0.97 });
-  mats.interior = new T.MeshStandardMaterial({ color: 0x000000, emissive: new T.Color(1.0, 0.72, 0.42), emissiveIntensity: 1.3, roughness: 1 });
-  mats.lampGlass = new T.MeshStandardMaterial({ color: new T.Color(1, 0.9, 0.7), emissive: new T.Color(1.0, 0.75, 0.4), emissiveIntensity: 5, roughness: 0.2 });
+  mats.interior = new T.MeshStandardMaterial({ color: 0x000000, emissive: new T.Color().setRGB(1.0, 0.72, 0.42, T.SRGBColorSpace), emissiveIntensity: 1.3, roughness: 1 });
+  mats.lampGlass = new T.MeshStandardMaterial({ color: new T.Color().setRGB(1, 0.9, 0.7, T.SRGBColorSpace), emissive: new T.Color().setRGB(1.0, 0.75, 0.4, T.SRGBColorSpace), emissiveIntensity: 5, roughness: 0.2 });
 }
 
 const FZ = -7.4; // facade plane
@@ -47,7 +47,7 @@ function buildHotel() {
   const g = new T.Group();
   // brick wall with openings: build as pieces around door (x -0.95..0.95, h 2.55) and windows
   const wallParts = [];
-  const W = 16, H = 5.2;
+  const W = 24, H = 5.2;
   const holes = [[-0.95, 0.95, 0.35, 2.75], [-3.6, -2.2, 1.0, 2.9], [2.2, 3.6, 1.0, 2.9], [-6.6, -5.2, 1.0, 2.9], [5.2, 6.6, 1.0, 2.9],
     [-3.6, -2.2, 3.95, 4.95], [2.2, 3.6, 3.95, 4.95], [-0.7, 0.7, 3.95, 4.95]];
   // vertical slicing by holes: simple approach -> horizontal bands
@@ -78,7 +78,7 @@ function buildHotel() {
   for (let i = 0; i < 3; i++) st.push(boxAt(3.4 - i * 0.25, 0.17, 0.6 - i * 0.2 + 0.2 * (2 - i) * 0, 0, 0.085 + i * 0.17, FZ + 0.6 - i * 0.2 - (0.6 - i * 0.2) / 2 + 0.0, 1.5));
   const stoneMesh = new T.Mesh(mergeGeometries(st), mats.stone);
   {
-    const roof = new T.Mesh(worldUV(new T.BoxGeometry(W, 0.06, 4, 8, 1, 4), 3), new T.MeshStandardMaterial({ color: new T.Color(0.20, 0.21, 0.24), normalMap: tex('brick_normal.jpg'), normalScale: new T.Vector2(0.8, 0.8), roughness: 0.6 }));
+    const roof = new T.Mesh(worldUV(new T.BoxGeometry(W, 0.06, 4, 8, 1, 4), 3), new T.MeshStandardMaterial({ color: new T.Color().setRGB(0.20, 0.21, 0.24, T.SRGBColorSpace), normalMap: tex('brick_normal.jpg'), normalScale: new T.Vector2(0.8, 0.8), roughness: 0.6 }));
     roof.rotation.x = 0.75; roof.position.set(0, H + 1.6, FZ - 1.6);
     roof.castShadow = true; g.add(roof);
   }
@@ -88,7 +88,7 @@ function buildHotel() {
   for (const [a, b, y0, y1] of holes.slice(1)) {
     const cx = (a + b) / 2, w = b - a, h = y1 - y0, cy = (y0 + y1) / 2;
     const inner = new T.Mesh(new T.PlaneGeometry(w, h), mats.interior.clone());
-    inner.material.emissive = new T.Color(0.95, 0.68, 0.40).multiplyScalar(0.55 + Math.random() * 0.35);
+    inner.material.emissive = new T.Color().setRGB(0.95, 0.68, 0.40, T.SRGBColorSpace).multiplyScalar(0.55 + Math.random() * 0.35);
     inner.position.set(cx, cy, FZ - 0.38);
     g.add(inner);
     // curtains (folded cloth)
@@ -97,7 +97,7 @@ function buildHotel() {
       const p = cg.attributes.position;
       for (let i = 0; i < p.count; i++) p.setZ(i, Math.sin(p.getX(i) * 60) * 0.02);
       cg.computeVertexNormals();
-      const c = new T.Mesh(cg, new T.MeshStandardMaterial({ color: new T.Color(0.78, 0.70, 0.56), roughness: 0.9, normalMap: tex('twill_normal.jpg'), emissive: new T.Color(0.35, 0.25, 0.14), side: T.DoubleSide }));
+      const c = new T.Mesh(cg, new T.MeshStandardMaterial({ color: new T.Color().setRGB(0.78, 0.70, 0.56, T.SRGBColorSpace), roughness: 0.9, normalMap: tex('twill_normal.jpg'), emissive: new T.Color().setRGB(0.35, 0.25, 0.14, T.SRGBColorSpace), side: T.DoubleSide }));
       c.position.set(cx + side * w * 0.36, cy, FZ - 0.33);
       g.add(c);
     }
@@ -173,7 +173,7 @@ function buildHotel() {
     lg.add(body, cap, base, arm);
     lg.position.set(s * 1.45, 2.35, FZ + 0.25);
     g.add(lg);
-    const pl = new T.PointLight(new T.Color(1, 0.72, 0.42), 1.4, 3.5, 2);
+    const pl = new T.PointLight(new T.Color().setRGB(1, 0.72, 0.42, T.SRGBColorSpace), 1.4, 3.5, 2);
     pl.position.copy(lg.position).add(new T.Vector3(0, 0, 0.15));
     g.add(pl);
   }
@@ -340,6 +340,7 @@ function buildMat(x, z, color) {
   rope.rotation.x = Math.PI / 2; rope.position.y = 0.012; rope.castShadow = true;
   g.add(m, rope);
   g.position.set(x, 0.0, z);
+  g.scale.setScalar(0.75);
   g.userData.color = color;
   scene.add(g);
   return g;
@@ -355,18 +356,24 @@ export function buildWorld(leafMaterial) {
     colorFn: (r) => ({ cell: r() < 0.5 ? 0 : 3, size: 0.085 }) });
   world.maple = buildTree(4.1, -6.2, { height: 4.6, trunkR: 0.11, spread: 0.75, leafCount: 3600, seed: 23, lean: -0.35,
     colorFn: (r) => ({ cell: r() < 0.7 ? 1 : 4, size: 0.09 }) });
+  // more autumn trees beyond the garden walls
+  buildTree(-5.2, -1.5, { height: 8, trunkR: 0.18, spread: 1.0, leafCount: 3000, seed: 31, lean: 0.1, colorFn: (r) => ({ cell: r() < 0.5 ? 0 : 3, size: 0.09 }) });
+  buildTree(5.3, -2.2, { height: 6.5, trunkR: 0.14, spread: 0.9, leafCount: 2600, seed: 41, lean: -0.1, colorFn: (r) => ({ cell: r() < 0.6 ? 4 : 0, size: 0.09 }) });
+  buildTree(4.9, 1.8, { height: 7, trunkR: 0.15, spread: 0.9, leafCount: 2400, seed: 53, lean: -0.15, colorFn: (r) => ({ cell: r() < 0.5 ? 1 : 3, size: 0.09 }) });
   world.bench = buildBench();
   world.bench.position.set(1.45, 0, 0.25); world.bench.rotation.y = -0.5;
   world.sign = buildSign();
   world.sign.position.set(-1.75, 0, -5.9); world.sign.rotation.y = 0.35;
-  world.mats = [buildMat(-1.45, -2.2, 0), buildMat(1.45, -2.2, 1), buildMat(1.45, -3.9, 2)];
+  world.mats = [buildMat(-0.5, -1.25, 0), buildMat(0.5, -1.25, 1), buildMat(0.0, -2.1, 2)];
+  world.mats.forEach((m) => m.userData.r = 0.42 * 0.75);
   world.mats.forEach((m) => (m.visible = false));
   // hedge/garden wall at sides (low brick wall with stone coping)
   const sides = [];
-  for (const sx of [-3.35, 3.35]) sides.push(boxAt(0.3, 0.7, 7.6, sx, 0.35, -3.0));
+  sides.push(boxAt(0.3, 0.75, 4.4, -3.35, 0.375, -1.4), boxAt(0.3, 1.9, 7.6, 3.35, 0.95, -3.0));
+  for (const z of [-3.75]) sides.push(boxAt(0.42, 1.3, 0.42, -3.35, 0.65, z, 1.5));
   const sw = new T.Mesh(mergeGeometries(sides), mats.brick); sw.castShadow = true; sw.receiveShadow = true; scene.add(sw);
   const cap = [];
-  for (const sx of [-3.35, 3.35]) cap.push(boxAt(0.38, 0.08, 7.7, sx, 0.74, -3.0, 1.5));
+  cap.push(boxAt(0.4, 0.09, 4.5, -3.35, 0.79, -1.4, 1.5), boxAt(0.4, 0.09, 7.7, 3.35, 1.94, -3.0, 1.5));
   const cm = new T.Mesh(mergeGeometries(cap), mats.stone); cm.castShadow = true; cm.receiveShadow = true; scene.add(cm);
   return world;
 }
