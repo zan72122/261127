@@ -154,7 +154,7 @@ export class Moss {
     const wetTex = tex('moss_wet_c_lo');
     const mat = new THREE.MeshStandardMaterial({
       map: tex('moss_dry_c_lo'), normalMap: tex('moss_n'), roughnessMap: tex('moss_orm'), aoMap: tex('moss_orm'),
-      roughness: 1, metalness: 0, aoMapIntensity: 1.0,
+      roughness: 1, metalness: 0, aoMapIntensity: 1.0, envMapIntensity: 0.6,
     });
     mat.normalScale.set(1.3, 1.3);
     this.terrainUniforms = { uWetMap: { value: wetTex }, uSand: { value: texRep('stone_c', 1, 1) } };
@@ -187,7 +187,7 @@ export class Moss {
         .replace('#include <roughnessmap_fragment>', `
           float roughnessFactor = roughness;
           vec4 texelRoughness = texture2D( roughnessMap, vRoughnessMapUv );
-          roughnessFactor *= texelRoughness.g * mix(1.05, 0.55, smoothstep(0.45, 1.05, w));
+          roughnessFactor *= texelRoughness.g * mix(1.05, 0.78, smoothstep(0.45, 1.05, w));
           roughnessFactor = mix(roughnessFactor, 0.35, smoothstep(0.0, 0.2, water));
         `)
         .replace('#include <normal_fragment_maps>', `
@@ -238,7 +238,7 @@ export class Moss {
     g.boundingSphere = new THREE.Sphere(new THREE.Vector3(), 0.3);
 
     const count = this.lowCount ? 5200 : 8500;
-    const mat = new THREE.MeshStandardMaterial({ roughness: 0.75, metalness: 0, side: THREE.DoubleSide });
+    const mat = new THREE.MeshStandardMaterial({ roughness: 0.72, metalness: 0, side: THREE.DoubleSide, envMapIntensity: 0.6 });
     mat.onBeforeCompile = (sh) => {
       Object.assign(sh.uniforms, this.uniforms);
       sh.vertexShader = COMMON + `
@@ -278,6 +278,9 @@ export class Moss {
             if (nrm.y < 0.0) nrm = -nrm;
             nrm = normalize(nrm + vec3(0.0, 0.6, 0.0));
           }
+          // waterlogged shoots lie down under standing water
+          float drown = smoothstep(0.03, 0.3, S.g);
+          lp *= vec3(mix(1.0, 0.8, drown), mix(1.0, 0.3, drown), mix(1.0, 0.8, drown));
           vec3 objectNormal = nrm;
           // colour: dry tan/brown -> olive -> fresh green, tips lighter
           vec3 dryC = mix(vec3(0.16, 0.10, 0.05), vec3(0.30, 0.21, 0.12), rnd);
@@ -428,7 +431,7 @@ export class Moss {
     g.setIndex(idx);
     g.computeVertexNormals();
     const mat = new THREE.MeshPhysicalMaterial({
-      color: 0x223322, roughness: 0.04, metalness: 0, transparent: true, envMapIntensity: 1.4,
+      color: 0x1d2a1a, roughness: 0.03, metalness: 0, transparent: true, envMapIntensity: 2.6,
       specularIntensity: 1, ior: 1.33, depthWrite: false,
     });
     mat.onBeforeCompile = (sh) => {
@@ -437,7 +440,7 @@ export class Moss {
         #include <begin_vertex>
         vec4 S = texture2D(uSim, simUV(position.xz));
         vDepth = S.g; vXZ = position.xz;
-        transformed.y += S.g * 0.006 + 0.0018 * smoothstep(0.0, 0.05, S.g) + S.r * 0.0025;
+        transformed.y += S.g * 0.006 + 0.0012 * smoothstep(0.0, 0.05, S.g) + S.r * 0.0022;
       `);
       sh.fragmentShader = 'uniform float uTime; varying float vDepth; varying vec2 vXZ;\n' + sh.fragmentShader
         .replace('#include <normal_fragment_begin>', `
@@ -493,7 +496,7 @@ export class Moss {
       // moss absorbs fast while dry, then saturates; extra becomes standing water
       const cap = 1.0;
       if (w < cap) this.wet[k] = Math.min(cap + 0.05, w + add * (1.15 - w * 0.6));
-      else this.water[k] += add * 0.0006;
+      else this.water[k] += add * 0.00012;
     }
     this.dirty = true;
   }

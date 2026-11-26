@@ -49,7 +49,7 @@ async function boot() {
   parts = await peopleP;
   build();
   resize();
-  setState(DBG.startsWith('s') ? DBG : 'intro', true);
+  setState(['s1', 's2', 's3', 'free'].includes(DBG) ? DBG : 'intro', true);
   renderer.compile(scene, camera);
   requestAnimationFrame(loop);
   setTimeout(() => { document.getElementById('veil').style.opacity = '0'; }, 120);
@@ -117,8 +117,9 @@ function build() {
   world.add(girl.group);
   const dm = peopleMaterials();
   dad = new Figure(parts.dad, dm);
-  dad.group.position.set(0.42, -0.72, 0.66);
-  dad.group.rotation.y = -0.35;
+  dad.group.position.set(0.52, -0.72, 0.56);
+  dad.group.rotation.y = 0.35;
+  const stool = makeStool(M); stool.position.set(0.52, -0.72, 0.58); world.add(stool);
   world.add(dad.group);
   coatHang = new THREE.Mesh(parts.coathang.geometry, pm[2]);
   coatHang.castShadow = true; coatHang.receiveShadow = true;
@@ -153,6 +154,20 @@ function build() {
   layoutTable();
 }
 
+function makeStool(M) {
+  const g = new THREE.Group();
+  const seat = new THREE.Mesh(new THREE.CylinderGeometry(0.17, 0.165, 0.035, 40), M.wood);
+  seat.position.y = 0.455; seat.castShadow = seat.receiveShadow = true; g.add(seat);
+  for (let i = 0; i < 4; i++) {
+    const a = i * Math.PI / 2 + Math.PI / 4;
+    const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.014, 0.017, 0.45, 12), M.wood);
+    leg.position.set(Math.cos(a) * 0.12, 0.22, Math.sin(a) * 0.12);
+    leg.rotation.set(Math.sin(a) * 0.12, 0, -Math.cos(a) * 0.12);
+    leg.castShadow = true; g.add(leg);
+  }
+  return g;
+}
+
 // ------------------------------------------------------------------ tools on the table
 let coatHalo;
 const lid = { get obj() { return jar.lid; } };
@@ -182,8 +197,8 @@ let portrait = false;
 function layoutTable() {
   // portrait: tools in a row in front of the jar; landscape: on both sides
   const L = portrait ? {
-    spray: [0.215, 0, 0.13, 0.5, 0], dropper: [0.12, 0.0055, 0.255, 0.9, 1], magnifier: [0.02, 0.006, 0.27, -0.3, 2],
-    pebble: [-0.14, 0, 0.23, 0, 0], twig: [-0.215, 0, 0.10, 0.9, 0], card: [0.24, 0, -0.17, -0.45], cup: [0.23, 0, -0.02], lid: [-0.27, 0.0045, -0.12],
+    spray: [0.15, 0, 0.235, 0.5, 0], dropper: [0.075, 0.0055, 0.33, 1.45, 1], magnifier: [-0.055, 0.006, 0.315, -0.2, 2],
+    pebble: [-0.13, 0, 0.235, 0, 0], twig: [-0.17, 0, 0.135, 0.9, 0], card: [0.17, 0, -0.2, -0.45], cup: [0.18, 0, 0.13], lid: [-0.12, 0.0045, -0.30],
   } : {
     spray: [0.255, 0, 0.03, 0.6, 0], dropper: [0.23, 0.0055, 0.165, 0.7, 1], magnifier: [-0.235, 0.006, 0.02, -0.3, 2],
     pebble: [-0.22, 0, 0.16, 0, 0], twig: [-0.27, 0, -0.10, 1.1, 0], card: [0.27, 0, -0.18, -0.5], cup: [0.33, 0, -0.08], lid: [-0.40, 0.0045, -0.23],
@@ -238,13 +253,16 @@ function initLens() {
 
 // ------------------------------------------------------------------ camera shots
 const shots = {
-  intro: { dir: V3(0.1, -0.30, -1), target: V3(-0.12, 0.0, 0.30), pts: () => [V3(-0.70, 0.25, 0.5), V3(-0.62, -0.40, 0.5), V3(-0.12, 0.42, 0.6), V3(-0.12, -0.72, 0.6), V3(0, 0.28, 0), V3(0.2, 0, -0.1), V3(0.38, 0.6, 0.66)] },
+  intro: { dir: V3(0.06, -0.24, -1), target: V3(-0.05, 0.02, 0.30), pts: () => [V3(-0.70, 0.25, 0.5), V3(-0.62, 0.84, 0.5), V3(-0.62, -0.40, 0.5), V3(-0.12, 0.42, 0.6), V3(-0.12, -0.60, 0.6), V3(0, 0.28, 0), V3(0.2, 0, -0.1), V3(0.62, 0.62, 0.56)] },
   play: { dir: V3(0, -0.47, -1), target: V3(0, 0.085, 0.02), pts: () => playPts() },
-  cheer: { dir: V3(0.12, -0.32, -1), target: V3(0.0, 0.05, 0.3), pts: () => [V3(-0.28, 0.46, 0.6), V3(-0.12, -0.35, 0.6), V3(0.16, 0.27, 0), V3(-0.16, 0, 0), V3(0.5, 0.75, 0.66)] },
+  cheer: { dir: V3(0.10, -0.16, -1), target: V3(0.1, 0.12, 0.3), pts: () => [V3(-0.28, 0.40, 0.6), V3(-0.12, -0.30, 0.6), V3(0.16, 0.27, 0), V3(-0.16, 0, 0), V3(0.6, 0.62, 0.56), V3(0.4, -0.2, 0.56)] },
 };
 function playPts() {
   const p = [V3(-0.165, 0.27, 0), V3(0.165, 0.27, 0), V3(0, 0.27, -0.16), V3(-0.165, 0.0, 0.02), V3(0.165, 0.0, 0.02), V3(0, 0.0, 0.17), V3(0.08, 0.315, 0.12)];
-  for (const t of Object.values(tools)) p.push(t.home.clone().add(V3(0, 0.02, 0)));
+  for (const t of Object.values(tools)) {
+    const r = t.name === 'spray' ? 0.03 : t.r * 0.8;
+    for (const o of [V3(r, 0.01, 0), V3(-r, 0.01, 0), V3(0, 0.01, r), V3(0, t.name === 'spray' ? 0.16 : 0.02, 0)]) p.push(t.home.clone().add(o));
+  }
   return p;
 }
 const cam = { pos: V3(0, 0.4, 1.8), tgt: V3(0, 0, 0), from: null, to: null, t: 1, dur: 1.6, shot: 'intro' };
@@ -321,7 +339,11 @@ function setState(s, instant = false) {
   G.state = s; G.t = 0; G.idle = 0;
   if (s === 'intro') { goShot('intro', 1, true); enableTools([]); }
   if (s === 's1') { goShot('play', 2.2, instant); enableTools(['spray']); girl.coat.visible = true; coatHang.visible = false; room.rack.visible = true; }
-  if (s === 's2') { goShot('play', 2.0, instant); enableTools(['pebble', 'twig']); girl.coat.visible = true; coatHang.visible = false; }
+  if (s === 's2') {
+    goShot('play', 2.0, instant); enableTools(['pebble', 'twig']); girl.coat.visible = true; coatHang.visible = false;
+    // a thin stream keeps flowing in the creek
+    for (let x = -0.13; x <= 0.13; x += 0.006) moss.addWater(x, creekZ(x), 0.0009, 0.004);
+  }
   if (s === 's3') { goShot('play', 2.0, instant); enableTools(['magnifier']); girl.coat.visible = true; coatHang.visible = false; }
   if (s === 'free') { goShot('play', 2.0, instant); enableTools(['spray', 'pebble', 'twig', 'dropper', 'magnifier']); }
   if (instant && DBG) debugPrep(s);
@@ -392,7 +414,7 @@ function canTapLid() {
 function onDown() {
   const s = G.state;
   if (s === 'intro') {
-    const sc = screenOf(coatHang.position.clone().add(V3(0, 0.55, 0)));
+    const sc = screenOf(coatHang.position.clone().add(V3(0, 0.6, 0)));
     const sg = screenOf(girl.group.position.clone().add(V3(0, 0.8, 0)));
     const dc = Math.hypot(sc.x - G.screen.x, sc.y - G.screen.y), dg = Math.hypot(sg.x - G.screen.x, sg.y - G.screen.y);
     if (dc < Math.max(90, pxPerMeter(coatHang.position) * 0.35) || dg < 80) dress();
@@ -403,7 +425,7 @@ function onDown() {
   if (t === 'lid') { toggleLid(); return; }
   if (t) { takeTool(t); return; }
   G.pressing = true;
-  G.path = [];
+  G.path = []; G.touchPoint = null;
   G.lastPlace = null; G.lastTwig = null; G.lastUV = null;
   if (!G.held) hand.setPose('point');
   onMove();
@@ -438,7 +460,19 @@ function onMove() {
       p.y = moss.surfaceAt(p.x, p.z);
     }
   }
-  if (p) { G.touchPoint = p; G.path.push(p.clone()); }
+  if (p) {
+    // stones / twigs follow the traced line itself (interpolated, so fast swipes leave no gaps)
+    if ((G.held === 'pebble' || G.held === 'twig') && G.touchPoint && G.path.length) {
+      const a = G.touchPoint.clone(), L = a.distanceTo(p);
+      const n = Math.max(1, Math.ceil(L / 0.003));
+      for (let i = 1; i <= n; i++) {
+        const q = a.clone().lerp(p, i / n);
+        q.y = moss.surfaceAt(q.x, q.z);
+        placeAlong(G.held, q);
+      }
+    } else if (G.held === 'pebble' || G.held === 'twig') placeAlong(G.held, p);
+    G.touchPoint = p; G.path.push(p.clone());
+  }
 }
 function onUp() {
   G.pressing = false;
@@ -537,7 +571,7 @@ function updateTools(dt) {
         q = basis(n.clone().negate().addScaledVector(UP, 0.3).addScaledVector(camR, -0.65), n.clone().addScaledVector(UP, 0.6).addScaledVector(camR, 0.3));
       } else {
         at = G.touchPoint.clone().add(V3(0, 0.002, 0));
-        q = basis(V3(0, -1, 0).addScaledVector(camF, 0.7).addScaledVector(camR, -0.45), camF.clone().negate().addScaledVector(UP, 0.5));
+        q = armQuat(at, 0.3, UP.clone().addScaledVector(camF, -0.3));
         // gentle press: moss under the fingertip gets a touch of moisture from the skin? no - just a pat
       }
       placeHand(hand, q, tipL, at, dt);
@@ -573,7 +607,8 @@ function updateTools(dt) {
     tr.rotation.x = -pullT * 0.35;
     hand.squeeze = pullT;
   } else if (held === 'pebble' || held === 'twig') {
-    const q = basis(V3(-0.25, -0.55, 0).addScaledVector(camF, 0.8).addScaledVector(camR, -0.35), UP.clone().addScaledVector(camF, -0.6).addScaledVector(camR, 0.25));
+    const at0 = tgt ? tgt.clone().add(V3(0, 0.016, 0)) : rest.clone();
+    const q = armQuat(at0, 0.25, UP.clone().addScaledVector(camR, 0.35));
     const iTip = handLocal(hand, 'index2', 0.011), tTip = handLocal(hand, 'thumb2', 0.010);
     const pinch = iTip.clone().add(tTip).multiplyScalar(0.5);
     const at = tgt ? tgt.clone().add(V3(0, 0.016, 0)) : rest.clone();
@@ -582,7 +617,6 @@ function updateTools(dt) {
     heldObj.position.copy(pinch).applyMatrix4(hand.group.matrixWorld);
     heldObj.quaternion.copy(hand.group.quaternion);
     if (held === 'twig') heldObj.quaternion.multiply(new THREE.Quaternion().setFromAxisAngle(V3(0, 0, 1), Math.PI / 2));
-    if (pressing && tgt) placeAlong(held, tgt);
   } else if (held === 'dropper') {
     let at = tgt ? tgt.clone() : rest.clone();
     if (G.emptying > 0) {
@@ -603,7 +637,7 @@ function updateTools(dt) {
     const zt = camF.clone().negate();
     const qt = basis(yt, zt);
     smoothTool(t.obj, at.clone().add(V3(0, 0.004, 0)), qt, dt, 14);
-    const q = basis(V3(-0.6, -0.2, 0).addScaledVector(camF, 0.7), UP.clone().addScaledVector(camF, -0.4).addScaledVector(camR, 0.5));
+    const q = armQuat(at.clone().add(V3(0, 0.1, 0)), 0.1, UP.clone().addScaledVector(camR, 0.5));
     const iTip = handLocal(hand, 'index2', 0.011), tTip = handLocal(hand, 'thumb2', 0.010);
     const pinch = iTip.clone().add(tTip).multiplyScalar(0.5);
     const bulb = V3(0, 0.106, 0).applyQuaternion(t.obj.quaternion).add(t.obj.position);
@@ -628,11 +662,10 @@ function updateTools(dt) {
     w.position.y = 0.022 + w.scale.y / 2;
   } else if (held === 'magnifier') {
     const at = tgt ? tgt.clone() : rest.clone().add(V3(-0.05, 0, 0));
-    // lens floats between eye and target, facing the camera
+    // lens floats between the eye and the target, above the jar rim, facing the camera
     const toCam = camera.position.clone().sub(at).normalize();
-    const lensC = at.clone().addScaledVector(toCam, tgt ? 0.085 : 0.05);
-    const qt = new THREE.Quaternion().setFromRotationMatrix(new THREE.Matrix4().lookAt(camera.position, lensC, UP));
-    // lookAt gives -Z toward lens, we want +Z (lens normal) toward the camera
+    const lensC = at.clone().lerp(camera.position, tgt ? 0.42 : 0.3);
+    if (!tgt) lensC.copy(rest).add(V3(0.03, 0.12, 0.2));
     const qL = basis(UP.clone().addScaledVector(toCam, -UP.dot(toCam)).applyAxisAngle(toCam, -0.35), toCam);
     smoothTool(t.obj, lensC, qL, dt, 12);
     // fist around the handle: handle axis = hand X, palm faces camera-left
@@ -645,6 +678,13 @@ function updateTools(dt) {
     hand.group.position.copy(handleW).sub(fist.clone().applyQuaternion(qh));
     if (tgt) lensHover(tgt, dt);
   }
+}
+// orientation for a hand whose forearm reaches in from the lower-right of the view
+function armQuat(at, fingerBend, dorsalHint) {
+  const anchor = camera.position.clone().addScaledVector(camR, 0.26).addScaledVector(UP, -0.22).addScaledVector(camF, 0.05);
+  const arm = anchor.sub(at).normalize();
+  const fingers = arm.clone().negate().addScaledVector(UP, -fingerBend).normalize();
+  return basis(fingers, dorsalHint || UP);
 }
 function placeHand(h, q, localPt, worldAt, dt, instant = false) {
   h.group.quaternion.copy(q);
@@ -786,14 +826,14 @@ function buildBridge(c) {
   const y = Math.max(groundH(c.x + across.x * 0.016, c.z + across.z * 0.016), groundH(c.x - across.x * 0.016, c.z - across.z * 0.016)) + 0.0012;
   // planks laid along the creek direction, stepping across it
   for (let i = 0; i < 9; i++) {
-    const o = (i - 4) * 0.0037;
+    const o = (i - 4) * 0.0042;
     const p = V3(c.x + across.x * o, y + Math.sin(i * 1.7) * 0.0003, c.z + across.z * o);
     const q = new THREE.Quaternion().setFromEuler(new THREE.Euler(0, -yaw + (Math.random() - 0.5) * 0.12, (Math.random() - 0.5) * 0.05));
-    twigs.add(p, q, V3(0.72, 0.85, 0.85), null, i * 0.07);
+    twigs.add(p, q, V3(0.95, 1.05, 1.05), null, i * 0.07);
   }
   // two side rails across
   for (const s of [-1, 1]) {
-    const p = V3(c.x + dir.x * s * 0.0085, y + 0.0028, c.z + dir.y * s * 0.0085);
+    const p = V3(c.x + dir.x * s * 0.0115, y + 0.0032, c.z + dir.y * s * 0.0115);
     const q = new THREE.Quaternion().setFromEuler(new THREE.Euler(0, -Math.atan2(across.z, across.x), 0));
     twigs.add(p, q, V3(1.25, 0.7, 0.7), null, 0.6 + (s + 1) * 0.08);
   }
@@ -935,7 +975,7 @@ const hintEl = document.getElementById('hint');
 let hintOn = false;
 function hintTarget() {
   const s = G.state;
-  if (s === 'intro') return { p: coatHang.position.clone().add(V3(0, 0.5, 0)) };
+  if (s === 'intro') return { p: coatHang.position.clone().add(V3(0, 0.6, 0)) };
   if (s === 's1') {
     if (G.dadT > 0) return null;
     if (G.dadDone && moss.flood() > G.floodStart * 0.12 + 0.00002) {
@@ -999,7 +1039,7 @@ function updateHints(dt) {
   lid.halo.position.copy(jar.lid.position).add(V3(0, 0.02, 0));
   const coatOn = G.state === 'intro';
   coatHalo.material.opacity += ((coatOn ? pulse * 0.8 : 0) - coatHalo.material.opacity) * Math.min(1, dt * 5);
-  coatHalo.position.copy(coatHang.position).add(V3(0, 0.55, 0));
+  coatHalo.position.copy(coatHang.position).add(V3(0, 0.6, 0));
   if (coatOn) coatHang.rotation.z = Math.sin(clock.elapsedTime * 4) * 0.025;
 }
 function needGlow(t) {
@@ -1113,7 +1153,7 @@ function loop() {
     updateTown(d);
     girl.update(d); dad.update(d);
   }
-  updateHints(dt);
+  updateHints(DBG ? 0.3 : dt);
   if (G.huhWobble > 0) { G.huhWobble -= dt; hand.group.rotateZ(Math.sin(G.huhWobble * 20) * 0.08 * G.huhWobble); }
   renderLens();
   renderer.render(scene, camera);
@@ -1124,6 +1164,7 @@ function loop() {
 function debugPrep(s) {
   if (s === 's2' || s === 's3' || s === 'free') {
     for (let k = 0; k < 6000; k++) { const a = Math.random() * 6.28, r = Math.sqrt(Math.random()) * 0.15; moss.addWet(Math.cos(a) * r, Math.sin(a) * r, 0.12, 0.008); }
+    moss.water.fill(0);
     G.dadDone = true;
   }
   if (s === 's3' || s === 'free') {
@@ -1135,13 +1176,14 @@ function debugPrep(s) {
 window.__G = G;
 window.__api = {
   G, setState, takeTool: (n) => takeTool(tools[n]), moss: () => moss, jar: () => jar, cheer, toggleLid,
-  press: (x, y) => { setNDC({ clientX: x, clientY: y }); G.pressing = true; G.path = []; G.lastPlace = null; G.lastTwig = null; G.lastUV = null; onMove(); },
+  press: (x, y) => { setNDC({ clientX: x, clientY: y }); G.pressing = true; G.path = []; G.touchPoint = null; G.lastPlace = null; G.lastTwig = null; G.lastUV = null; onMove(); },
   move: (x, y) => { setNDC({ clientX: x, clientY: y }); onMove(); },
   release: () => onUp(),
   screenOf: (x, y, z) => screenOf(V3(x, y, z)),
-  wetAll: () => debugPrep('s2'),
+  wetAll: () => { debugPrep('s2'); },
   pathAll: () => debugPrep('s3'),
   dad: () => { G.dadDone = true; G.dadT = 0.0001; },
+  flood: () => { moss.addWater(0.065, -0.005, 0.004, 0.02); G.dadDone = true; G.floodStart = moss.flood(); enableTools(['spray', 'dropper']); },
   light: () => { G.lit = true; train.running = true; },
   cam: () => ({ pos: camera.position.toArray(), fov: camera.fov }),
   setCam: (p, t) => { cam.pos.set(...p); cam.tgt.set(...t); cam.t = 1; cam.shot = null; },

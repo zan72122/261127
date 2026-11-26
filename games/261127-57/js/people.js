@@ -32,7 +32,7 @@ export function peopleMaterials() {
   M[HAIR].normalScale.set(1.2, 1.2);
   M[KNIT] = new THREE.MeshPhysicalMaterial({ color: new THREE.Color(0.62, 0.44, 0.17), normalMap: texRep('knit_n', 9, 9), roughnessMap: texRep('knit_orm', 9, 9), aoMap: texRep('knit_orm', 9, 9), roughness: 1, sheen: 0.8, sheenRoughness: 0.9, sheenColor: new THREE.Color(0.9, 0.75, 0.5) });
   M[TIGHTS] = new THREE.MeshPhysicalMaterial({ color: new THREE.Color(0.10, 0.12, 0.19), normalMap: texRep('knit_n', 20, 20), roughness: 0.85, sheen: 0.5, sheenColor: new THREE.Color(0.4, 0.42, 0.55) });
-  M[SHOE] = new THREE.MeshPhysicalMaterial({ color: new THREE.Color(0.30, 0.16, 0.10), roughness: 0.45, clearcoat: 0.3, normalMap: texRep('skin_n', 10, 10) });
+  M[SHOE] = new THREE.MeshPhysicalMaterial({ color: new THREE.Color(0.16, 0.09, 0.06), roughness: 0.45, clearcoat: 0.3, normalMap: texRep('skin_n', 10, 10) });
   M[TIE] = new THREE.MeshPhysicalMaterial({ color: new THREE.Color(0.55, 0.16, 0.16), roughness: 0.5, sheen: 0.5 });
   M[DENIM] = new THREE.MeshPhysicalMaterial({ map: texRep('denim_c', 14, 14), normalMap: texRep('denim_n', 14, 14), roughness: 0.9, sheen: 0.3 });
   M[FLANNEL] = new THREE.MeshPhysicalMaterial({ map: texRep('flannel_c', 5, 5), normalMap: texRep('flannel_n', 5, 5), roughness: 0.92, sheen: 0.7, sheenRoughness: 0.9, sheenColor: new THREE.Color(0.8, 0.7, 0.6) });

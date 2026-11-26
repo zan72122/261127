@@ -408,10 +408,10 @@ def make_sleeve(name='sleeve', r0=0.026, r1=0.042, L=0.42, cuff=0.022, folds=7):
     # rolled cuff ring
     prims.append(cone(a + V(0, 0.003, 0), a - V(0, cuff, 0), r0 + 0.004, r0 + 0.0045, mat=COAT, k=0.004))
     prims.append(Prim('cone', (a + V(0, 0.012, 0), a - V(0, 0.4, 0), r0 - 0.0035, r1 - 0.004), sub=True))
-    v, f = build(prims, 0.0009, pad=0.006)
+    v, f = build(prims, 0.0011, pad=0.006)
+    v = smooth(v, f, 3)
+    v, f = decimate(v, f, 16000)
     v = smooth(v, f, 2)
-    # cut away bottom end (keep open)
-    v, f = decimate(v, f, 9000)
     n = vnormals(v, f)
     uv = cyl_uv(v, a, b, V(0, 0, -1))
     add_mesh(name, v, f, n, uv, np.full(len(v), COAT, np.uint8))
@@ -597,32 +597,34 @@ def make_dad():
     def hairdisp(p):
         ang = np.arctan2(p[..., 0], p[..., 2])
         return -0.0012 * np.abs(np.sin(ang * 40 + p[..., 1] * 60))
-    P.append(ell((0, 1.655, 0.0), (0.078, 0.105, 0.095), mat=SKIN, chain=1))
-    P.append(ell((0.080, 1.645, 0.0), (0.010, 0.026, 0.016), mat=SKIN, chain=1, k=0.006))
-    P.append(ell((-0.080, 1.645, 0.0), (0.010, 0.026, 0.016), mat=SKIN, chain=1, k=0.006))
-    P.append(ell((0, 1.690, 0.012), (0.083, 0.085, 0.092), mat=HAIR, chain=1, k=0.003, disp=hairdisp, bias=-0.002))
-    P.append(cone((0, 1.50, 0.0), (0, 1.58, 0.005), 0.055, 0.050, mat=SKIN, chain=1, k=0.02))
+    D = 0.43  # sitting: upper body lowered onto a stool (seat at y=0.47)
+    P.append(ell((0, 1.655 - D, 0.0), (0.078, 0.105, 0.095), mat=SKIN, chain=1))
+    P.append(ell((0.080, 1.645 - D, 0.0), (0.010, 0.026, 0.016), mat=SKIN, chain=1, k=0.006))
+    P.append(ell((-0.080, 1.645 - D, 0.0), (0.010, 0.026, 0.016), mat=SKIN, chain=1, k=0.006))
+    P.append(ell((0, 1.690 - D, 0.012), (0.083, 0.085, 0.092), mat=HAIR, chain=1, k=0.003, disp=hairdisp, bias=-0.002))
+    P.append(ell((0, 1.625 - D, 0.040), (0.074, 0.062, 0.062), mat=HAIR, chain=1, k=0.01, disp=hairdisp, bias=-0.002))
+    P.append(cone((0, 1.50 - D, 0.0), (0, 1.58 - D, 0.005), 0.055, 0.050, mat=SKIN, chain=1, k=0.02))
     def shirt(p):
-        y = p[..., 1]
+        y = p[..., 1] + D
         ang = np.arctan2(p[..., 0], p[..., 2])
         return -0.004 * np.abs(np.sin(ang * 3 + y * 8)) * np.clip((1.3 - y) / 0.4, 0, 1)
-    P.append(ell((0, 1.330, 0.0), (0.185, 0.165, 0.115), mat=FLANNEL, chain=0, k=0.0, disp=shirt))
-    P.append(ell((0, 1.120, 0.0), (0.165, 0.160, 0.110), mat=FLANNEL, chain=0, k=0.05, disp=shirt))
-    P.append(cone((-0.17, 1.44, 0.0), (0.17, 1.44, 0.0), 0.062, 0.062, mat=FLANNEL, chain=0, k=0.04))
-    P.append(cone((-0.05, 1.50, 0.02), (0.0, 1.51, 0.06), 0.016, 0.016, mat=FLANNEL, chain=0, k=0.01))
-    P.append(cone((0.05, 1.50, 0.02), (0.0, 1.51, 0.06), 0.016, 0.016, mat=FLANNEL, chain=0, k=0.01))
+    P.append(ell((0, 1.330 - D, 0.0), (0.185, 0.165, 0.115), mat=FLANNEL, chain=0, k=0.0, disp=shirt))
+    P.append(ell((0, 1.110 - D, 0.0), (0.180, 0.175, 0.126), mat=FLANNEL, chain=0, k=0.05, disp=shirt))
+    P.append(cone((-0.17, 1.44 - D, 0.0), (0.17, 1.44 - D, 0.0), 0.062, 0.062, mat=FLANNEL, chain=0, k=0.04))
+    P.append(cone((-0.05, 1.50 - D, 0.02), (0.0, 1.51 - D, 0.06), 0.016, 0.016, mat=FLANNEL, chain=0, k=0.01))
+    P.append(cone((0.05, 1.50 - D, 0.02), (0.0, 1.51 - D, 0.06), 0.016, 0.016, mat=FLANNEL, chain=0, k=0.01))
     def jeans(p):
-        return -0.003 * np.abs(np.sin(p[..., 1] * 70)) * np.clip((0.5 - p[..., 1]) / 0.4, 0, 1)
-    P.append(ell((0, 0.950, 0.0), (0.170, 0.110, 0.105), mat=DENIM, chain=0, k=0.03))
-    P.append(Prim('torus', (V(0, 0.99, 0.0), 0.162, 0.014), mat=SHOE, chain=0, k=0.004))  # leather belt
+        return -0.0025 * np.abs(np.sin((p[..., 2] + p[..., 1]) * 70))
+    P.append(ell((0, 0.930 - D, 0.0), (0.160, 0.100, 0.106), mat=DENIM, chain=0, k=0.02))
     for s in (-1, 1):
-        P.append(cone((s * 0.09, 0.90, 0.0), (s * 0.10, 0.50, 0.01), 0.078, 0.058, mat=DENIM, chain=0, k=0.02, disp=jeans))
-        P.append(cone((s * 0.10, 0.50, 0.01), (s * 0.105, 0.09, 0.02), 0.058, 0.050, mat=DENIM, chain=0, k=0.01, disp=jeans))
-        P.append(box((s * 0.105, 0.045, -0.035), (0.050, 0.045, 0.135), 0.035, mat=SHOE, chain=0, k=0.01))
+        hip = V(s * 0.09, 0.52, -0.02); knee = V(s * 0.11, 0.53, -0.44); ank = V(s * 0.12, 0.09, -0.47)
+        P.append(cone(hip, knee, 0.082, 0.058, mat=DENIM, chain=0, k=0.03, disp=jeans))
+        P.append(cone(knee, ank, 0.058, 0.048, mat=DENIM, chain=0, k=0.012, disp=jeans))
+        P.append(box((s * 0.12, 0.045, -0.52), (0.050, 0.045, 0.130), 0.035, mat=SHOE, chain=0, k=0.01))
     arms = {}
-    # left arm hangs; right arm holds mug at chest
-    arms['L'] = (V(-0.205, 1.43, 0.0), V(-0.235, 1.15, 0.02), V(-0.230, 0.90, 0.0), V(-0.225, 0.80, 0.0))
-    arms['R'] = (V(0.205, 1.43, 0.0), V(0.235, 1.16, 0.0), V(0.12, 1.24, -0.16), V(0.07, 1.27, -0.20))
+    # left forearm resting on the table edge, right hand holds a mug
+    arms['L'] = (V(-0.205, 1.43 - D, 0.0), V(-0.24, 1.17 - D, -0.06), V(-0.16, 0.745, -0.30), V(-0.12, 0.74, -0.37))
+    arms['R'] = (V(0.205, 1.43 - D, 0.0), V(0.235, 1.16 - D, -0.02), V(0.12, 1.24 - D, -0.18), V(0.07, 1.27 - D, -0.22))
     for side, (sh, el, wr, hd) in arms.items():
         cu, cf = (2, 3) if side == 'L' else (4, 5)
         def sl(p, a=sh, b=wr):
@@ -634,7 +636,7 @@ def make_dad():
         P.append(cone(wr, hd, 0.028, 0.030, mat=SKIN, chain=cf, k=0.01, bias=-0.004))
         P.append(cone(wr - norm(wr - el) * 0.012, wr + norm(wr - el) * 0.004, 0.037, 0.037, mat=FLANNEL, chain=cf, k=0.003))  # cuff
     # mug in right hand
-    P.append(cone((0.05, 1.24, -0.235), (0.05, 1.33, -0.235), 0.040, 0.040, mat=MUG, chain=5, k=0.004))
+    P.append(cone((0.05, 1.24 - D, -0.255), (0.05, 1.33 - D, -0.255), 0.040, 0.040, mat=MUG, chain=5, k=0.004))
     v, f = build(P, 0.0050, pad=0.03)
     v = smooth(v, f, 3)
     v, f = decimate(v, f, 26000)
@@ -644,8 +646,8 @@ def make_dad():
     mat = smooth_labels(mat, f, 3)
     sk = Skel()
     sk.add('root', None, (0, 0.0, 0))
-    sk.add('spine', 'root', (0, 0.95, 0))
-    sk.add('head', 'spine', (0, 1.52, 0))
+    sk.add('spine', 'root', (0, 0.95 - 0.43, 0))
+    sk.add('head', 'spine', (0, 1.52 - 0.43, 0))
     for side in ('L', 'R'):
         sh, el, wr, hd = arms[side]
         sk.add('upper' + side, 'spine', sh)
@@ -655,10 +657,10 @@ def make_dad():
     W = np.zeros((len(v), nb)); bi = {nm: i for i, nm in enumerate(sk.names)}
     y = v[:, 1]
     m = chain == 0
-    w = np.clip((y - 0.9) / 0.15, 0, 1)
+    w = np.clip((y - 0.55) / 0.15, 0, 1)
     W[m, bi['spine']] = w[m]; W[m, bi['root']] = 1 - w[m]
     m = chain == 1
-    w = np.clip((y - 1.50) / 0.06, 0, 1)
+    w = np.clip((y - 1.07) / 0.06, 0, 1)
     W[m, bi['head']] = w[m]; W[m, bi['spine']] = 1 - w[m]
     for side, cu, cf in (('L', 2, 3), ('R', 4, 5)):
         sh, el, wr, hd = arms[side]

@@ -123,7 +123,7 @@ export class Jar {
           float glint = pow(clamp(dot(Rf, uSunDir), 0.0, 1.0), 120.0) * 8.0;
           float edge = clamp(length(vec2(bx, by)) * 8.0, 0.0, 1.0);
           vec3 beadCol = vec3(0.10, 0.12, 0.11) * edge + vec3(1.2, 1.2, 1.15) * win * 0.8 + uSunCol * glint;
-          float fa = fog * 0.88;
+          float fa = smoothstep(0.0, 0.55, fog) * 0.9;
           float ba = smoothstep(0.05, 0.4, b) * (0.18 + 0.6 * edge + win * 0.5 + glint);
           vec3 col = mix(fogCol, beadCol, clamp(ba, 0.0, 1.0));
           float a = clamp(fa * (1.0 - 0.6 * smoothstep(0.05, 0.4, b)) + ba, 0.0, 0.95);
@@ -270,7 +270,7 @@ export class Jar {
   // ---------------------------------------------------------------- lid
   _buildLid() {
     const lid = new THREE.Group();
-    const disc = new THREE.Mesh(new THREE.CylinderGeometry(JAR.r + 0.006, JAR.r + 0.006, 0.009, 96), glassMaterial(THREE.FrontSide, 1.2));
+    const disc = new THREE.Mesh(new THREE.CylinderGeometry(JAR.r + 0.006, JAR.r + 0.006, 0.009, 96), glassMaterial(THREE.FrontSide, 0.55));
     disc.renderOrder = 9;
     lid.add(disc);
     const ring = new THREE.Mesh(new THREE.TorusGeometry(JAR.r + 0.006, 0.0045, 8, 96), glassMaterial(THREE.FrontSide, 1.4));
