@@ -278,11 +278,11 @@ def gen_plaster(S=512):
     trowel = np.clip(fftnoise(S, S, 3.5, seed=24), -0.5, 2)
     hgt += 0.5 * np.round(trowel * 2) / 2
     base = srgb([226, 214, 196])
-    c = base[None, None, :] * (1 + 0.035 * n1[..., None] + 0.02 * n2[..., None])
-    c -= 0.03 * np.clip(-n3, 0, 3)[..., None]
+    c = base[None, None, :] * (1 + 0.025 * n1[..., None] + 0.008 * n2[..., None])
+    c -= 0.008 * np.clip(-n3, 0, 3)[..., None]
     ao = ao_from_height(hgt, 4, 0.8)
-    save_rgb(c * (0.85 + 0.15 * ao[..., None]), 'plaster_c.jpg', 84)
-    save_rgb(normal_from_height(hgt, 1.0), 'plaster_n.jpg', 86)
+    save_rgb(c * (0.95 + 0.05 * ao[..., None]), 'plaster_c.jpg', 84)
+    save_rgb(normal_from_height(blur_wrap(hgt, 1.2), 0.8), 'plaster_n.jpg', 86)
     save_orm(ao, 0.88 + 0.08 * n2.clip(-1, 1), 0.0, 'plaster_orm.jpg')
     print('plaster done')
 

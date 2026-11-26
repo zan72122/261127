@@ -682,9 +682,17 @@ function updateTools(dt) {
 }
 // orientation for a hand whose forearm reaches in from the lower-right of the view
 function armQuat(at, fingerBend, dorsalHint) {
-  const anchor = camera.position.clone().addScaledVector(camR, 0.26).addScaledVector(UP, -0.22).addScaledVector(camF, 0.05);
-  const arm = anchor.sub(at).normalize();
-  const fingers = arm.clone().negate().addScaledVector(UP, -fingerBend).normalize();
+  // the camera is the girl's eye. Inside the jar the forearm has to come in over the rim;
+  // outside it comes from her shoulder just below-right of the eye.
+  let elbow;
+  if (Math.hypot(at.x, at.z) < JAR.r + 0.01 && at.y < JAR.h) {
+    elbow = V3(at.x * 0.3 + 0.15, JAR.h + 0.14, Math.max(JAR.r + 0.05, at.z + 0.12));
+  } else {
+    const shoulder = camera.position.clone().addScaledVector(camR, 0.16).addScaledVector(UP, -0.17).addScaledVector(camF, -0.02);
+    elbow = shoulder.lerp(at, 0.5).addScaledVector(UP, -0.12);
+  }
+  const arm = elbow.sub(at).normalize();
+  const fingers = arm.clone().negate().addScaledVector(UP, -fingerBend * 0.3).normalize();
   return basis(fingers, dorsalHint || UP);
 }
 function placeHand(h, q, localPt, worldAt, dt, instant = false) {
@@ -723,9 +731,9 @@ function pump(obj, dir) {
     }
   }
   if (lingering) {
-    for (let i = 0; i < 10; i++) {
-      const p = tip.clone().addScaledVector(dir, 0.04 + Math.random() * 0.06);
-      particles.emit(2, p, dir.clone().multiplyScalar(0.05).add(V3((Math.random() - 0.5) * 0.02, -0.01, (Math.random() - 0.5) * 0.02)), 5 + Math.random() * 4, 0.012 + Math.random() * 0.01, 0.25);
+    for (let i = 0; i < 22; i++) {
+      const p = tip.clone().addScaledVector(dir, 0.08 + Math.random() * 0.14).add(V3((Math.random() - 0.5) * 0.04, 0, (Math.random() - 0.5) * 0.04));
+      particles.emit(2, p, dir.clone().multiplyScalar(0.02).add(V3((Math.random() - 0.5) * 0.03, -0.015, (Math.random() - 0.5) * 0.03)), 6 + Math.random() * 6, 0.022 + Math.random() * 0.025, 0.16);
     }
   }
   // spraying the flood again -> "huh?"
@@ -896,6 +904,17 @@ function placeTrain() {
     u -= (car.userData.len + 0.003) / circ;
   }
 }
+// dust motes drifting in the morning sunbeam (window -> table)
+let dustAcc = 0;
+function updateDust(dt) {
+  dustAcc += dt * 9;
+  while (dustAcc > 1) {
+    dustAcc -= 1;
+    const t = Math.random();
+    const p = V3(-0.45 + Math.random() * 0.9, 0.05 + Math.random() * 0.7, -0.55 + Math.random() * 0.85);
+    particles.emit(3, p, V3((Math.random() - 0.5) * 0.006, (Math.random() - 0.5) * 0.004, (Math.random() - 0.5) * 0.006), 6 + t * 6, 0.0012 + Math.random() * 0.0015, 1);
+  }
+}
 function updateTown(dt) {
   if (train.running) train.speed = Math.min(0.045, train.speed + dt * 0.02);
   if (train.speed > 0) {
@@ -954,9 +973,9 @@ function updateDad(dt) {
     // a strong jet instead of mist
     dadHand.squeeze = 0.5 + 0.5 * Math.sin(T * 20);
     const tipW = tool.userData.tip.clone().applyMatrix4(tool.matrixWorld);
-    for (let i = 0; i < 6; i++) {
+    for (let i = 0; i < 9; i++) {
       const d = dir.clone().add(V3((Math.random() - 0.5) * 0.05, (Math.random() - 0.5) * 0.05, (Math.random() - 0.5) * 0.05)).normalize();
-      particles.emit(1, tipW, d.multiplyScalar(1.2 + Math.random() * 0.4), 0.8, 0.0012 + Math.random() * 0.0016);
+      particles.emit(1, tipW, d.multiplyScalar(1.2 + Math.random() * 0.4), 0.8, 0.0022 + Math.random() * 0.0025);
     }
     G.jetT = (G.jetT || 0) - dt;
     if (G.jetT <= 0) { sfx.jet(); G.jetT = 0.45; }
@@ -1140,7 +1159,7 @@ const FAST = !!Q.get('fast');
 function loop() {
   requestAnimationFrame(loop);
   const dt = Math.min(0.05, clock.getDelta());
-  const sub = DBG ? 6 : 1; // debug: fast-forward the simulation (headless rendering is slow)
+  const sub = G.freeze ? 0 : DBG ? 6 : 1; // debug: fast-forward the simulation (headless rendering is slow)
   for (let k = 0; k < sub; k++) {
     const d = DBG ? 0.05 : dt;
     updateFlow(d);
@@ -1153,6 +1172,7 @@ function loop() {
     stones.update(d, () => sfx.clack());
     twigs.update(d, () => sfx.twig());
     updateTown(d);
+    updateDust(d);
     girl.update(d); dad.update(d);
   }
   updateHints(DBG ? 0.3 : dt);
@@ -1191,8 +1211,12 @@ window.__api = {
   light: () => { G.lit = true; train.running = true; },
   cam: () => ({ pos: camera.position.toArray(), fov: camera.fov }),
   setCam: (p, t) => { cam.pos.set(...p); cam.tgt.set(...t); cam.t = 1; cam.shot = null; },
+  pcount: () => { let n = 0, k1 = 0; for (let i = 0; i < particles.cap; i++) if (particles.life[i] > 0) { n++; if (particles.kind[i] === 1) k1++; } return [n, k1]; },
+  armDir: () => V3(0, -1, 0).applyQuaternion(hand.group.quaternion).toArray().concat(hand.group.position.toArray(), camera.position.toArray()),
   handPos: () => hand.group.position.toArray(),
   look: (k = 0.45) => { const h = hand.group.position.clone(); const c = camera.position.clone(); const p = c.lerp(h, k); cam.pos.copy(p); cam.tgt.copy(h); cam.t = 1; cam.shot = null; },
+  pcount: () => { let n = 0, k1 = 0; for (let i = 0; i < particles.cap; i++) if (particles.life[i] > 0) { n++; if (particles.kind[i] === 1) k1++; } return [n, k1]; },
+  armDir: () => V3(0, -1, 0).applyQuaternion(hand.group.quaternion).toArray().concat(hand.group.position.toArray(), camera.position.toArray()),
   handPos: () => hand.group.position.toArray(),
   look: (k = 0.45) => { const h = hand.group.position.clone(); const c = camera.position.clone(); const p = c.lerp(h, k); cam.pos.copy(p); cam.tgt.copy(h); cam.t = 1; cam.shot = null; },
   parts: () => { let n = 0; for (let i = 0; i < particles.cap; i++) if (particles.life[i] > 0) n++; const t = tools.spray.obj.userData.tip.clone().applyMatrix4(tools.spray.obj.matrixWorld); return { n, tip: t.toArray(), free: particles.free.length, pump: G.pumpT, press: G.pressing, tp: G.touchPoint && G.touchPoint.toArray() }; },

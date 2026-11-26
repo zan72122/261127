@@ -13,6 +13,7 @@ export class Particles {
     this.size = new Float32Array(cap);
     this.kind = new Uint8Array(cap);
     this.alpha = new Float32Array(cap);
+    this.a0 = new Float32Array(cap);
     this.free = [];
     for (let i = cap - 1; i >= 0; i--) this.free.push(i);
     const g = new THREE.BufferGeometry();
@@ -60,7 +61,7 @@ export class Particles {
             a = vA * (0.5 + 0.5 * pow(1.0 - z, 1.5));
             col = vec3(0.55, 0.62, 0.62) + uSunCol * (vPhase * 1.5 + exp(-dot(q - vec2(-0.3, 0.35), q - vec2(-0.3, 0.35)) * 40.0) * 3.0);
           } else if (vK < 2.5) { // steam puff
-            a = exp(-r2 * 2.2) * vA * 0.55;
+            a = exp(-r2 * 3.0) * vA * 0.5;
             col = vec3(0.92) + uSunCol * vPhase * 0.8;
           } else { // dust mote
             a = exp(-r2 * 5.0) * vA;
@@ -84,7 +85,7 @@ export class Particles {
     this.pos.set([p.x, p.y, p.z], i * 3);
     this.vel.set([v.x, v.y, v.z], i * 3);
     this.life[i] = life; this.max[i] = life;
-    this.size[i] = size; this.kind[i] = kind; this.alpha[i] = alpha;
+    this.size[i] = size; this.kind[i] = kind; this.alpha[i] = alpha; this.a0[i] = alpha;
     this.aKind.array[i] = kind;
   }
 
@@ -109,7 +110,12 @@ export class Particles {
       }
       P[o] += Vv[o] * dt; P[o + 1] += Vv[o + 1] * dt; P[o + 2] += Vv[o + 2] * dt;
       const fade = Math.min(1, this.life[i] / Math.min(0.4, this.max[i] * 0.5));
-      if (k === 2) { this.size[i] += dt * 0.012; this.alpha[i] = fade * 0.8; }
+      if (k === 2) {
+        this.size[i] += dt * 0.006; this.alpha[i] = fade * this.a0[i] * Math.min(1, (this.max[i] - this.life[i]) / 0.6);
+        const r = Math.hypot(P[o], P[o + 2]);
+        if (r > 0.14 && r < 0.2 && P[o + 1] < 0.27) { Vv[o] -= P[o] / r * dt * 0.05; Vv[o + 2] -= P[o + 2] / r * dt * 0.05; }
+        if (P[o + 1] < 0.1 && r < 0.16) Vv[o + 1] += dt * 0.03;
+      }
       else if (k === 3) { this.alpha[i] = fade * Math.min(1, (this.max[i] - this.life[i]) / 1.5) * 0.7; }
       else this.alpha[i] = Math.min(this.alpha[i], fade);
       if (collide && (k === 0 || k === 1)) {

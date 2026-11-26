@@ -152,16 +152,17 @@ export class Figure {
     const hop = Math.max(0, Math.sin(this.t * 10)) * 0.045 * this.hop;
     this.mesh.position.y = hop;
     for (const m of this.extra) m.position.y = hop;
-    // arms: clap above the table / raise
+    // arms: hands up high and clap (visible from behind)
     const c = this.clap;
     const cl = Math.max(0, Math.sin(this.t * 14));
     if (b.upperL) {
-      rot(b.upperL, new THREE.Vector3(1, 0, 0), c * 0.9);
-      b.upperL.quaternion.multiply(_q.setFromAxisAngle(new THREE.Vector3(0, 1, 0), -c * (0.25 + 0.25 * cl)));
-      rot(b.upperR, new THREE.Vector3(1, 0, 0), c * 0.9);
-      b.upperR.quaternion.multiply(_q.setFromAxisAngle(new THREE.Vector3(0, 1, 0), c * (0.25 + 0.25 * cl)));
-      rot(b.foreL, new THREE.Vector3(0, 0, 1), -c * 0.6);
-      rot(b.foreR, new THREE.Vector3(0, 0, 1), c * 0.6);
+      const X = new THREE.Vector3(1, 0, 0), Z = new THREE.Vector3(0, 0, 1);
+      rot(b.upperL, X, c * 0.75);
+      b.upperL.quaternion.multiply(_q.setFromAxisAngle(Z, c * (0.05 + 0.22 * cl)));
+      rot(b.upperR, X, c * 0.75);
+      b.upperR.quaternion.multiply(_q.setFromAxisAngle(Z, -c * (0.05 + 0.22 * cl)));
+      rot(b.foreL, X, c * 0.35);
+      rot(b.foreR, X, c * 0.35);
     }
   }
 }
