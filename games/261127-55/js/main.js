@@ -138,14 +138,15 @@ const bubble = makeBubble(); bubble.visible = false; scene.add(bubble);
 
 // ---------- カメラの構図 ----------
 const SH = {
-  intro: { t: [-2.2, 0.55, -2.95], yaw: 0.3, pitch: 0.12, rw: 1.5, rh: 0.8 },
-  introBox: { t: [-2.15, 0.5, -3.05], yaw: 0.2, pitch: 0.42, rw: 0.62, rh: 0.45 },
-  car: { t: [0.0, 0.0, -0.44], yaw: 0.0, pitch: 0.74, rw: 0.92, rh: 0.6 },
-  carWide: { t: [0.0, 0.65, -0.45], yaw: 0.1, pitch: 0.2, rw: 2.1, rh: 1.2 },
-  carFix: { t: [car.wb[0] + 0.12, 0.2, carOrig[1] + 0.74], yaw: 0.22, pitch: 0.17, rw: 0.62, rh: 0.42 },
-  boat: { t: [2.25, 0.0, -0.66], yaw: -0.04, pitch: 0.72, rw: 0.82, rh: 0.75 },
-  boatWide: { t: [2.1, 0.55, -0.6], yaw: -0.12, pitch: 0.24, rw: 1.9, rh: 1.15 },
-  free: { t: [-1.8, 0.2, -1.7], yaw: 0.12, pitch: 0.42, rw: 1.5, rh: 1.1 },
+  intro: { t: [-2.2, 0.55, -2.95], yaw: 0.3, pitch: 0.12, rw: 1.5, rh: 0.8, pw: 0.6 },
+  introBox: { t: [-2.15, 0.5, -3.05], yaw: 0.2, pitch: 0.42, rw: 0.62, rh: 0.45, pw: 0.75 },
+  car: { t: [0.0, 0.0, -0.44], yaw: 0.0, pitch: 0.74, rw: 0.92, rh: 0.6, pw: 0.8, pp: 0.1 },
+  carWide: { t: [0.0, 0.65, -0.45], yaw: 0.1, pitch: 0.2, rw: 2.1, rh: 1.2, pw: 0.62 },
+  carFix: { t: [car.wb[0] + 0.07, 0.17, carOrig[1] + 0.76], yaw: 0.06, pitch: 0.2, rw: 0.55, rh: 0.36, pw: 0.8 },
+  boat: { t: [2.25, 0.0, -0.66], yaw: -0.04, pitch: 0.72, rw: 0.82, rh: 0.75, pw: 0.85, pp: 0.08 },
+  boatWide: { t: [2.1, 0.75, -0.6], yaw: -0.12, pitch: 0.2, rw: 1.9, rh: 1.3, pw: 0.62 },
+  thumb: { t: [0.05, 0.3, 0.25], yaw: -0.62, pitch: 0.2, rw: 1.05, rh: 0.62 },
+  free: { t: [-1.9, 0.35, -2.0], yaw: 0.12, pitch: 0.32, rw: 1.5, rh: 1.15, pw: 0.72, pp: 0.12 },
 };
 const cam = { pos: new THREE.Vector3(), tgt: new THREE.Vector3(), dPos: new THREE.Vector3(), dTgt: new THREE.Vector3(), speed: 2.2, follow: null, shot: null };
 function shotPose(s, out) {
@@ -153,10 +154,13 @@ function shotPose(s, out) {
   const short = THREE.MathUtils.degToRad(38);
   let vf, hf;
   if (asp >= 1) { vf = short; hf = 2 * Math.atan(Math.tan(vf / 2) * asp); } else { hf = short; vf = 2 * Math.atan(Math.tan(hf / 2) / asp); }
-  const d = Math.max(s.rw / Math.tan(hf / 2), s.rh / Math.tan(vf / 2));
+  // 縦持ちは横幅を少し切ってでも寄る（遊ぶ所を大きく）
+  const port = asp < 0.85 ? 1 : asp < 1.15 ? 0.5 : 0;
+  const rw = s.rw * lerp(1, s.pw || 0.8, port), pitch = s.pitch + (s.pp || 0) * port;
+  const d = Math.max(rw / Math.tan(hf / 2), s.rh / Math.tan(vf / 2));
   const t = new THREE.Vector3(...s.t);
   if (cam.follow) t.add(cam.follow());
-  const f = new THREE.Vector3(-Math.sin(s.yaw) * Math.cos(s.pitch), -Math.sin(s.pitch), -Math.cos(s.yaw) * Math.cos(s.pitch));
+  const f = new THREE.Vector3(-Math.sin(s.yaw) * Math.cos(pitch), -Math.sin(pitch), -Math.cos(s.yaw) * Math.cos(pitch));
   out.tgt.copy(t); out.pos.copy(t).addScaledVector(f, -d);
   out.vf = THREE.MathUtils.radToDeg(vf);
   return out;
@@ -174,13 +178,13 @@ function go(st) { S.st = st; S.t = 0; S.idle = 0; S.enter = true; }
 function placeHumans(where) {
   if (where === 'intro') {
     girl.root.position.set(-2.12, 0, -2.6); girl.root.rotation.y = Math.PI + 0.15; girl.play('idle');
-    papa.root.position.set(-1.2, 0, -3.35); papa.root.rotation.y = -1.45; papa.play('idle');
+    papa.root.position.set(-3.3, 0, -2.7); papa.root.rotation.y = 1.25; papa.play('idle');
   } else if (where === 'car') {
     girl.root.position.set(-0.95, 0, 0.62); girl.root.rotation.y = 2.25;
     papa.root.position.set(1.15, 0, -0.85); papa.root.rotation.y = -Math.PI / 2;
   } else if (where === 'boat') {
     girl.root.position.set(1.05, 0, 0.55); girl.root.rotation.y = 2.0;
-    papa.root.position.set(0.55, 0, -1.55); papa.root.rotation.y = Math.PI / 2;
+    papa.root.position.set(3.95, 0, -1.25); papa.root.rotation.y = -Math.PI / 2 - 0.3;
   } else if (where === 'free') {
     papa.root.position.set(-2.6, 0, -3.1); papa.root.rotation.y = 0; papa.play('sit');
     girl.root.visible = false;
@@ -329,7 +333,11 @@ function papaScript() {
   const sq = [[-a, -a], [a, -a], [a, a], [-a, a], [-a, -a]];
   for (let i = 0; i < 4; i++) for (let k = 0; k < 8; k++) { const t = k / 8; pts.push([sq[i][0] + (sq[i + 1][0] - sq[i][0]) * t, sq[i][1] + (sq[i + 1][1] - sq[i][1]) * t]); }
   for (let y = -a + 0.02, row = 0; y <= a - 0.015; y += 0.03, row++) { pts.push([row % 2 ? a - 0.02 : -a + 0.02, y]); pts.push([row % 2 ? -a + 0.02 : a - 0.02, y]); }
-  return { part: p, pts: pts.map(([x, y]) => car.toWorld(cx + x, cy + y)), i: 0, t: 0 };
+  // 線の間も細かく打つ
+  const dense = [];
+  for (let i = 0; i < pts.length - 1; i++) { const [x0, y0] = pts[i], [x1, y1] = pts[i + 1]; const n = Math.max(1, Math.ceil(Math.hypot(x1 - x0, y1 - y0) / 0.012)); for (let k = 0; k < n; k++) dense.push([x0 + (x1 - x0) * k / n, y0 + (y1 - y0) * k / n]); }
+  dense.push(pts[pts.length - 1]);
+  return { part: p, pts: dense.map(([x, y]) => car.toWorld(cx + x, cy + y)), i: 0, t: 0 };
 }
 
 // ---------- 車が走る ----------
@@ -388,7 +396,7 @@ function hintTarget() {
   if (st === 'free') {
     const t = S.things.find((q) => !q.done);
     if (t) { const c = t.cov.centroidUnpainted(); if (c) return new THREE.Vector3(c[0], 0.02, c[1]); }
-    return new THREE.Vector3(-1.9, 0, -1.2);
+    return new THREE.Vector3(-1.75, 0, -1.55);
   }
   return null;
 }
@@ -448,7 +456,7 @@ function update(dt) {
     const ps = S.papa; const N = new THREE.Vector3(0, 1, 0);
     const from = new THREE.Vector3(car.wb[0] + carOrig[0] - 0.2, 1.4, carOrig[1] - 1.6);
     papaHand.root.visible = true;
-    const idx = Math.min(ps.pts.length - 1, Math.floor(T * 26));
+    const idx = Math.min(ps.pts.length - 1, Math.floor(Math.max(0, T - 0.4) * 70));
     const [x, z] = ps.pts[idx];
     const tip = new THREE.Vector3(x, 0, z);
     papaHand.place(tip, N, from, dt, T > 0.4, 0.5);
@@ -456,7 +464,7 @@ function update(dt) {
       while (ps.i <= idx) { const [px, pz] = ps.pts[ps.i]; paint.chalk(px, pz, 0.03, new THREE.Color(CHALKS[3]), 0.7); paint.real(px, pz, 0.032, 1, 0.3); ps.part.cov.hit(px, pz, 0.028); ps.i++; dust.emit(px, 0.01, pz, (Math.random() - 0.5) * 0.1, 0.05, (Math.random() - 0.5) * 0.1, 0.012, 0.8, 0.95, 0.92, 0.75, 0.5); }
       A.scratch(0.6, dt);
     }
-    if (idx >= ps.pts.length - 1 && T > ps.pts.length / 26 + 0.6) {
+    if (idx >= ps.pts.length - 1 && T > ps.pts.length / 70 + 1.0) {
       ps.part.done = true; ps.part.sloppy = true; ps.part.color = new THREE.Color(CHALKS[3]);
       papaHand.root.visible = false; A.scratch(0, dt); go('car_paint');
     }
@@ -604,13 +612,14 @@ function update(dt) {
 
   processFill();
   car.updateRise(dt); boat.updateRise(dt);
+  for (const w of car.wheels) if (w.side < 0) w.g.visible = !!car.lifting;
   if (car.state !== 'up' && (st === 'car_lift' || S.liftDone)) car.state = 'up';
 
   // 人
   girl.update(dt); papa.update(dt);
   girlBlob.visible = girl.root.visible; girlBlob.position.set(girl.root.position.x, 0.004, girl.root.position.z);
   papaBlob.visible = papa.root.visible; papaBlob.position.set(papa.root.position.x, 0.004, papa.root.position.z + (papa.state.startsWith('sit') ? 0.15 : 0));
-  if (bubble.visible) { const hp = papa.head.getWorldPosition(new THREE.Vector3()); bubble.position.set(hp.x + 0.3, hp.y + 0.38 + Math.sin(S.time * 2) * 0.02, hp.z); }
+  if (bubble.visible) { const hp = papa.head.getWorldPosition(new THREE.Vector3()); bubble.position.set(hp.x + 0.36, hp.y + 0.16 + Math.sin(S.time * 2) * 0.02, hp.z); }
 
   // ヒント
   const ht = hintTarget();
@@ -669,12 +678,20 @@ function paintTick(dt) {
     if (Math.random() < 0.5) dust.emit(hit.x, hit.y, hit.z + 0.01, (Math.random() - 0.5) * 0.1, -0.05, 0.05, 0.012, 0.7, col.r, col.g, col.b, 0.6);
   } else {
     pt = groundHit(); if (!pt) return;
+    // 寝ている車・舟の浮き彫りの上を塗る時は、その高さの面で指の下の点を取る（視差のずれをなくす）
+    const dr = (S.st === 'car_paint') ? car : (S.st === 'boat_paint') ? boat : null;
+    if (dr && !dr.lifting) {
+      const h = dr.W * Math.max(0.02, dr.parts[0].rise);
+      const o = ray.ray.origin, d = ray.ray.direction; const t = (h - o.y) / d.y;
+      const q = new THREE.Vector3(o.x + d.x * t, 0, o.z + d.z * t);
+      if (dr.topAt(q.x, q.z) > 0) { pt = q; pt.y = h; }
+    }
     const col = tray.color;
     if (P.mode === 'draw') {
       strokeTo(pt, 0.014, col, 0.85, [], false);
       if (!P.stroke.length || Math.hypot(pt.x - P.stroke[P.stroke.length - 1][0], pt.z - P.stroke[P.stroke.length - 1][1]) > 0.02) P.stroke.push([pt.x, pt.z]);
     } else {
-      strokeTo(pt, 0.062, col, 0.55, activeTargets(), true);
+      strokeTo(new THREE.Vector3(pt.x, 0, pt.z), 0.062, col, 0.55, activeTargets(), true);
     }
     const prev = P.tip.clone(); const sp = prev.distanceTo(pt) / Math.max(dt, 1e-3); P.speed = lerp(P.speed, Math.min(sp, 4), 0.3);
     if (Math.random() < Math.min(1, P.speed * 0.8)) dust.emit(pt.x + (Math.random() - 0.5) * 0.04, 0.008, pt.z + (Math.random() - 0.5) * 0.04, (Math.random() - 0.5) * 0.12, 0.05 + Math.random() * 0.08, (Math.random() - 0.5) * 0.12, 0.008 + Math.random() * 0.012, 0.6 + Math.random() * 0.8, col.r * 0.9 + 0.1, col.g * 0.9 + 0.1, col.b * 0.9 + 0.1, 0.55);
@@ -697,7 +714,7 @@ function frame(now) {
   let dt = (now - last) / 1000; last = now; dt = Math.min(dt, window.__dtMax || 0.05);
   // 画質の自動調整（iPhone で 30fps を守る）
   fpsAcc += dt; fpsN++;
-  if (fpsAcc > 2.5) {
+  if (fpsAcc > 2.5 && !window.__noAdapt) {
     const fps = fpsN / fpsAcc; fpsAcc = 0; fpsN = 0; qualityChecked++;
     if (fps < 34 && post.on && DPR <= 1.5) { post.on = false; if (post.rt) post.rt.dispose(); post.rt = null; }
     else if (fps < 34 && DPR > 1) { DPR = Math.max(1, DPR - 0.25); renderer.setPixelRatio(DPR); resize(); }
@@ -749,7 +766,7 @@ ready.then(() => {
 });
 // デバッグ用（自動テスト）：?st=状態名
 const qs = new URLSearchParams(location.search);
-window.__game = { autoDrag: (pts, px = 30) => new Promise((res) => {
+window.__game = { SH, cam, post, autoDrag: (pts, px = 30) => new Promise((res) => {
   const sp = pts.map((q) => { const v = new THREE.Vector3(q[0], q[2] || 0, q[1]).project(camera); return [(v.x * 0.5 + 0.5) * innerWidth, (-v.y * 0.5 + 0.5) * innerHeight]; });
   A.audioInit(); P.down = true; P.x = sp[0][0]; P.y = sp[0][1]; P.stroke = []; P.last = null; P.mode = null; P.moved = 0; onDown(P.x, P.y);
   let i = 1; const stepF = () => { if (i >= sp.length) { P.down = false; onUp(); P.lastW = null; res(); return; } const [tx, ty] = sp[i]; const dx = tx - P.x, dy = ty - P.y, d = Math.hypot(dx, dy); if (d <= px) { P.x = tx; P.y = ty; i++; } else { P.x += dx / d * px; P.y += dy / d * px; } requestAnimationFrame(stepF); }; requestAnimationFrame(stepF); }),

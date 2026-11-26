@@ -276,7 +276,7 @@ export class HandRig {
     this.handG = new THREE.Group(); this.handG.add(hand, nails); this.root.add(this.handG);
     // 前腕と袖（袖口のしわ）
     const s = opts.scale;
-    const arm = tube([new THREE.Vector3(-0.06 * s, 0.003 * s, 0), new THREE.Vector3(-0.2 * s, 0.05 * s, 0), new THREE.Vector3(-0.42 * s, 0.13 * s, 0)], (t) => (0.027 + 0.012 * t) * s, { radial: 16, rings: 12, ell: () => [1.3, 0.9] });
+    const arm = tube([new THREE.Vector3(-0.06 * s, 0.003 * s, 0), new THREE.Vector3(-0.1 * s, 0.018 * s, 0), new THREE.Vector3(-0.15 * s, 0.035 * s, 0)], (t) => (0.026 + 0.006 * t) * s, { radial: 16, rings: 8, ell: () => [1.3, 0.9] });
     const armM = new THREE.Mesh(arm, this.skinM); armM.castShadow = true; this.root.add(armM);
     const sleeveM = opts.sleeve;
     const sl = tube([new THREE.Vector3(-0.085 * s, 0.006 * s, 0), new THREE.Vector3(-0.3 * s, 0.09 * s, 0), new THREE.Vector3(-0.9 * s, 0.33 * s, 0)], (t) => {
@@ -417,6 +417,23 @@ export class Human {
     }
     headG.computeVertexNormals();
     const headM = new THREE.Mesh(headG, skin); headM.castShadow = true; headM.position.y = hr * 1.0; this.head.add(headM);
+    // 小さな顔のつくり（引きの画面で人形っぽく見えないように）
+    {
+      const hp3 = headG.attributes.position;
+      const surfZ = (x, y) => { let z = 0; for (let i = 0; i < hp3.count; i++) { const vx = hp3.getX(i), vy = hp3.getY(i), vz = hp3.getZ(i); if (vz > 0 && Math.abs(vx - x) < hr * 0.12 && Math.abs(vy - y) < hr * 0.12) z = Math.max(z, vz); } return z; };
+      const eyeM = new THREE.MeshPhysicalMaterial({ color: 0x1a1410, roughness: 0.12, clearcoat: 1, clearcoatRoughness: 0.05 });
+      const browM = new THREE.MeshStandardMaterial({ color: kind === 'girl' ? 0x2a1c14 : 0x231a14, roughness: 0.8 });
+      const lipM = new THREE.MeshStandardMaterial({ color: kind === 'girl' ? 0xc97f78 : 0xa8685e, roughness: 0.5 });
+      const er = hr * (kind === 'girl' ? 0.085 : 0.065);
+      for (const sx of [-1, 1]) {
+        const ex = sx * hr * 0.3, ey = -hr * 0.05;
+        const e = new THREE.Mesh(new THREE.SphereGeometry(er, 12, 8), eyeM); e.scale.set(1, 1.1, 0.5); e.position.set(ex, hr + ey, surfZ(ex, ey) - er * 0.15); this.head.add(e);
+        const by = hr * 0.17;
+        const br = new THREE.Mesh(new THREE.CapsuleGeometry(hr * 0.022, hr * 0.17, 3, 6), browM); br.rotation.z = Math.PI / 2 + sx * 0.12; br.position.set(sx * hr * 0.3, hr + by, surfZ(sx * hr * 0.3, by) + hr * 0.005); this.head.add(br);
+      }
+      const my = -hr * 0.48;
+      const mo = new THREE.Mesh(new THREE.CapsuleGeometry(hr * 0.025, hr * 0.14, 3, 6), lipM); mo.rotation.z = Math.PI / 2; mo.position.set(0, hr + my, surfZ(0, my) - hr * 0.01); this.head.add(mo);
+    }
     for (const sx of [-1, 1]) {
       const ear = new THREE.SphereGeometry(hr * 0.2, 12, 8); ear.scale(0.4, 1, 0.75);
       const e = new THREE.Mesh(ear, skin); e.position.set(sx * hr * 0.86, hr * 0.92, -hr * 0.05); e.rotation.y = sx * 0.3; this.head.add(e);

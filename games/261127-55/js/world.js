@@ -33,7 +33,7 @@ export function makeEnvironment(renderer) {
   const sky = new THREE.Mesh(new THREE.SphereGeometry(50, 32, 16), skyMaterial(60));
   envScene.add(sky);
   // 地面（舗道・芝）と遠景の木々（緑・桜色）の帯
-  const gnd = new THREE.Mesh(new THREE.CircleGeometry(49, 32), new THREE.MeshBasicMaterial({ color: new THREE.Color(0.20, 0.22, 0.16) }));
+  const gnd = new THREE.Mesh(new THREE.CircleGeometry(49, 32), new THREE.MeshBasicMaterial({ color: new THREE.Color(0.14, 0.15, 0.12) }));
   gnd.rotation.x = -Math.PI / 2; gnd.position.y = -1.6; envScene.add(gnd);
   const plaza = new THREE.Mesh(new THREE.CircleGeometry(8, 24), new THREE.MeshBasicMaterial({ color: new THREE.Color(0.32, 0.32, 0.31) }));
   plaza.rotation.x = -Math.PI / 2; plaza.position.y = -1.55; envScene.add(plaza);
@@ -41,7 +41,7 @@ export function makeEnvironment(renderer) {
   for (let i = 0; i < 46; i++) {
     const a = (i / 46) * Math.PI * 2 + R() * 0.1;
     const pink = R() < 0.55;
-    const c = pink ? new THREE.Color(0.95, 0.74, 0.80).multiplyScalar(0.9 + R() * 0.2) : new THREE.Color(0.10, 0.20, 0.07).multiplyScalar(0.8 + R() * 0.5);
+    const c = pink ? new THREE.Color(0.78, 0.64, 0.68).multiplyScalar(0.85 + R() * 0.2) : new THREE.Color(0.07, 0.10, 0.06).multiplyScalar(0.8 + R() * 0.4);
     const m = new THREE.Mesh(new THREE.SphereGeometry(4 + R() * 4, 12, 8), new THREE.MeshBasicMaterial({ color: c }));
     const d = 28 + R() * 10;
     m.position.set(Math.cos(a) * d, 2 + R() * 3, Math.sin(a) * d); m.scale.y = 0.7;

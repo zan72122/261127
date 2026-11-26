@@ -3,7 +3,7 @@ import * as THREE from '../lib/three.module.min.js';
 import { tex } from './tex.js';
 import { Coverage } from './paint.js';
 import { makeMaskUniforms, maskMaterial, maskDepth } from './mask.js';
-import { smooth, clamp, easeInOut, merge, rng } from './util.js';
+import { smooth, clamp, easeInOut, merge, rng, subdivide, smoothNormals } from './util.js';
 
 export function pointInPoly(x, y, poly) {
   let c = false;
@@ -61,12 +61,21 @@ class Drawable {
     // 寝ている間は全体で同じ高さの浅い浮き彫り（塗った分だけ高く）。起き上がる時に 1 へ
     let prog = 0; for (const p of this.parts) prog += p.done ? 1 : Math.min(1, p.frac / p.th);
     prog /= this.parts.length;
-    const target = this.lifting ? 1 : 0.025 + 0.2 * smooth(prog);
+    const target = this.lifting ? 1 : 0.025 + 0.13 * smooth(prog);
     for (const p of this.parts) {
       p.rise += (target - p.rise) * (1 - Math.exp(-dt * (this.lifting ? 4 : 2.5)));
       const s = Math.max(0.02, p.rise);
       p.group.scale.z = s; p.group.position.z = (this.W / 2) * (s - 1);
     }
+  }
+  // 寝ている浮き彫りの上面の高さ（塗って本物になった所だけ）
+  topAt(X, Z) {
+    for (const p of this.parts) {
+      const c = p.cov; const i = Math.floor((X - c.x0) / c.cell), j = Math.floor((Z - c.z0) / c.cell);
+      if (i < 0 || j < 0 || i >= c.nx || j >= c.nz) continue;
+      const k = j * c.nx + i; if (c.mask[k] && c.paint[k]) return this.W * Math.max(0.02, p.rise);
+    }
+    return 0;
   }
   allDone() { return this.parts.every((p) => p.done); }
   setLifted(v) { for (const p of this.parts) p.U.uMaskOn.value = v ? 0 : 1; }
@@ -107,8 +116,9 @@ export class Car extends Drawable {
     this.win = hole.getPoints(10).map((p) => [p.x, p.y]);
     // --- 車体 ---
     const bt = 0.05;
-    const geo = new THREE.ExtrudeGeometry(s, { depth: W - bt * 2, bevelEnabled: true, bevelThickness: bt, bevelSize: 0.045, bevelSegments: 5, curveSegments: 14, steps: 1 });
+    let geo = new THREE.ExtrudeGeometry(s, { depth: W - bt * 2, bevelEnabled: true, bevelThickness: bt, bevelSize: 0.045, bevelSegments: 6, curveSegments: 16, steps: 4 });
     geo.translate(0, 0, -(W - bt * 2) / 2);
+    geo = subdivide(geo, 0.045);
     // 平面形を丸め、上ほどすぼめる（タンブルホーム）
     const pos = geo.attributes.position;
     for (let i = 0; i < pos.count; i++) {
@@ -118,7 +128,7 @@ export class Car extends Drawable {
       const bulge = 1 + 0.03 * Math.sin(clamp((y - 0.13) / 0.33, 0, 1) * Math.PI);
       pos.setZ(i, z * ends * tum * bulge);
     }
-    geo.computeVertexNormals();
+    smoothNormals(geo);
     const detail = this.makeDetail();
     const paintM = new THREE.MeshPhysicalMaterial({
       color: 0xffffff, metalness: 0.35, roughness: 0.32, clearcoat: 1, clearcoatRoughness: 0.045,
@@ -130,8 +140,12 @@ export class Car extends Drawable {
     this.bodyMesh = this.addMesh(body, new THREE.Mesh(geo, paintM), 'paint', new THREE.Color(0.75, 0.12, 0.1));
     // 室内：座席とハンドル（窓から見える）
     const seatM = new THREE.MeshStandardMaterial({ color: 0x2b2b2e, roughness: 0.9, normalMap: tex('cotton_nrm.jpg'), map: tex('cotton_col.jpg', { srgb: true }) });
-    const seatG = new THREE.BoxGeometry(0.22, 0.30, W * 0.78, 3, 4, 3);
-    seatG.translate(-0.24, 0.42, 0); seatG.rotateZ(0.0);
+    const rbox = (w, h, d, r) => { const sh = new THREE.Shape(); sh.moveTo(-w / 2 + r, -h / 2); sh.lineTo(w / 2 - r, -h / 2); sh.quadraticCurveTo(w / 2, -h / 2, w / 2, -h / 2 + r); sh.lineTo(w / 2, h / 2 - r); sh.quadraticCurveTo(w / 2, h / 2, w / 2 - r, h / 2); sh.lineTo(-w / 2 + r, h / 2); sh.quadraticCurveTo(-w / 2, h / 2, -w / 2, h / 2 - r); sh.lineTo(-w / 2, -h / 2 + r); sh.quadraticCurveTo(-w / 2, -h / 2, -w / 2 + r, -h / 2);
+      const g = new THREE.ExtrudeGeometry(sh, { depth: d - 2 * r, bevelEnabled: true, bevelThickness: r, bevelSize: r * 0.9, bevelSegments: 4, curveSegments: 6 }); g.translate(0, 0, -(d - 2 * r) / 2); return g; };
+    const cush = rbox(0.24, 0.07, W * 0.72, 0.03); cush.translate(-0.2, 0.33, 0);
+    const back = rbox(0.07, 0.28, W * 0.72, 0.03); back.rotateZ(0.18); back.translate(-0.33, 0.49, 0);
+    const dash = rbox(0.12, 0.08, W * 0.8, 0.025); dash.translate(0.2, 0.44, 0);
+    const seatG = merge([cush, back, dash]);
     const seat = new THREE.Mesh(seatG, seatM);
     this.addMesh(body, seat, 'keep');
     const wheelG = new THREE.TorusGeometry(0.075, 0.012, 8, 24); wheelG.rotateY(Math.PI / 2); wheelG.rotateZ(0.5); wheelG.translate(0.04, 0.52, 0.16);
