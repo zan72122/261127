@@ -81,7 +81,7 @@ export class GlazeStage {
   }
   hintTarget() {
     const C = this.ctx;
-    if (this.dips >= 1 && !this.holding && this.inTub < 0) return C.anim.kiln.group.localToWorld(new THREE.Vector3(0.0, 0.62, 0.3));
+    if (this.dips >= 1 && !this.holding && this.inTub < 0 && this.ctx.clayHolder.position.y > this.hover - 0.05) return C.clayHolder.localToWorld(new THREE.Vector3(0, -C.clay.H * 0.5, 0));
     // 次の桶
     const t = C.anim.tubs[(this.dips) % 3];
     return new THREE.Vector3(t.x, t.y + 0.02, t.z);
@@ -100,6 +100,7 @@ export class GlazeStage {
     if (this.dips >= 1 && C.hitObjFat(C.anim.kiln.group, p.x, p.y, 20) && !C.hitObj(C.clay.mesh, p.x, p.y)) { this.toKiln(); return; }
     this.holding = true;
     this.grabOff = null;
+    this.downT = C.clock; this.downXY = [p.x, p.y]; this.downOnPot = !!C.hitObjFat(C.clay.mesh, p.x, p.y, 20);
     const q = this.planeHit(p);
     if (q) this.grabOff = new THREE.Vector3().subVectors(C.clayHolder.position, q);
     if (this.grabOff) this.grabOff.y = Math.max(0, Math.min(0.1, this.grabOff.y));
@@ -111,7 +112,14 @@ export class GlazeStage {
     // 指の少し上に器（指の下に隠れないように）
     this.target.set(q.x, q.y + 0.06 + this.ctx.clay.H * 0.5, POS.tubs.z + 0.02);
   }
-  up() { this.holding = false; this.target.y = this.hover; }
+  up(p) {
+    this.holding = false; this.target.y = this.hover;
+    // 釉薬をかけたあと、器をトンとたたく → 窯へ
+    const C = this.ctx;
+    if (this.dips >= 1 && this.downOnPot && C.clock - this.downT < 0.35 && Math.hypot(p.x - this.downXY[0], p.y - this.downXY[1]) < 14 && this.inTub < 0) {
+      this.target.copy(C.clayHolder.position); this.toKiln();
+    }
+  }
   toKiln() {
     const C = this.ctx;
     C.setHint(null);
@@ -184,10 +192,10 @@ export class GlazeStage {
     // つまんでいる指の跡：高台のまわり 4 か所は釉薬がつかない
     const footV = this.footS / SMAX * VH;
     for (const a of [0.1, 0.3, 0.55, 0.8]) {
-      const ci = a * UW, cj = footV + 4;
-      for (let j = Math.max(0, Math.floor(cj - 7)); j < Math.min(VH, cj + 7); j++) for (let i = Math.floor(ci - 6); i < ci + 6; i++) {
+      const ci = a * UW, cj = footV + 1;
+      for (let j = Math.max(0, Math.floor(cj - 4)); j < Math.min(VH, cj + 4); j++) for (let i = Math.floor(ci - 4); i < ci + 4; i++) {
         const ii = ((i % UW) + UW) % UW;
-        const d = Math.hypot((i - ci) / 5, (j - cj) / 6);
+        const d = Math.hypot((i - ci) / 2.6, (j - cj) / 3.2);
         if (d < 1) for (const t of this.thick) t[ii + UW * j] *= d * d;
       }
     }
@@ -262,8 +270,8 @@ class KilnStage {
       h.removeFromParent(); K.group.add(h);
       h.position.set(0, K.shelfY + 0.01, 0.02); h.rotation.set(0, 0, 0);
       C.clay.mesh.rotation.set(0, 0, 0);
-      K.doorPivot.rotation.y = -1.95;
-      this.sub = 'door'; this.t = 0;
+      K.doorPivot.rotation.y = -1.95; K.dial.rotation.z = 0;
+      this.sub = 'door'; this.t = 0; this.said = false; this.taps = 0; this.cracks = []; this.autoCracks = 0;
       C.focusTarget.copy(K.group.localToWorld(new THREE.Vector3(0, 0.55, 0.3)));
       C.post.aperture = 0.003; C.post.exposure = 0.95;
       C.setHint(() => this.hintTarget(), 0.3);

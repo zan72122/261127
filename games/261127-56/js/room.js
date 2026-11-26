@@ -305,17 +305,17 @@ export function buildRoom(scene) {
   const sl = mesh(new THREE.RingGeometry(0.12, 0.245, 64), slurry, 0, 0.343, 0, wh, false, true); sl.rotation.x = -Math.PI / 2;
   // 回転する台（アルミ）
   const headG = new THREE.Group(); headG.position.set(0, POS.wheelHeadY - 0.025, 0); wh.add(headG);
-  const headM = new THREE.MeshPhysicalMaterial({ color: 0x6d5e52, roughness: 0.4, metalness: 0.35, clearcoat: 0.7, clearcoatRoughness: 0.15, map: tex('grain', 'c', { repeat: [3, 3] }), normalMap: tex('grain', 'n', { repeat: [3, 3] }), normalScale: new THREE.Vector2(0.6, 0.6) });
+  const headM = new THREE.MeshPhysicalMaterial({ color: 0x4f433a, roughness: 0.32, metalness: 0.1, clearcoat: 0.7, clearcoatRoughness: 0.15, map: tex('grain', 'c', { repeat: [3, 3] }), normalMap: tex('grain', 'n', { repeat: [3, 3] }), normalScale: new THREE.Vector2(0.6, 0.6) });
   const headTop = mesh(new THREE.CylinderGeometry(0.15, 0.15, 0.022, 72), [mAlu, headM, mAlu], 0, 0.014, 0, headG);
   mesh(new THREE.CylinderGeometry(0.03, 0.03, 0.12, 16), mSteel, 0, -0.06, 0, headG);
   // 回転台の上の板（バット）のどろ跡
   anim.wheelHead = headG;
   // 速さのレバー（右側）
-  const lever = new THREE.Group(); lever.position.set(0.23, 0.27, 0.1); wh.add(lever);
+  const lever = new THREE.Group(); lever.position.set(0.27, 0.27, -0.17); wh.add(lever);
   mesh(boxGeo(0.03, 0.06, 0.12, 0.3), mIron, 0, 0, 0, lever);
   const leverArm = new THREE.Group(); lever.add(leverArm);
-  mesh(new THREE.CylinderGeometry(0.008, 0.008, 0.14, 10), mSteel, 0, 0.07, 0, leverArm);
-  const knob = mesh(new THREE.SphereGeometry(0.02, 16, 12), new THREE.MeshPhysicalMaterial({ color: 0x1b1b1b, roughness: 0.3, clearcoat: 0.6 }), 0, 0.145, 0, leverArm);
+  mesh(new THREE.CylinderGeometry(0.008, 0.008, 0.22, 10), mSteel, 0, 0.11, 0, leverArm);
+  const knob = mesh(new THREE.SphereGeometry(0.02, 16, 12), new THREE.MeshPhysicalMaterial({ color: 0x1b1b1b, roughness: 0.3, clearcoat: 0.6 }), 0, 0.225, 0, leverArm);
   leverArm.rotation.z = -0.3;
   anim.lever = leverArm;
   contactShadow(room, POS.wheel.x, POS.wheel.z, 0.9, 0.9, 0.65);
@@ -328,24 +328,29 @@ export function buildRoom(scene) {
   // 道具（スポンジ・水の鉢・切り糸）を水受けのふちに
   const tools = new THREE.Group(); tools.position.copy(POS.wheel); room.add(tools);
   const bowlM = new THREE.MeshPhysicalMaterial({ color: 0x8a5d3e, roughness: 0.25, clearcoat: 0.6, map: tex('grain', 'c', { repeat: [2, 2] }), normalMap: tex('grain', 'n', { repeat: [2, 2] }) });
-  const waterBowl = lathe([[0, 0], [0.06, 0], [0.075, 0.01], [0.09, 0.07], [0.087, 0.073], [0.07, 0.014], [0, 0.016]], 40, bowlM, tools, -0.34, 0.34, 0.12);
+  const waterBowl = lathe([[0, 0], [0.06, 0], [0.075, 0.01], [0.09, 0.07], [0.087, 0.073], [0.07, 0.014], [0, 0.016]], 40, bowlM, tools, -0.2, 0.42, -0.36);
   const water = new THREE.MeshPhysicalMaterial({ color: 0x8b7564, roughness: 0.03, metalness: 0, transmission: 0, transparent: true, opacity: 0.85, clearcoat: 1, clearcoatRoughness: 0.02, envMapIntensity: 1.6 });
-  const wsurf = mesh(new THREE.CircleGeometry(0.083, 40), water, -0.34, 0.4, 0.12, tools, false, false); wsurf.rotation.x = -Math.PI / 2;
+  const wsurf = mesh(new THREE.CircleGeometry(0.083, 40), water, -0.2, 0.48, -0.36, tools, false, false); wsurf.rotation.x = -Math.PI / 2;
   // 小さな台（鉢を置く）
-  mesh(boxGeo(0.24, 0.34, 0.24, 0.4), mBoard, -0.34, 0.17, 0.12, tools);
-  contactShadow(room, POS.wheel.x - 0.34, POS.wheel.z + 0.12, 0.35, 0.35, 0.5);
+  mesh(boxGeo(0.24, 0.42, 0.24, 0.4), mBoard, -0.2, 0.21, -0.36, tools);
+  contactShadow(room, POS.wheel.x - 0.2, POS.wheel.z - 0.36, 0.35, 0.35, 0.5);
   // スポンジ
-  const spongeM = new THREE.MeshStandardMaterial({ color: 0xc9a46a, roughness: 0.95, map: tex('grain', 'c', { repeat: [6, 6] }), normalMap: tex('grain', 'n', { repeat: [6, 6] }), normalScale: new THREE.Vector2(3, 3) });
-  const sponge = mesh(new THREE.SphereGeometry(0.035, 24, 16), spongeM, -0.37, 0.423, 0.1, tools);
+  const spongeM = new THREE.MeshStandardMaterial({ color: 0xb39a72, roughness: 0.95, map: tex('grain', 'c', { repeat: [6, 6] }), normalMap: tex('grain', 'n', { repeat: [6, 6] }), normalScale: new THREE.Vector2(3, 3) });
+  const sponge = mesh(new THREE.SphereGeometry(0.035, 24, 16), spongeM, -0.15, 0.462, -0.235, tools);
   sponge.scale.set(1.2, 0.55, 0.9);
   // 切り糸（木の取っ手 2 つと糸）
-  const wire = new THREE.Group(); wire.position.set(0.2, 0.455, 0.2); tools.add(wire);
+  const wire = new THREE.Group(); wire.position.set(0.17, 0.455, -0.23); tools.add(wire);
   const hM = pbr('board', { color: 0xa07850, roughness: 0.8, repeat: [0.2, 0.2] });
   mesh(new THREE.CylinderGeometry(0.009, 0.009, 0.05, 10), hM, -0.1, 0, 0, wire).rotation.z = Math.PI / 2;
   mesh(new THREE.CylinderGeometry(0.009, 0.009, 0.05, 10), hM, 0.1, 0, 0.03, wire).rotation.z = Math.PI / 2;
   const wl = mesh(new THREE.CylinderGeometry(0.0008, 0.0008, 0.18, 4), mSteel, 0, 0, 0.015, wire, false, false); wl.rotation.z = Math.PI / 2; wl.rotation.y = -0.17;
-  wire.rotation.y = 0.5;
-  anim.wire = wire; anim.sponge = sponge; anim.waterBowl = waterBowl; anim.water = wsurf;
+  wire.rotation.y = -0.6;
+  // さわりやすい大きめの当たり判定（見えない）
+  const hitM = new THREE.MeshBasicMaterial({ visible: false });
+  const wireHit = new THREE.Mesh(new THREE.BoxGeometry(0.26, 0.06, 0.08), hitM); wire.add(wireHit);
+  const spongeHit = new THREE.Mesh(new THREE.SphereGeometry(0.06, 8, 6), hitM); spongeHit.position.copy(sponge.position); tools.add(spongeHit);
+  const bowlHit = new THREE.Mesh(new THREE.CylinderGeometry(0.11, 0.11, 0.12, 12), hitM); bowlHit.position.set(-0.2, 0.46, -0.36); tools.add(bowlHit);
+  anim.wire = wire; anim.sponge = sponge; anim.waterBowl = waterBowl; anim.water = wsurf; anim.spongeHit = spongeHit; anim.bowlHit = bowlHit;
 
   // ---- 釉薬の桶（たが付きの木桶）
   const tubsG = new THREE.Group(); tubsG.position.copy(POS.tubs); room.add(tubsG);

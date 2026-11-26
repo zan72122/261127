@@ -59,7 +59,7 @@ export class Clay {
         const area = Math.PI * Math.max(2e-5, this.Ro[kt] ** 2 - this.Ri[kt] ** 2);
         if (dd > 0) {
           // 半分は高さへ、半分は上ほど厚く（引き上げた土は口縁にたまる）
-          this.H = Math.min(HMAX, this.H + dd * 0.7 / area);
+          this.H = Math.min(HMAX, this.H + dd * 0.85 / area);
           const d2 = this.V0 - this.volume();
           let den = 0;
           for (let k = 0; k < K; k++) { const y = this.yk(k); if (y > this.H) break; const w = 0.4 + 0.6 * (y / this.H); den += 2 * Math.PI * this.Ro[k] * w * DY; }
@@ -85,6 +85,19 @@ export class Clay {
   }
   enforce() {
     const kt = this.topK();
+    if (this.open) {
+      // 底より下（土台）は細くならない
+      const kF = Math.max(0, Math.min(K - 1, Math.round(this.yF / DY - 0.5)));
+      const baseMin = Math.max(0.03, this.Ri[Math.min(K - 1, kF + 2)] + 0.009);
+      for (let k = 0; k < K; k++) { if (this.yk(k) > this.yF + 0.012) break; if (this.Ro[k] < baseMin) this.Ro[k] = baseMin; }
+      // 口縁だけが太くならない（壁の平均より少し厚いまで）
+      let ts = 0, tn = 0;
+      for (let k = 0; k < K; k++) { const y = this.yk(k); if (y > this.yF + 0.01 && y < this.H - 0.015) { ts += this.Ro[k] - this.Ri[k]; tn++; } }
+      if (tn > 2) {
+        const tl = Math.max(TMIN * 1.2, ts / tn * 1.15);
+        for (let k = 0; k < K; k++) { const y = this.yk(k); if (y >= this.H - 0.015 && y <= this.H + DY && this.Ro[k] - this.Ri[k] > tl) this.Ro[k] -= (this.Ro[k] - this.Ri[k] - tl) * 0.15; }
+      }
+    }
     for (let k = 0; k < K; k++) {
       const y = this.yk(k);
       if (y > this.H) { this.Ro[k] = this.Ro[kt]; this.Ri[k] = this.Ri[kt]; continue; }
@@ -237,12 +250,13 @@ export class Clay {
       return { pts, zs };
     }
     const lip = (Ro(H - 0.002) - Ri(H - 0.002)) * 0.5;
-    const yTop = H - lip;
+    const lipK = Math.min(1, 0.0045 / Math.max(0.001, lip)) * 0.6 + 0.3; // 厚い壁ほど平らな口縁
+    const yTop = H - lip * lipK;
     const n = 40;
     for (let i = 1; i <= n; i++) { const y = 0.0012 + (yTop - 0.0012) * i / n; P(Ro(y), y, 0); }
     // 口縁（丸める）
     const ro = Ro(yTop), ri = Ri(yTop), cr = (ro + ri) / 2, rad = (ro - ri) / 2;
-    for (let i = 1; i < 10; i++) { const a = Math.PI * i / 10; P(cr + Math.cos(a) * rad, yTop + Math.sin(a) * rad * 1.05, 1); }
+    for (let i = 1; i < 10; i++) { const a = Math.PI * i / 10; const sa = Math.sin(a); P(cr + Math.cos(a) * rad, yTop + Math.pow(sa, 0.7) * rad * lipK, 1); }
     // 内側を下へ
     const fil = Math.min(0.006, (yTop - this.yF) * 0.4);
     for (let i = 0; i <= n; i++) { const y = yTop - (yTop - this.yF - fil) * i / n; P(Ri(y), y, 2); }
@@ -536,13 +550,14 @@ export function makePotMaterial(clay) {
         vec4 gl4 = texture2D(tGlaze, vPUv) * uGlazeOn;
         vec3 gth = gl4.rgb;
         // ろくろ目の山では薄く、谷では厚く
-        gth *= clamp(1.0 - gro * 3.0 * uFired, 0.4, 1.8);
+        gth *= clamp(1.0 - gro * 5.0 * uFired, 0.35, 2.0);
         float tot = gth.r + gth.g + gth.b;
         float cov = smoothstep(0.03, 0.22, tot);
         vec3 rawC = (gth.r * vec3(0.13, 0.17, 0.25) + gth.g * vec3(0.27, 0.15, 0.07) + gth.b * vec3(0.82, 0.8, 0.74)) / max(tot, 1e-4);
         rawC *= 0.92 + 0.16 * grainC.r;
         // 焼いた後の色（厚みで濃さが変わる）
-        vec3 cBlue = mix(vec3(0.33, 0.5, 0.62), vec3(0.025, 0.09, 0.26), smoothstep(0.08, 0.9, gth.r));
+        vec3 cBlue = mix(vec3(0.2, 0.34, 0.46), vec3(0.012, 0.05, 0.2), smoothstep(0.08, 0.85, gth.r));
+        cBlue *= 0.85 + 0.3 * mott;
         vec3 cAme = mix(vec3(0.62, 0.36, 0.1), vec3(0.09, 0.03, 0.012), smoothstep(0.1, 1.0, gth.g));
         vec3 cWhite = mix(vec3(0.7, 0.69, 0.64), vec3(0.83, 0.85, 0.86), smoothstep(0.15, 0.9, gth.b));
         vec3 firedC = (gth.r * cBlue + gth.g * cAme + gth.b * cWhite) / max(tot, 1e-4);
@@ -554,9 +569,10 @@ export function makePotMaterial(clay) {
         vec3 fired = mix(firedBody, firedC, opq);
         // 貫入（タップで広がる）
         float crackMask = texture2D(tCrack, vPUv).r * uFired * smoothstep(0.12, 0.3, tot);
-        float cr = crackle(vObj * 170.0);
-        float crLine = (1.0 - smoothstep(0.015, 0.06, cr)) * crackMask;
-        fired = mix(fired, fired * 0.55 + vec3(0.02, 0.018, 0.015), crLine * mix(0.5, 1.0, gth.b / max(tot, 1e-4)));
+        float cr = crackle(vObj * 150.0);
+        float crW = fwidth(cr);
+        float crLine = (1.0 - smoothstep(crW * 0.6, crW * 1.6 + 0.025, cr)) * crackMask;
+        fired = mix(fired, fired * 0.35 + vec3(0.03, 0.025, 0.018), crLine * mix(0.65, 1.0, gth.b / max(tot, 1e-4)));
         vec3 unfired = mix(body, rawC, cov);
         diffuseColor.rgb = mix(unfired, fired, uFired);
         float glossy = mix(0.0, cov, uFired);
@@ -581,7 +597,7 @@ export function makePotMaterial(clay) {
           float hU = texture2D(tGroove, vPUv + vec2(0.0, e)).r - texture2D(tGroove, vPUv - vec2(0.0, e)).r;
           float hR = texture2D(tGroove, vPUv + vec2(1.0/1024.0, 0.0)).r - texture2D(tGroove, vPUv - vec2(1.0/1024.0, 0.0)).r;
           float gk = mix(1.0, 0.35, uFired * cov) * smoothstep(0.002, 0.012, vR);
-          gn.y += -hU * 6.0 * uTanSign * gk; gn.x += -hR * 1.5 * gk;
+          gn.y += -hU * 3.2 * uTanSign * gk; gn.x += -hR * 1.0 * gk;
           normal = normalize(tbn * gn);
         }`)
       .replace('#include <lights_physical_fragment>', `#include <lights_physical_fragment>

@@ -62,9 +62,10 @@ const SHOTS = {
   wheel: { pos: [0.05, 0.86, -0.08], look: [0.05, 0.52, -0.56], f: 42, pPos: [0.05, 0.9, 0.0], pLook: [0.05, 0.5, -0.56] },
   wheelWide: { pos: [0.55, 1.0, 0.15], look: [0.05, 0.52, -0.56], f: 38 },
   dry: { pos: [-0.7, 0.75, -0.25], look: [-1.2, 0.5, -0.78], f: 45 },
-  glaze: { pos: [1.05, 1.02, -0.62], look: [1.05, 0.5, -1.45], f: 38, pPos: [1.05, 1.15, -0.45], pLook: [1.05, 0.48, -1.45] },
+  glaze: { pos: [1.05, 0.92, -0.68], look: [1.05, 0.5, -1.45], f: 36, pPos: [1.05, 1.0, -0.42], pLook: [1.05, 0.5, -1.45] },
   kiln: { pos: [0.95, 0.95, 0.15], look: [1.85, 0.6, -0.08], f: 38, pPos: [0.75, 1.0, 0.2], pLook: [1.85, 0.6, -0.08] },
   kilnIn: { pos: [1.18, 0.78, -0.02], look: [1.9, 0.48, -0.06], f: 45 },
+  thumb: { pos: [-0.86, 0.93, 1.07], look: [-0.95, 0.81, 0.67], f: 50 },
   table: { pos: [-0.95, 1.1, 1.3], look: [-0.95, 0.78, 0.35], f: 40, pPos: [-0.95, 1.32, 1.36], pLook: [-0.95, 0.6, 0.45] },
 };
 const cam = { pos: new THREE.Vector3(), look: new THREE.Vector3(), fromPos: new THREE.Vector3(), fromLook: new THREE.Vector3(), toPos: new THREE.Vector3(), toLook: new THREE.Vector3(), t: 1, dur: 1, f0: 40, f1: 40, shot: null };
@@ -396,8 +397,8 @@ const wheelStage = {
       if (hitObjFat(clay.mesh, p.x, p.y, 40)) { reballTap(); }
       return;
     }
-    if (this.wireReady && hitObjFat(anim.wire, p.x, p.y, 34)) { cutWithWire(); return; }
-    if (hitObjFat(anim.sponge, p.x, p.y, 34) || hitObjFat(anim.waterBowl, p.x, p.y, 20) || hitObj(anim.water, p.x, p.y)) { wetHands(); return; }
+    if (this.wireReady && hitObjFat(anim.wire, p.x, p.y, 24)) { cutWithWire(); return; }
+    if (hitObjFat(anim.spongeHit, p.x, p.y, 20) || hitObjFat(anim.bowlHit, p.x, p.y, 16)) { wetHands(); return; }
     this.tryContact(p, true);
   },
   move(p) { if (this.sub !== 'reball' && !busy) this.tryContact(p, false); },
@@ -450,7 +451,7 @@ const wheelStage = {
     if (this.sub === 'shape' && !gameState.mishapDone && gameState.firstShape > 6 && !finger.active && clock - lastInput > 0.8) papaMishap();
     this.wireReady = (this.sub === 'shape2' || (this.sub === 'shape' && gameState.mishapDone)) && this.stats.kind !== 'lump' && (this.stats.top > 0.035);
     // 道具が光る
-    anim.wire.position.y = 0.455 + (this.wireReady ? Math.sin(clock * 5) * 0.004 + 0.006 : 0);
+    if (!(handAnim && handAnim.kind === 'wire')) anim.wire.position.y = 0.455 + (this.wireReady ? Math.sin(clock * 5) * 0.004 + 0.006 : 0);
   },
 };
 function wetHands() {
@@ -488,7 +489,7 @@ function updateFinger(dt) {
   const zone = finger.zone || clay.zoneAt(finger.r, finger.y);
   const wetK = 0.5 + 0.5 * Math.min(1, finger.water * 1.6);
   const spd = Math.min(1.3, wheel.speed / 1.6);
-  const p = Math.min(1, 0.35 + finger.hold * 0.45) * wetK * spd;
+  const p = Math.min(1, 0.35 + finger.hold * 0.45) * wetK * (0.4 + 0.6 * spd);
   clay.apply({ zone, r: finger.r, y: finger.y, p, vy: Math.max(-0.3, Math.min(0.3, vy)), vr: Math.max(-0.3, Math.min(0.3, vr)), dt, hold: finger.hold });
   clay.remesh();
   finger.depth = Math.min(1, finger.hold);
@@ -550,7 +551,7 @@ let slumpAnim = 0;
 function reballTap() {
   sfx.slap();
   handAnim = { kind: 'pat', t: 0 };
-  clay.reball(0.34);
+  clay.reball(0.45);
   if (clay.slump < 0.06) {
     clay.slump = 0; clay.reball(1);
     wheelStage.sub = 'shape2';
@@ -614,7 +615,7 @@ function updateHands(dt) {
     handAnim.t += dt;
     const p = anim.waterBowl.getWorldPosition(new THREE.Vector3());
     const dip = Math.sin(Math.min(1, handAnim.t / 0.9) * Math.PI);
-    const tip = new THREE.Vector3(p.x + 0.01, 0.41 + (1 - dip) * 0.12, p.z);
+    const tip = new THREE.Vector3(p.x + 0.01, 0.47 + (1 - dip) * 0.12, p.z);
     placeHand(hands.press, tip, new THREE.Vector3(0.1, -1, -0.4), camDir.clone().negate(), TIP, k);
     if (handAnim.t > 1.0) handAnim = null;
   } else if (handAnim && handAnim.kind === 'pat') {
@@ -658,16 +659,16 @@ function updateHands(dt) {
     placeHand(sup, lt, sf, sn, useLeft ? TIP : CUP_PAD, k);
   } else {
     // 休めている手：手前の水受けのふち
-    const rr = base.clone().addScaledVector(camDir, -0.17).addScaledVector(right, 0.15).add(new THREE.Vector3(0, -0.005, 0));
+    const rr = base.clone().addScaledVector(camDir, -0.13).addScaledVector(right, 0.15).add(new THREE.Vector3(0, -0.012, 0));
     placeHand(hands.press, rr, camDir.clone().addScaledVector(right, -0.35).add(new THREE.Vector3(0, -0.15, 0)).normalize(), new THREE.Vector3(0, 1, 0), TIP, k * 0.5);
-    const rl = base.clone().addScaledVector(camDir, -0.17).addScaledVector(right, -0.16).add(new THREE.Vector3(0, -0.005, 0));
+    const rl = base.clone().addScaledVector(camDir, -0.13).addScaledVector(right, -0.16).add(new THREE.Vector3(0, -0.012, 0));
     placeHand(hands.cup, rl, camDir.clone().addScaledVector(right, 0.35).add(new THREE.Vector3(0, -0.15, 0)).normalize(), new THREE.Vector3(0, 1, 0), CUP_PAD, k * 0.5);
   }
   // パパの手
   if (handAnim && handAnim.kind === 'papa' && hands.papa) {
     handAnim.t += dt;
     const t = handAnim.t;
-    const lev = anim.lever.getWorldPosition(new THREE.Vector3()).add(new THREE.Vector3(0, 0.14, 0));
+    const lev = anim.lever.getWorldPosition(new THREE.Vector3()).add(new THREE.Vector3(0, 0.22, 0));
     const start = lev.clone().addScaledVector(right, 0.45).add(new THREE.Vector3(0, 0.25, 0.15));
     let tip;
     if (t < 1.2) tip = start.clone().lerp(lev, ease(Math.min(1, t / 1.2)));
@@ -741,7 +742,7 @@ function restartGame() {
   clay.resetLump(1);
   gameState.firstShape = 0;
   peopleMaterials().skin.userData.tri.uClay.value = 0;
-  anim.wire.position.set(0.2, 0.455, 0.2); anim.wire.rotation.set(0, 0.5, 0);
+  anim.wire.position.set(0.17, 0.455, -0.23); anim.wire.rotation.set(0, -0.6, 0);
   goStage(wheelStage);
 }
 
@@ -792,6 +793,11 @@ function frame(now) {
   updateHands(dt);
   updateDrops(dt);
   updateCamera(dt, t);
+  // 影：太陽の影は数フレームに 1 回（動く物は作業灯・食卓の灯りの影で受ける）
+  L.sun.shadow.autoUpdate = false;
+  if ((frameN % 6) === 0) L.sun.shadow.needsUpdate = true;
+  L.work.shadow.autoUpdate = stage.name === 'wheel' || stage.name === 'intro' || (frameN % 20) === 0;
+  L.table.shadow.autoUpdate = stage.name === 'table' || (frameN % 20) === 0;
   drawHintHand(t);
   post.render(scene, camera, t);
   // 重いときは解像度を下げる（30fps を守る）

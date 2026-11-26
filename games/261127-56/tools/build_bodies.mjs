@@ -120,7 +120,6 @@ function sleevePrims(S, z0, z1, kind) {
   }
   const innerF = compose(inner);
   const items = [...outer];
-  items.push({ p: { d: (x, y, z) => innerF(x, y, z), c: [0, 0, z0 * S], R: 1e9 }, op: 's', k: 0.002 * S });
   items.push({ p: plane([0, 0, 1], z0 * S), op: 'i', k: 0.003 * S });
   return items;
 }
