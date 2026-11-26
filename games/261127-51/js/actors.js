@@ -92,6 +92,42 @@ function makeMagnifier() {
 }
 
 // ------------------------------------------------------------------ girl
+// Strand ribbons over the bob so the back of the head reads as real hair.
+function makeHairStrands() {
+  const N = 420, SEG = 8;
+  const pos = [], col = [], idx = [];
+  for (let i = 0; i < N; i++) {
+    const a = Math.PI + (Math.random() * 2 - 1) * 2.25; // around the back (-z) and sides
+    const y0 = 0.15 + Math.random() * 0.03 + Math.cos(a - Math.PI) * 0.0;
+    const y1 = 0.035 + Math.random() * 0.025 + Math.max(0, Math.cos(a)) * 0.04;
+    const w = 0.004 + Math.random() * 0.004;
+    const shade = 0.75 + Math.random() * 0.5;
+    const base = pos.length / 3;
+    for (let s = 0; s <= SEG; s++) {
+      const t = s / SEG;
+      const y = y0 + (y1 - y0) * t;
+      // follow the skull then fall: radius grows, tips curl inward
+      const r = 0.094 + Math.sin(t * Math.PI * 0.9) * 0.012 - Math.pow(t, 4) * 0.012 + (i % 3) * 0.0012;
+      const aa = a + Math.sin(t * 3 + i) * 0.03;
+      const cx = Math.sin(aa) * r * 0.95, cz = Math.cos(aa) * r - 0.006;
+      const tx = Math.cos(aa) * w * (1 - t * 0.5), tz = -Math.sin(aa) * w * (1 - t * 0.5);
+      pos.push(cx - tx, y + 0.86, cz - tz, cx + tx, y + 0.86, cz + tz);
+      const c = [0.032 * shade, 0.016 * shade, 0.009 * shade];
+      col.push(...c, ...c);
+      if (s < SEG) { const b = base + s * 2; idx.push(b, b + 2, b + 1, b + 1, b + 2, b + 3); }
+    }
+  }
+  const g = new T.BufferGeometry();
+  g.setAttribute('position', new T.Float32BufferAttribute(pos, 3));
+  g.setAttribute('color', new T.Float32BufferAttribute(col, 3));
+  g.setIndex(idx); g.computeVertexNormals();
+  const m = new T.MeshPhysicalMaterial({ vertexColors: true, roughness: 0.42, side: T.DoubleSide, sheen: 0.8, sheenColor: new T.Color(0.5, 0.35, 0.25), sheenRoughness: 0.3 });
+  const mesh = new T.Mesh(g, m);
+  mesh.position.y = -0.86;
+  mesh.castShadow = true;
+  return mesh;
+}
+
 export class Girl {
   constructor(parts) {
     this.root = new T.Group();
@@ -110,6 +146,7 @@ export class Girl {
     const head = meshFrom(parts.head, skinM); head.position.y = -0.86;
     const hair = meshFrom(parts.hair, hairM); hair.position.y = -0.86;
     this.neck.add(head, hair);
+    this.neck.add(makeHairStrands());
     this.hat = makeHat(); this.hat.position.set(0, 0.155, -0.006); this.hat.rotation.x = -0.12; this.hat.visible = false;
     this.neck.add(this.hat);
     this.arms = [];
@@ -155,6 +192,7 @@ export class Girl {
       case 'lookup': nod = -0.3 * env; break;
     }
     if (this.holdMag) armR = [-0.9, 0, 0.1];
+    if (this.kneelHold && !this.act) { jump = -0.3; nod = 0.35; armR = [-0.8, 0, 0.12]; armL = [-0.8, 0, -0.12]; }
     this.body.position.y = jump + breath;
     const a0 = this.arms[0].rotation, a1 = this.arms[1].rotation;
     a0.x = damp(a0.x, armR[0], 12, dt); a0.y = damp(a0.y, armR[1], 12, dt); a0.z = damp(a0.z, armR[2], 12, dt);
@@ -196,19 +234,22 @@ export class Papa {
   do(name, dur = 1.2) { this.act = name; this.actT = 0; this.actDur = dur; }
   // brush powder off: world point p, radius r, amount
   brush(p, r, amt) {
+    // sweep a horizontal band around the body (front and back) at the brushed height
     let removed = 0;
-    const lp = V3();
+    const v = V3();
     for (const m of this.meshes) {
-      lp.copy(p); m.worldToLocal(lp);
+      m.updateWorldMatrix(true, false);
+      const e = m.matrixWorld.elements;
       const pos = m.geometry.attributes.position, pw = m.geometry.attributes.aPowder;
       for (let i = 0; i < pos.count; i++) {
-        const dx = pos.getX(i) - lp.x, dy = pos.getY(i) - lp.y, dz = pos.getZ(i) - lp.z;
-        const d2 = dx * dx + dy * dy + dz * dz;
-        if (d2 < r * r && pw.array[i] > 0) {
-          const f = (1 - Math.sqrt(d2) / r) * amt;
-          const v = Math.max(0, pw.array[i] - f);
-          removed += pw.array[i] - v; pw.array[i] = v;
-        }
+        if (pw.array[i] <= 0) continue;
+        const x = pos.getX(i), y = pos.getY(i), z = pos.getZ(i);
+        const wy = e[1] * x + e[5] * y + e[9] * z + e[13];
+        const d = Math.abs(wy - p.y);
+        // the band gets most of it; the shake loosens a little everywhere
+        const f = (d < r ? (1 - d / r) * amt : 0) + amt * 0.06;
+        const nv = Math.max(0, pw.array[i] - f);
+        removed += pw.array[i] - nv; pw.array[i] = nv;
       }
       pw.needsUpdate = true;
     }
@@ -417,7 +458,10 @@ export class Dog {
         bodyTilt = 0.15;
         wagAmp = 0.8;
         if (this.onStep && Math.floor(prev / Math.PI) !== Math.floor(this.walkPh / Math.PI)) this.onStep(Math.floor(this.walkPh / Math.PI) % 4);
-      } else if (this.target.done) { this.target.done(); this.target.done = null; }
+      } else {
+        if (this.target.done) { this.target.done(); this.target.done = null; }
+        if (this.face !== undefined) { let dr = this.face - this.root.rotation.y; dr = Math.atan2(Math.sin(dr), Math.cos(dr)); this.root.rotation.y += dr * Math.min(1, dt * 3); }
+      }
     }
     this.body.position.y = jump;
     this.body.rotation.x = damp(this.body.rotation.x, bodyTilt, 6, dt);
@@ -519,7 +563,7 @@ function makeFlashlight() {
   });
   const beam = new T.Mesh(beamG, beamM);
   beam.position.x = 0.096; g.add(beam);
-  const light = new T.SpotLight(0x8a5cff, 0, 4, 0.36, 0.65, 1.2);
+  const light = new T.SpotLight(0x7a4dff, 0, 6, 0.38, 0.6, 1.0);
   light.position.set(0.096, 0, 0);
   const tgt = new T.Object3D(); tgt.position.set(1, 0, 0); g.add(tgt); light.target = tgt;
   g.add(light);
@@ -550,7 +594,7 @@ export class HandRig {
     for (let i = 0; i < su.count; i++) su.setXY(i, su.getX(i) * 0.26 / 0.12, su.getY(i) * 0.42 / 0.12);
     const sleeveM = pbr('twill', { ns: 1.2, color: 0xffffff, side: T.DoubleSide, physical: { sheen: 0.4, sheenColor: new T.Color(0.6, 0.55, 0.45) } });
     this.sleeve = meshFrom(sl, sleeveM);
-    this.sleeve.position.set(0, -0.13, -0.028);
+    this.sleeve.position.set(0, -0.085, -0.026);
     const cuff = meshFrom(new T.TorusGeometry(0.039, 0.005, 12, 48), sleeveM);
     cuff.rotation.x = Math.PI / 2; cuff.scale.set(1.12, 0.86, 1); cuff.position.set(0, 0.0, 0);
     this.sleeve.add(cuff);
@@ -632,7 +676,7 @@ export class HandRig {
     const camR = V3().setFromMatrixColumn(camera.matrixWorld, 0);
     const camU = V3().setFromMatrixColumn(camera.matrixWorld, 1);
     const camB = V3().setFromMatrixColumn(camera.matrixWorld, 2);
-    const p = camera.position.clone().addScaledVector(camB, -0.42).addScaledVector(camR, 0.09).addScaledVector(camU, -0.1);
+    const p = camera.position.clone().addScaledVector(camB, -0.5).addScaledVector(camR, 0.05).addScaledVector(camU, -0.03);
     this.aim(p, camB, dt, { k: 5, press: 0 });
   }
   useFlat(on) {

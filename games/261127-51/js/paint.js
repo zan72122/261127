@@ -41,7 +41,9 @@ const stampMat = new T.ShaderMaterial({
 
 export class PaintRT {
   constructor(w, h, cw = 96, ch = 48) {
-    this.rt = new T.WebGLRenderTarget(w, h, { type: T.HalfFloatType, depthBuffer: false });
+    const ext = renderer.extensions;
+    const hf = ext.has('EXT_color_buffer_float') || ext.has('EXT_color_buffer_half_float');
+    this.rt = new T.WebGLRenderTarget(w, h, { type: hf ? T.HalfFloatType : T.UnsignedByteType, depthBuffer: false });
     this.rt.texture.generateMipmaps = false;
     this.scene = new T.Scene();
     this.cam = new T.OrthographicCamera(0, 1, 1, 0, -1, 1);
@@ -106,11 +108,11 @@ export const POWDER_GLSL = /* glsl */`
     vec4 p = texture2D(tPaint, uv);
     float a = p.r + p.g;
     // haze peaks after the first pass and thins as the brush keeps sweeping
-    float haze = a * (0.55 - 0.42 * smoothstep(0.25, 1.1, a));
+    float haze = a * (1.1 - 0.85 * smoothstep(0.35, 1.4, a));
     float g = phash(floor(grainUv));
-    haze *= 0.55 + 0.9 * g;
+    haze *= 0.6 + 0.8 * g;
     float gold = p.g / max(a, 1e-4);
-    return vec4(clamp(haze, 0.0, 0.85), gold, a, g);
+    return vec4(clamp(haze, 0.0, 0.55), gold, a, g);
   }
 `;
 export const BLACK = 'vec3(0.045, 0.043, 0.042)';
@@ -176,16 +178,16 @@ function latentMat(maskName, paint) {
         float amt = pp.r + pp.g;
         float gold = pp.g / max(amt, 1e-4);
         // ridges grab powder: faint after one pass, crisp after several
-        float vis = smoothstep(0.03, 0.55, amt);
+        float vis = smoothstep(0.02, 0.4, amt);
         float edge = smoothstep(0.25 - 0.18 * vis, 0.65 - 0.2 * vis, mask);
         float g = pgr(floor(vMUv * 700.0));
-        float alpha = edge * vis * (0.75 + 0.25 * g);
+        float alpha = clamp(edge * vis * (0.8 + 0.3 * g), 0.0, 1.0);
         if (alpha < 0.01) discard;
         vec3 pcol = mix(vec3(0.03, 0.03, 0.03), vec3(0.85, 0.63, 0.3) * (0.75 + 0.5 * g), gold);
         diffuseColor = vec4(pcol, alpha);`)
       .replace('#include <normal_fragment_maps>', `
-        normal = bumpN(normal, alpha, 0.6);`)
-      .replace('#include <roughnessmap_fragment>', '#include <roughnessmap_fragment>\nroughnessFactor = mix(0.65, 0.35, gold);')
+        normal = bumpN(normal, alpha, 0.25);`)
+      .replace('#include <roughnessmap_fragment>', '#include <roughnessmap_fragment>\nroughnessFactor = mix(0.88, 0.35, gold);')
       .replace('#include <metalnessmap_fragment>', '#include <metalnessmap_fragment>\nmetalnessFactor = gold * 0.95;');
   };
   m.customProgramCacheKey = () => 'latent';
@@ -267,19 +269,21 @@ export class DecalSet {
           float alpha = smoothstep(0.12, 0.6, mask * (0.7 + 0.5 * g)) * vAmt;
           if (alpha < 0.01) discard;
           diffuseColor = vec4(vCol.rgb * (0.8 + 0.4 * g), alpha);` : `
-          float mask = texture2D(tMask, vMUv).r;
+          vec2 muv = (vMUv - 0.5) * 2.0 + 0.5;
+          float mask = (muv.x > 0.0 && muv.x < 1.0 && muv.y > 0.0 && muv.y < 1.0) ? texture2D(tMask, muv).r : 0.0;
           vec3 L = vWP - uUVPos; float dl = length(L);
-          float spot = smoothstep(uUVCos, mix(uUVCos, 1.0, 0.5), dot(L / dl, uUVDir)) * uUVOn / (1.0 + dl * dl * 0.4);
-          float glow = mask * (spot * 1.6 + vRev * 0.30) * vAmt;
-          float halo = smoothstep(0.0, 0.4, mask) * (spot * 0.4 + vRev * 0.06) * vAmt;
+          float spot = smoothstep(uUVCos, mix(uUVCos, 1.0, 0.45), dot(L / dl, uUVDir)) * uUVOn / (1.0 + dl * dl * 0.25);
+          float rr = length(vMUv - 0.5) * 2.0;
+          float glow = smoothstep(0.08, 0.5, mask) * (spot * 2.2 + vRev * 0.45) * vAmt;
+          float halo = exp(-rr * rr * 6.0) * (spot * 0.5 + vRev * 0.12) * vAmt;
           if (glow + halo < 0.004) discard;
-          diffuseColor = vec4(0.0, 0.0, 0.0, clamp(glow * 0.6 + halo, 0.0, 0.9));`)
+          diffuseColor = vec4(0.0, 0.0, 0.0, clamp(glow * 0.7 + halo * 0.5, 0.0, 0.92));`)
         .replace('#include <normal_fragment_maps>', kind === 0 ? `
           normal = bumpN(normal, alpha, 0.8);` : '')
         .replace('#include <roughnessmap_fragment>', '#include <roughnessmap_fragment>\nroughnessFactor = mix(0.75, 0.3, vCol.a);')
         .replace('#include <metalnessmap_fragment>', '#include <metalnessmap_fragment>\nmetalnessFactor = vCol.a;')
         .replace('#include <emissivemap_fragment>', kind === 1 ? `#include <emissivemap_fragment>
-          totalEmissiveRadiance = vec3(0.62, 0.86, 1.0) * glow * 2.2 + vec3(0.55, 0.4, 1.0) * halo * 1.2;` : '#include <emissivemap_fragment>');
+          totalEmissiveRadiance = vec3(0.70, 0.92, 1.0) * glow * 5.0 + vec3(0.55, 0.42, 1.0) * halo * 2.5;` : '#include <emissivemap_fragment>');
     };
     m.customProgramCacheKey = () => 'decal' + kind;
     this.mesh.material = m;

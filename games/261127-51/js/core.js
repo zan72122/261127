@@ -32,8 +32,10 @@ function makeRT(w, h) {
   if (rt) { rt.dispose(); rt.depthTexture.dispose(); }
   const depth = new THREE.DepthTexture(w, h);
   depth.type = THREE.UnsignedIntType;
+  const ext = renderer.extensions;
+  const hdr = ext.has('EXT_color_buffer_float') || ext.has('EXT_color_buffer_half_float');
   rt = new THREE.WebGLRenderTarget(w, h, {
-    type: THREE.HalfFloatType, samples: 4, depthTexture: depth, depthBuffer: true,
+    type: hdr ? THREE.HalfFloatType : THREE.UnsignedByteType, samples: 4, depthTexture: depth, depthBuffer: true,
   });
   rt.texture.minFilter = THREE.LinearFilter;
   rt.texture.generateMipmaps = false;
@@ -69,7 +71,7 @@ const postMat = new THREE.ShaderMaterial({
       float z = lin(texture2D(tDepth, uv).x);
       float c0 = coc(z);
       vec3 col = texture2D(tColor, uv).rgb;
-      float maxPx = 7.0;
+      float maxPx = 4.0 * uRes.y / 1000.0;
       if (c0 * maxPx > 0.6 && inLens < 0.5) {
         vec3 acc = col; float wsum = 1.0;
         vec2 px = 1.0 / uRes;

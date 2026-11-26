@@ -134,7 +134,7 @@ const P0 = {};
 function buildProps() {
   // ---- cookie jar (glass, empty but for crumbs)
   const H = 0.24;
-  const prof = [[0.0, 0.0], [0.07, 0.0], [0.082, 0.006], [0.086, 0.03], [0.086, 0.165], [0.08, 0.19], [0.066, 0.208], [0.062, 0.22], [0.063, 0.236], [0.066, 0.24]];
+  const prof = [[0.07, 0.0], [0.082, 0.006], [0.086, 0.03], [0.086, 0.165], [0.08, 0.19], [0.066, 0.208], [0.062, 0.22], [0.063, 0.236], [0.066, 0.24]];
   const rAt = (y) => { for (let i = 1; i < prof.length; i++) if (y <= prof[i][1]) { const [r0, y0] = prof[i - 1], [r1, y1] = prof[i]; return lerp(r0, r1, (y - y0) / (y1 - y0 || 1)); } return prof[prof.length - 1][0]; };
   const jarG = new T.LatheGeometry(prof.map(([r, y]) => new T.Vector2(r, y)), 72);
   // re-parametrise: u = angle fraction, v = height fraction (paint map space)
@@ -264,7 +264,7 @@ function makeBiscuit() {
 
 // ---------------------------------------------------------------- curtain
 function makeCurtain(z0, width, side) {
-  const H = 2.28, segX = 48, segY = 40;
+  const H = 2.28, segX = 56, segY = 44;
   const g = new T.PlaneGeometry(width, H, segX, segY);
   g.rotateY(-Math.PI / 2);
   const p = g.attributes.position;
@@ -305,7 +305,7 @@ function updateCurtain(c, t) {
       // bulge (puppy behind the curtain)
       const wz = c.mesh.position.z + zLocal, wy = c.mesh.position.y + (v - 0.5) * H;
       const d = Math.hypot(wz - c.bulge.z, (wy - c.bulge.y) * 0.8);
-      x -= c.bulgeAmt * Math.exp(-(d * d) / 0.02) * 0.12;
+      x -= c.bulgeAmt * Math.exp(-(d * d) / 0.035) * 0.2;
       // the hem drags on the floor a bit
       p.setXYZ(idx, x - (1 - v) * 0.0, (v - 0.5) * H, zLocal);
     }
@@ -327,19 +327,19 @@ function startIntro() {
   A.papa.root.visible = false;
   A.dog.root.visible = false;
   hideAll();
-  shot([-0.15, 1.25, 0.95], [-0.72, 0.82, -1.45], { snap: true, ap: 0.8, portraitPull: 0.55 });
+  shot([0.55, 1.32, 1.45], [-0.95, 0.72, -0.8], { snap: true, ap: 0.8, portraitPull: 0.5 });
   G.seq = 0;
   handlers = {
     down() {
       const h = pick([P0.hatSpot, P0.magSpot]);
-      if (h && G.seq >= 1 && !G.busy) wearHat();
+      if (h && G.seq < 2 && !G.busy) { G.seq = 2; wearHat(); }
     },
   };
 }
 function updateIntro(dt) {
   G.stateT += dt;
   const g = A.girl;
-  if (G.seq === 0) {
+  if (G.seq === 0 && !G.busy) {
     // she peeks into the empty jar, then droops
     g.lookPitch = G.stateT < 2.2 ? 0.25 : 0;
     if (G.stateT > 1.2 && !G.introSad) { G.introSad = true; g.do('sad', 1.6); S.hmm(); }
@@ -465,7 +465,7 @@ function brushAt() {
 function stampPowder(obj, p, ang) {
   if (G.load <= 0.01) return;
   const ch = G.powder === 'gold' ? 1 : 0;
-  const amt = 0.075 * Math.min(1, G.load * 1.6);
+  const amt = 0.16 * Math.min(1, G.load * 1.6);
   const r = 0.014;
   if (obj === P0.jar.outer) {
     const lp = P0.jar.group.worldToLocal(p.clone());
@@ -478,7 +478,7 @@ function stampPowder(obj, p, ang) {
     const R = P0.tile.rect;
     P0.tile.paint.stamp((p.x - R.x) / R.z, (p.y - R.y) / R.w, r / R.z, r / R.w, ch, amt, ang);
   }
-  G.load = Math.max(0, G.load - 0.0016);
+  G.load = Math.max(0, G.load - 0.0012);
   A.hand.tool.userData.U.uLoad.value = G.load;
   if (G.load <= 0.01 && !G.emptyHint) { G.emptyHint = true; after(0.6, () => { G.emptyHint = false; if (G.state === 's1' && G.load <= 0.01) hintPot(); }); }
 }
@@ -489,9 +489,9 @@ function buildLatents() {
   const toTile = (wp) => [(wp.x - R.x) / R.z, (wp.y - R.y) / R.w];
   const zW = W.ROOM.z0 + 0.0075;
   const tileDefs = [
-    ['paw', -0.73, 1.03, 0.034, 0.25, true], ['paw', -0.6, 1.07, 0.034, -0.2, true],
-    ['paw', -0.47, 0.99, 0.033, 0.4, true], ['paw', -0.35, 1.035, 0.033, -0.1, true],
-    ['nose', -0.63, 1.2, 0.04, 0.0, true],
+    ['paw', -0.73, 1.03, 0.052, 0.25, true], ['paw', -0.6, 1.08, 0.052, -0.2, true],
+    ['paw', -0.47, 0.995, 0.05, 0.4, true], ['paw', -0.35, 1.045, 0.05, -0.1, true],
+    ['nose', -0.63, 1.2, 0.05, 0.0, true],
     ['finger', -0.2, 1.11, 0.018, 0.3, false], ['finger', -0.175, 1.135, 0.018, 0.1, false],
   ];
   for (const [mask, x, y, s, rot, main] of tileDefs) {
@@ -502,8 +502,8 @@ function buildLatents() {
   }
   // jar: paw dabs + fingertips around the rim (facing the camera)
   const J = P0.jar;
-  const facing = Math.atan2(camera.position.x - J.group.position.x, camera.position.z - J.group.position.z);
-  const jarDefs = [['paw', 0.0, 0.09, 0.03, true], ['paw', 0.35, 0.12, 0.03, true], ['finger', -0.45, 0.19, 0.017, false], ['finger', -0.3, 0.2, 0.017, false], ['finger', -0.6, 0.17, 0.018, false]];
+  const facing = Math.atan2(cam.tPos.x - J.group.position.x, cam.tPos.z - J.group.position.z);
+  const jarDefs = [['paw', 0.0, 0.09, 0.045, true], ['paw', 0.45, 0.125, 0.045, true], ['finger', -0.45, 0.19, 0.017, false], ['finger', -0.3, 0.2, 0.017, false], ['finger', -0.6, 0.17, 0.018, false]];
   for (const [mask, da, y, s, main] of jarDefs) {
     const a0 = facing + da;
     const seg = 6;
@@ -539,7 +539,7 @@ function checkPrints() {
   let changed = false;
   for (const pr of G.prints) {
     if (pr.found) continue;
-    if (pr.level() > 0.38) {
+    if (pr.level() > 0.75) {
       pr.found = true; changed = true; G.found++;
       S.reveal(G.found);
       P.emit(pr.center.clone().addScaledVector(pr.info.normal, 0.01), 8, { size: 0.0014, color: [1.8, 1.7, 1.4], spread: 0.012, jitter: 0.03, gravity: -0.01, life: 0.7 });
@@ -591,7 +591,7 @@ function layTrail() {
         if (y === 0 && x > 0.1 && x < 2.1 && z > -1.25 && z < 0.15) y = 0.004; // rug
         left = !left;
         x += Math.cos(dir) * (left ? 0.035 : -0.035); z -= Math.sin(dir) * (left ? 0.035 : -0.035);
-        const it = P0.trail.add(V3(x, y + 0.001, z), V3(0, 1, 0), dir + Math.PI + rand(-0.15, 0.15), 0.036, 0.036, [0, 0, 0], 0, rand(0.75, 1.0));
+        const it = P0.trail.add(V3(x, y + 0.001, z), V3(0, 1, 0), dir + Math.PI + rand(-0.15, 0.15), 0.11, 0.11, [0, 0, 0], 0, rand(0.75, 1.0));
         it.seg = si;
         items.push(it);
       }
@@ -632,7 +632,7 @@ function updateS2(dt) {
   const f = P0.flash;
   const on = (ptr.down && G.uvTarget && !G.busy) ? 1 : 0;
   G.uvOn = damp(G.uvOn, on, 14, dt);
-  f.light.intensity = G.uvOn * 2.5;
+  f.light.intensity = G.uvOn * 9;
   f.beamM.uniforms.uOn.value = G.uvOn;
   f.lensM.emissiveIntensity = G.uvOn * 4;
   S.hum(on > 0.5);
@@ -680,7 +680,7 @@ function papaGag() {
   // he carries the refill tin from the cupboard
   const tin = W.refill;
   pa.arms[0].add(tin); tin.position.set(0.04, -0.6, 0.1); tin.rotation.set(0, 0, 0);
-  shot([-0.65, 1.45, 2.45], [0.95, 0.72, -0.1], { speed: 1.0, ap: 0.6, portraitPull: 0.35 });
+  shot([-0.8, 1.5, 2.5], [0.85, 0.92, -0.1], { speed: 1.0, ap: 0.6, portraitPull: 0.35 });
   A.hand.show(false);
   // the girl steps into the shot (seen from behind)
   const g = A.girl; g.root.visible = true; g.root.position.set(-0.15, 0, 0.95); g.root.rotation.y = 2.3;
@@ -756,7 +756,7 @@ function makeGirlBrush() {
 }
 function hintClean() {
   const pa = A.papa;
-  if (pa.powderLeft() > 0.18) return setHint(pa.neck.localToWorld(V3(0, -0.35, 0.1)), { delay: 1.5, drag: pa.neck.localToWorld(V3(0, -0.65, 0.1)) });
+  if (pa.powderLeft() > 0.2) return setHint(pa.neck.localToWorld(V3(0, -0.35, 0.1)), { delay: 1.5, drag: pa.neck.localToWorld(V3(0, -0.65, 0.1)) });
   const m = P0.mess.items.find((q) => q.amt > 0.15) || P0.spill.items.find((q) => q.amt > 0.15);
   if (m) setHint(m.pos.clone().add(V3(-0.1, 0, 0)), { delay: 2, drag: m.pos.clone().add(V3(0.1, 0, 0)) });
   else setHint(null);
@@ -775,31 +775,35 @@ function cleanAt() {
   const goal = onPapa ? pa.root.position.clone().addScaledVector(toCam, 0.42) : stand.clone().addScaledVector(toCam, 0.3);
   g.target = { x: goal.x, z: goal.z };
   g.brushing = 0.4;
-  if (g.root.position.distanceTo(goal.setY(0)) < 0.35) {
+  {
     S.brush(0.8);
     if (onPapa) {
-      const rem = pa.brush(p, 0.16, 0.08);
+      const rem = pa.brush(p, 0.22, 0.12);
       if (rem > 0.02) {
         P.emit(p, 4, { size: 0.002, color: [0.07, 0.07, 0.07], spread: 0.03, jitter: 0.35, gravity: 0.2, life: 1.5, alpha: 0.6 });
         if (Math.random() < 0.03) { pa.do('laugh', 0.8); S.papaHa(); }
       }
-    } else {
+    }
+    if (!onPapa || p.y < 0.8) {
       let any = false;
+      const c = onPapa ? pa.root.position : p;
       for (const set of [P0.mess, P0.spill]) for (const it of set.items) {
-        const d = Math.hypot(it.pos.x - p.x, it.pos.z - p.z);
-        if (d < 0.14 + Math.max(it.w, it.h) * 0.4 && it.amt > 0) { set.setAmt(it, Math.max(0, it.amt - 0.06)); any = true; }
+        const d = Math.hypot(it.pos.x - c.x, it.pos.z - c.z) - (onPapa ? 0.15 : 0);
+        if (d < 0.18 + Math.max(it.w, it.h) * 0.4 && it.amt > 0) { set.setAmt(it, Math.max(0, it.amt - 0.12)); any = true; }
       }
       if (any) P.emit(p.clone().add(V3(0, 0.01, 0)), 3, { size: 0.002, color: [0.07, 0.07, 0.07], spread: 0.04, jitter: 0.25, gravity: 0.1, life: 1.2, alpha: 0.5 });
     }
   }
+  // every stroke also loosens the whole mess a little (no spot is ever impossible)
+  for (const set of [P0.mess, P0.spill]) for (const it of set.items) if (it.amt > 0) set.setAmt(it, Math.max(0, it.amt - 0.006));
   const messLeft = [...P0.mess.items, ...P0.spill.items].reduce((s, q) => s + q.amt, 0) / Math.max(1, P0.mess.items.length + P0.spill.items.length);
-  if (pa.powderLeft() < 0.16 && messLeft < 0.18) {
+  if (pa.powderLeft() < 0.2 && messLeft < 0.25) {
     G.busy = true; setHint(null);
     S.win(); pa.do('thumbs', 1.4); g.do('clap', 1.4); S.yay();
     after(1.8, () => {
       g.brushProp.visible = false; g.target = null;
       // papa goes to sit on the... he steps aside to watch
-      pa.target = { x: 0.15, z: 0.95, ry: -2.2 };
+      pa.target = { x: -0.7, z: -0.75, ry: 2.4 };
       A.girl.root.visible = false;
       G.state = 's2'; G.busy = false;
       A.hand.show(true); A.hand.setTool('flash');
@@ -858,17 +862,17 @@ function pullCurtain() {
 function foundPuppy() {
   const d = A.dog, g = A.girl, pa = A.papa;
   P0.curtains[0].bulgeAmt = 0;
-  d.target = { x: 2.85, z: -1.45 };
+  d.target = { x: 2.85, z: -1.45 }; d.face = -0.6;
   d.do('sheepish', 1.6); S.whine();
   after(0.4, () => { S.wow(); });
   after(1.6, () => { d.do('yip', 0.4); S.yipyip(); d.wag = 1; });
   after(2.4, () => {
     // pull back: the girl kneels by the puppy, papa laughs
     A.hand.show(false);
-    g.root.visible = true; g.root.position.set(2.4, 0, -0.95); g.root.rotation.y = 2.2;
+    g.root.visible = true; g.root.position.set(2.2, 0, -0.25); g.root.rotation.y = 2.64; g.kneelHold = true;
     g.target = null;
     g.do('kneel', 2.5);
-    pa.root.visible = true; pa.target = { x: 1.4, z: 0.2, ry: 2.2 };
+    pa.root.visible = true; pa.root.position.set(0.3, 0, -0.6); pa.target = { x: 1.0, z: -0.95, ry: 2.0 };
     shot([1.3, 1.2, 0.35], [2.65, 0.4, -1.3], { speed: 1.0, ap: 0.8, portraitPull: 0.5 });
     after(0.8, () => { pa.do('laugh', 1.5); S.papaHa(); });
     after(2.0, () => startGive());
@@ -877,7 +881,7 @@ function foundPuppy() {
 function startGive() {
   G.state = 'give'; G.busy = false;
   const d = A.dog;
-  d.root.position.set(2.85, 0, -1.4); d.root.rotation.y = -2.0;
+  d.root.position.set(2.85, 0, -1.4); d.root.rotation.y = -0.6; d.face = -0.6;
   P0.biscuit.visible = P0.ball.visible = true;
   P0.biscuit.position.set(2.5, 0.012, -1.15); P0.biscuit.rotation.y = 0.8;
   P0.ball.position.set(2.6, 0.035, -0.85);
@@ -918,8 +922,8 @@ function give(obj) {
 function startPlay() {
   G.state = 'play'; G.busy = false;
   const d = A.dog, g = A.girl, pa = A.papa;
-  g.root.visible = false;
-  pa.target = { x: 1.5, z: 0.6, ry: 2.6 };
+  g.root.visible = false; g.kneelHold = false;
+  pa.target = { x: 1.0, z: -0.95, ry: 2.0 };
   P0.ball.visible = false;
   d.target = { x: 2.6, z: -1.15 };
   // tools tray on the floor: black pot, gold pot, torch
@@ -937,7 +941,7 @@ function startPlay() {
       P0.paws.add(p, V3(0, 1, 0), ry + Math.PI, 0.034, 0.034, [pd.c.r, pd.c.g, pd.c.b], pd.metal, G.dogPowder.amt);
       G.dogPowder.amt *= 0.94;
     }
-    P0.uvPaws.add(p, V3(0, 1, 0), ry + Math.PI, 0.034, 0.034, [0, 0, 0], 0, 1);
+    P0.uvPaws.add(p, V3(0, 1, 0), ry + Math.PI, 0.09, 0.09, [0, 0, 0], 0, 1);
     S.pawStep();
   };
   handlers = {
@@ -994,7 +998,7 @@ function playTouch(first) {
     const yaw = rand(-0.25, 0.25) + (n.y > 0.5 ? Math.atan2(camera.position.x - h.point.x, camera.position.z - h.point.z) : 0);
     after(0.12, () => {
       const it = P0.hands.add(h.point, n, yaw, 0.085, 0.1, [pd.c.r, pd.c.g, pd.c.b], pd.metal, rand(0.8, 1.0));
-      P0.uvHands.add(h.point, n, yaw, 0.085, 0.1, [0, 0, 0], 0, 1);
+      P0.uvHands.add(h.point, n, yaw, 0.17, 0.2, [0, 0, 0], 0, 1);
       S.stamp();
       P.emit(h.point.clone().addScaledVector(n, 0.01), 26, { size: 0.0017, color: [pd.c.r * 1.2, pd.c.g * 1.2, pd.c.b * 1.2], metal: pd.metal, spread: 0.04, jitter: 0.12, gravity: 0.05, life: 1.8, alpha: 0.65 });
       // the puppy gets curious, trots over and gets powder on its paws
@@ -1004,7 +1008,7 @@ function playTouch(first) {
 }
 function dogTo(p, kind) {
   const d = A.dog;
-  const q = p.clone(); q.x = clamp(q.x, 1.6, 3.0); q.z = clamp(q.z, -1.75, 0.3);
+  const q = p.clone(); q.x = clamp(q.x, 2.2, 3.0); q.z = clamp(q.z, -1.8, -0.85);
   G.dogPowder = { kind, amt: 1 };
   d.target = { x: q.x, z: q.z, done: () => { d.do('sniff', 0.9); S.sniff(); } };
 }
@@ -1012,7 +1016,7 @@ function dogRun() {
   const d = A.dog;
   d.do('happy', 1.0); S.yip();
   const a = rand(0, Math.PI * 2);
-  const p = V3(clamp(d.root.position.x + Math.cos(a) * 0.6, 1.7, 2.95), 0, clamp(d.root.position.z + Math.sin(a) * 0.6, -1.7, 0.2));
+  const p = V3(clamp(d.root.position.x + Math.cos(a) * 0.5, 2.2, 2.95), 0, clamp(d.root.position.z + Math.sin(a) * 0.5, -1.8, -0.85));
   G.dogPowder = G.dogPowder || { kind: G.tool === 'gold' ? 'gold' : 'black', amt: 0.8 };
   G.dogPowder.amt = Math.max(G.dogPowder.amt, 0.7);
   d.target = { x: p.x, z: p.z, done: () => { d.do('yip', 0.4); } };
@@ -1032,7 +1036,7 @@ function updatePlay(dt) {
     const f = A.hand.tool.userData;
     const on = ptr.down && G.uvTarget ? 1 : 0;
     G.uvOn = damp(G.uvOn || 0, on, 14, dt);
-    f.light.intensity = G.uvOn * 2.5; f.beamM.uniforms.uOn.value = G.uvOn; f.lensM.emissiveIntensity = G.uvOn * 4;
+    f.light.intensity = G.uvOn * 9; f.beamM.uniforms.uOn.value = G.uvOn; f.lensM.emissiveIntensity = G.uvOn * 4;
     S.hum(on > 0.5);
     const target = G.uvTarget || cam.look.clone();
     A.hand.aim(target, V3(0, 1, 0), dt, { k: 14 });
@@ -1042,7 +1046,7 @@ function updatePlay(dt) {
   // the puppy wanders a little on its own
   const d = A.dog;
   if (!d.target || (!d.target.done && d.root.position.distanceTo(V3(d.target.x, 0, d.target.z)) < 0.05)) {
-    if (Math.random() < dt * 0.15) { const p = V3(rand(1.8, 2.9), 0, rand(-1.6, 0.1)); d.target = { x: p.x, z: p.z }; }
+    if (Math.random() < dt * 0.15) { const p = V3(rand(2.3, 2.95), 0, rand(-1.75, -0.95)); d.target = { x: p.x, z: p.z }; }
   }
 }
 
@@ -1103,6 +1107,7 @@ export function updateGame(dt) {
   switch (G.state) {
     case 'intro': updateIntro(dt); break;
     case 's1':
+      if (G.thumb) { const pr = G.prints[2]; A.hand.aim(pr.center.clone().add(V3(0.012, 0.005, 0.004)), V3(0, 0, 1), dt, { k: 30 }); A.hand.tool.userData.U.uLoad.value = 0.9; if (Math.random() < 0.5) P.emit(pr.center.clone().add(V3(0.02, 0.0, 0.01)), 3, { size: 0.0013, color: [0.06, 0.06, 0.06], spread: 0.012, jitter: 0.05, gravity: 0.05, life: 2.5, alpha: 0.7, drag: 3.5 }); break; }
       if (!ptr.down && !G.busy) A.hand.rest(dt);
       if (!ptr.down) A.hand.tool.userData.U.uBend.value.multiplyScalar(0.85);
       break;
@@ -1138,12 +1143,25 @@ export function debugGo(name) {
   if (name === 's1done') { startS1(); for (const pr of G.prints) { pr.found = true; } fakeBrush(); }
   if (name === 's2') { startS1(); fakeBrush(); startS2(); }
   if (name === 'gag') { startS1(); fakeBrush(); startS2(); G.seg = 1; nextSeg(); }
-  if (name === 'clean') { startS1(); fakeBrush(); startS2(); G.seg = 1; G.gagDone = true; A0.papa.root.visible = true; A0.papa.root.position.set(1.2, 0, 0.05); A0.papa.powderAll(1); for (let i = 0; i < 12; i++) P0.mess.add(V3(rand(0.5, 1.5), 0.002, rand(-0.5, 0.5)), V3(0, 1, 0), rand(0, 6), 0.13, 0.27, [0.05, 0.049, 0.048], 0.1, 1); A0.girl.root.visible = true; A0.girl.root.position.set(-0.15, 0, 0.95); A0.girl.root.rotation.y = 2.3; A0.girl.root.rotation.y = Math.PI * 0.8; A0.hand.show(false); shot([-0.65, 1.45, 2.45], [0.95, 0.72, -0.1], { snap: true, ap: 0.6 }); startCleanup(); }
+  if (name === 'clean') { startS1(); fakeBrush(); startS2(); G.seg = 1; G.gagDone = true; A0.papa.root.visible = true; A0.papa.root.position.set(1.2, 0, 0.05); A0.papa.powderAll(1); for (let i = 0; i < 12; i++) P0.mess.add(V3(rand(0.5, 1.5), 0.002, rand(-0.5, 0.5)), V3(0, 1, 0), rand(0, 6), 0.13, 0.27, [0.05, 0.049, 0.048], 0.1, 1); A0.girl.root.visible = true; A0.girl.root.position.set(-0.15, 0, 0.95); A0.girl.root.rotation.y = 2.3; A0.girl.root.rotation.y = Math.PI * 0.8; A0.hand.show(false); shot([-0.8, 1.5, 2.5], [0.85, 0.92, -0.1], { snap: true, ap: 0.6 }); startCleanup(); }
   if (name === 's3') { startS1(); startS2(); for (const s of G.trail) for (const it of s) P0.trail.setRev(it, 1); startS3(); }
   if (name === 'found') { startS1(); startS2(); startS3(); G.found3 = true; for (let i = 0; i <= P0.curtains[0].segX; i++) P0.curtains[0].open[i] = 0.9; foundPuppy(); }
   if (name === 'play') { startS1(); startS2(); startS3(); for (let i = 0; i <= P0.curtains[0].segX; i++) P0.curtains[0].open[i] = 0.9; P0.curtains[0].bulgeAmt = 0; A0.dog.crumbs.visible = false; startPlay(); }
   if (name === 's2uv') { startS1(); fakeBrush(); startS2(); for (const it of G.trail[0].slice(0, 9)) P0.trail.setRev(it, 1); ptr.down = true; G.uvTarget = G.trail[0][10].pos.clone(); }
   if (name === 's1brush') { startS1(); G.load = 1; fakeBrush(true); ptr.down = true; const pr = G.prints[1]; A0.hand.aim(pr.center, V3(0, 0, 1), 1, { snap: true }); A0.hand.tool.userData.U.uLoad.value = 0.8; }
+  if (name === 'thumb') {
+    startS1(); G.load = 1; G.powder = 'black';
+    for (const [i, pr] of G.prints.entries()) {
+      const ch = pr.paint === P0.jar.paint ? 1 : 0;
+      const k = i === 3 ? 6 : 40;
+      for (let j = 0; j < k; j++) pr.paint.stamp(pr.info.puv[0] + rand(-1, 1) * pr.info.pr[0] * 1.6, pr.info.puv[1] + rand(-1, 1) * pr.info.pr[1] * 1.6, pr.info.pr[0] * 1.8, pr.info.pr[1] * 1.8, ch, 0.08, rand(0, 3));
+    }
+    // a broad brushed haze band
+    for (let j = 0; j < 60; j++) P0.tile.paint.stamp(0.25 + j * 0.006, 0.28 + Math.sin(j * 0.3) * 0.03, 0.02, 0.03, 0, 0.05, 0);
+    shot([-0.52, 1.13, -1.62], [-0.6, 1.04, -2.3], { snap: true, ap: 1.4 });
+    G.camLock = true;
+    G.thumb = true;
+  }
   if (G.shotArgs) shot(G.shotArgs[0], G.shotArgs[1], { ...G.shotArgs[2], snap: true });
 }
 function fakeBrush(partial) {

@@ -301,8 +301,8 @@ function buildCounter(paintMat) {
   const can = lathe([[0, 0], [0.06, 0], [0.062, 0.005], [0.062, 0.16], [0.058, 0.165], [0, 0.166]], new T.MeshStandardMaterial({ color: 0xd8d0c2, roughness: 0.35 }));
   can.position.set(-2.2, 0.92, z0 + 0.18); add(can);
   contactShadow(-2.2, 0.92, z0 + 0.18, 0.22, 0.22, 0.9);
-  const board = box(0.3, 0.42, 0.02, oak, -0.55, 0.92 + 0.2, z0 + 0.05, { r: 0.008, uv: 0.6 });
-  board.rotation.x = -0.12; board.position.x = -0.42;
+  const board = box(0.3, 0.42, 0.02, oak, -2.85, 0.92 + 0.2, z0 + 0.05, { r: 0.008, uv: 0.6 });
+  board.rotation.x = -0.12;
 }
 
 export function lathe(pts, mat, seg = 48) {
