@@ -1507,10 +1507,11 @@ function drawStreet(){
   drawDesk();drawBeam();
   if(H.on&&DIR.inv&&DIR.inv.kind==='hat'&&!H.drag){const hp=hatPose();ctx.save();ctx.globalAlpha=0.42+0.12*Math.sin(T*5);flatA(ngon(hp.x,hp.y-24,H.hw+26,46,18,0.05,77,0),C.yel);ctx.restore();}
   drawGirl();
-  if(H.on)drawHat();
   drawSun();drawGarland();drawPhotos();
-  for(const s of SIGNS)if(s.drag&&s.lift>=4)drawSign(s);
   ctx.restore();
+  // the hat may overhang the panel edge (not clipped)
+  useT();if(H.on)drawHat();
+  for(const s of SIGNS)if(s.drag&&s.lift>=4)drawSign(s);
 }
 
 // ============================================================
