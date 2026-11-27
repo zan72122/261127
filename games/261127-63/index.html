@@ -705,8 +705,8 @@ function applyLayout() {
   VIEW.w = w; VIEW.h = h; VIEW.safe = readSafe();
   const portrait = w / h < 0.98; VIEW.portrait = portrait;
   const oldPlate = { x: PLATE.x, z: PLATE.z };
-  if (portrait) { PLATE.x = 0.0; PLATE.z = 3.7; PUPPY_POS.x = 0.7; PUPPY_POS.z = -2.62; PUPPY_POS.y = 1.62; PUPPY_POS.pose = 'peek'; PUPPY_POS.yaw = 0.05; }
-  else { PLATE.x = 1.1; PLATE.z = 3.3; PUPPY_POS.x = 4.05; PUPPY_POS.z = 0.55; PUPPY_POS.y = 0; PUPPY_POS.pose = 'sit'; PUPPY_POS.yaw = Math.atan2(-1.0, 0.75); }
+  if (portrait) { PLATE.x = 0.0; PLATE.z = 3.7 + clamp((0.56 - w / h) * 5, 0, 0.6); PUPPY_POS.x = 0.7; PUPPY_POS.z = -2.62; PUPPY_POS.y = 1.72; PUPPY_POS.pose = 'peek'; PUPPY_POS.yaw = 0.05; }
+  else { PLATE.x = 1.1; PLATE.z = 3.3; PUPPY_POS.x = 4.15; PUPPY_POS.z = 0.6; PUPPY_POS.y = 0; PUPPY_POS.pose = 'sit'; PUPPY_POS.yaw = Math.atan2(-1.0, 0.75); }
   PROPS.plate.position.set(PLATE.x, 0, PLATE.z); PROPS.plateGlow.position.x = PLATE.x; PROPS.plateGlow.position.z = PLATE.z;
   if (renderer) { renderer.setPixelRatio(DPR); renderer.setSize(w, h, false); }
   canvasEl.style.width = w + 'px'; canvasEl.style.height = h + 'px';
@@ -725,8 +725,8 @@ function fitCamera(portrait) {
   // plate
   for (let i = 0; i < 12; i++) { const a = (i / 12) * TAU; add(PLATE.x + Math.cos(a) * 1.55, 0.2, PLATE.z + Math.sin(a) * 1.55); }
   // puppy (head ~1.3 high, ears)
-  if (PUPPY_POS.pose === 'peek') { for (let i = 0; i < 8; i++) { const a = (i / 8) * TAU; add(PUPPY_POS.x + Math.cos(a) * 0.6, PUPPY_POS.y + 1.55 + Math.sin(a) * 0.5, PUPPY_POS.z + 0.3); } }
-  else for (let i = 0; i < 8; i++) { const a = (i / 8) * TAU; add(PUPPY_POS.x + Math.cos(a) * 0.75, 0.05, PUPPY_POS.z + Math.sin(a) * 0.75); add(PUPPY_POS.x + Math.cos(a) * 0.55, 1.75, PUPPY_POS.z + Math.sin(a) * 0.55); }
+  if (PUPPY_POS.pose === 'peek') { for (let i = 0; i < 8; i++) { const a = (i / 8) * TAU; add(PUPPY_POS.x + Math.cos(a) * 0.75, PUPPY_POS.y + 1.75 + Math.sin(a) * 0.65, PUPPY_POS.z + 0.4); } }
+  else for (let i = 0; i < 8; i++) { const a = (i / 8) * TAU; add(PUPPY_POS.x + Math.cos(a) * 0.95, 0.05, PUPPY_POS.z + Math.sin(a) * 0.95); add(PUPPY_POS.x + Math.cos(a) * 0.7, 2.3, PUPPY_POS.z + Math.sin(a) * 0.7); }
   const pitch = (portrait ? 57 : 47) * Math.PI / 180;
   const yaw = (portrait ? 5 : 4) * Math.PI / 180;
   const dir = new T.Vector3(Math.sin(yaw) * Math.cos(pitch), Math.sin(pitch), Math.cos(yaw) * Math.cos(pitch)); // from target to camera
@@ -810,20 +810,24 @@ const PUP = (() => {
     const skull = ell(0.37, 0.34, 0.34, furM, 36); skull.position.set(0, 0.28, 0.04); head.add(skull);
     const cheekL = ell(0.16, 0.13, 0.14, creamM); cheekL.position.set(-0.1, 0.17, 0.27); head.add(cheekL);
     const cheekR = ell(0.16, 0.13, 0.14, creamM); cheekR.position.set(0.1, 0.17, 0.27); head.add(cheekR);
-    const muzzle = ell(0.15, 0.12, 0.15, creamM); muzzle.position.set(0, 0.2, 0.33); head.add(muzzle);
+    const muzzle = ell(0.15, 0.12, 0.18, creamM); muzzle.position.set(0, 0.19, 0.36); head.add(muzzle);
+    for (const s of [-1, 1]) { const br = ell(0.045, 0.028, 0.03, creamM, 12); br.position.set(0.12 * s, 0.47, 0.3); br.rotation.z = -0.3 * s; head.add(br); }
+    const collarM = new T.MeshPhysicalMaterial({ color: 0xc8303a, roughness: 0.45, clearcoat: 0.4 });
+    const collar = new T.Mesh(new T.TorusGeometry(0.2, 0.045, 10, 28), collarM); collar.rotation.x = Math.PI / 2 - 0.25; collar.position.set(0, 0.79, 0.07); collar.scale.set(1.15, 1.0, 1); torso.add(collar);
+    const tag = new T.Mesh(new T.SphereGeometry(0.045, 14, 10), MAT.copper); tag.position.set(0, 0.7, 0.3); tag.scale.z = 0.5; torso.add(tag);
     const blaze = ell(0.07, 0.16, 0.06, creamM); blaze.position.set(0, 0.42, 0.3); blaze.rotation.x = -0.4; head.add(blaze);
-    noseM = ell(0.065, 0.048, 0.05, noseMat, 18); noseM.position.set(0, 0.27, 0.475); head.add(noseM);
+    noseM = ell(0.072, 0.052, 0.055, noseMat, 18); noseM.position.set(0, 0.255, 0.53); head.add(noseM);
     jaw = new T.Group(); jaw.position.set(0, 0.13, 0.22); head.add(jaw);
     const jawM = ell(0.11, 0.05, 0.13, creamM); jawM.position.set(0, -0.01, 0.1); jaw.add(jawM);
     tongue = ell(0.055, 0.02, 0.08, pinkM, 12); tongue.position.set(0, 0.015, 0.13); jaw.add(tongue);
-    const mouth = new T.Mesh(new T.TorusGeometry(0.05, 0.009, 6, 16, Math.PI), noseMat); mouth.position.set(0, 0.165, 0.455); mouth.rotation.set(-0.3, 0, Math.PI); head.add(mouth);
+    const mouth = new T.Mesh(new T.TorusGeometry(0.05, 0.009, 6, 16, Math.PI), noseMat); mouth.position.set(0, 0.155, 0.5); mouth.rotation.set(-0.3, 0, Math.PI); head.add(mouth);
     for (const s of [-1, 1]) {
       const e = ell(0.075, 0.082, 0.055, eyeM, 18); e.position.set(0.14 * s, 0.35, 0.315); head.add(e); eyes.push(e);
       const c = new T.Mesh(new T.SphereGeometry(0.02, 8, 6), whiteM); c.position.set(0.14 * s + 0.022, 0.385, 0.36); head.add(c); eyes.push(c);
     }
-    earL = new T.Group(); earL.position.set(-0.29, 0.5, 0.02); head.add(earL);
-    earR = new T.Group(); earR.position.set(0.29, 0.5, 0.02); head.add(earR);
-    for (const [g, s] of [[earL, -1], [earR, 1]]) { const m = ell(0.14, 0.26, 0.055, earM); m.position.set(0.06 * s, -0.19, 0.02); m.rotation.z = 0.32 * s; m.rotation.y = 0.35 * s; g.add(m); }
+    earL = new T.Group(); earL.position.set(-0.31, 0.5, 0.06); head.add(earL);
+    earR = new T.Group(); earR.position.set(0.31, 0.5, 0.06); head.add(earR);
+    for (const [g, s] of [[earL, -1], [earR, 1]]) { const m = ell(0.13, 0.25, 0.05, earM); m.position.set(0.09 * s, -0.17, 0.03); m.rotation.z = 0.55 * s; m.rotation.y = 0.25 * s; g.add(m); }
     const sh = new T.Mesh(new T.PlaneGeometry(1.4, 1.4), new T.MeshBasicMaterial({ map: TEX.blob(), transparent: true, depthWrite: false }));
     sh.rotation.x = -Math.PI / 2; sh.position.y = 0.006; root.add(sh); shadowM = sh;
     root.scale.setScalar(1.05);
@@ -834,10 +838,10 @@ const PUP = (() => {
     baseY = PUPPY_POS.y || 0;
     root.position.set(PUPPY_POS.x, baseY, PUPPY_POS.z); root.rotation.y = PUPPY_POS.yaw;
     const peek = PUPPY_POS.pose === 'peek';
-    for (const l of legs) l.rotation.x = peek ? -1.25 : 0.1;
+    for (const l of legs) l.rotation.x = peek ? -1.05 : 0.1;
     for (const h of hind) h.visible = !peek;
     shadowM.visible = !peek;
-    root.scale.setScalar(peek ? 1.4 : 1.15);
+    root.scale.setScalar(peek ? 1.55 : 1.45);
   };
   P.look = (x, y, z) => { lookW.set(x, y, z); };
   P.excite = (k = 1, dur = 1.6) => { wagExc = Math.max(wagExc, k); excUntil = NOW + dur; if (k > 0.7) { hopV = 2.2; } };
@@ -868,9 +872,10 @@ const PUP = (() => {
     const inv = new T.Matrix4().copy(root.matrixWorld).invert();
     const lp = tmpV.copy(target).applyMatrix4(inv);
     const nx = lp.x, ny = lp.y - (0.85 + 0.3), nz = lp.z - 0.1;
+    // (look vector in local root space)
     let yawT = Math.atan2(nx, Math.max(0.05, nz));
     let pitchT = -Math.atan2(ny, Math.hypot(nx, nz));
-    yawT = clamp(yawT, -1.15, 1.15); pitchT = clamp(pitchT, -0.45, PUPPY_POS.pose === 'peek' ? 0.32 : 0.75);
+    yawT = clamp(yawT, -1.15, 1.15); pitchT = clamp(pitchT, -0.45, PUPPY_POS.pose === 'peek' ? 0.22 : 0.75);
     const k = 1 - Math.pow(0.0015, dt);
     yawC += (yawT - yawC) * k; pitchC += (pitchT - pitchC) * k;
     if (NOW > rollUntil) rollT = 0;
@@ -978,7 +983,18 @@ function buildTopology() {
     while (e >= 0 && !used[e] && guard++ < 20000) {
       used[e] = 1; const a = bes[e * 2], b = bes[e * 2 + 1]; loop.push(a);
       const outs = outMap.get(b); e = -1;
-      if (outs) for (const o of outs) if (!used[o]) { e = o; break; }
+      if (outs) {
+        if (outs.length === 1) { if (!used[outs[0]]) e = outs[0]; }
+        else {
+          // pinch vertex: take the outgoing edge with the smallest clockwise turn from the incoming reverse direction
+          const ix = px[a] - px[b], iz = pz[a] - pz[b]; let best = 9;
+          for (const o of outs) {
+            if (used[o]) continue; const c = bes[o * 2 + 1]; const ox2 = px[c] - px[b], oz2 = pz[c] - pz[b];
+            let ccw = Math.atan2(ix * oz2 - iz * ox2, ix * ox2 + iz * oz2); let cw = -ccw; if (cw <= 1e-6) cw += Math.PI * 2;
+            if (cw < best) { best = cw; e = o; }
+          }
+        }
+      }
     }
     if (loop.length >= 3) {
       let ar = 0; for (let i = 0; i < loop.length; i++) { const a = loop[i], b = loop[(i + 1) % loop.length]; ar += px[a] * pz[b] - px[b] * pz[a]; }
@@ -1044,6 +1060,7 @@ function compact() {
 }
 
 // --- mesh generation from signed distance (marching triangles on triangular lattice) ---
+const MAT_OFF = { x: 0, z: 0 };
 function genFromSDF(sdf, x0, z0, x1, z1, h, initFn) {
   NV = 0; NT = 0;
   const rowH = h * Math.sqrt(3) / 2;
@@ -1079,7 +1096,7 @@ function genFromSDF(sdf, x0, z0, x1, z1, h, initFn) {
     if (j & 1) { clipTri([[i, j], [i + 1, j], [i + 1, j + 1]]); clipTri([[i, j], [i + 1, j + 1], [i, j + 1]]); }
     else { clipTri([[i, j], [i + 1, j], [i, j + 1]]); clipTri([[i + 1, j], [i + 1, j + 1], [i, j + 1]]); }
   }
-  for (let i = 0; i < NV; i++) { mu[i] = px[i]; mv[i] = pz[i]; rx[i] = px[i]; rz[i] = pz[i]; foldId[i] = -1; }
+  for (let i = 0; i < NV; i++) { mu[i] = px[i] + MAT_OFF.x; mv[i] = pz[i] + MAT_OFF.z; rx[i] = px[i]; rz[i] = pz[i]; foldId[i] = -1; }
   compactSimple();
   buildTopology();
   computeAreas();
@@ -1222,8 +1239,8 @@ function computeHeights() {
 }
 function invWave() {
   const t = invitePhase % 2.6;
-  if (t < 0.35) return 0.07 * smooth(0, 0.35, t);
-  if (t < 1.4) { const u = t - 0.35; return 0.07 * Math.exp(-u * 4.5) * Math.cos(u * 13); }
+  if (t < 0.35) return 0.1 * smooth(0, 0.35, t);
+  if (t < 1.4) { const u = t - 0.35; return 0.1 * Math.exp(-u * 4.5) * Math.cos(u * 13); }
   return 0;
 }
 
@@ -1382,7 +1399,7 @@ function makeDoughMaterial() {
   float Hh = smoothstep(0.42,0.0,cell)*(0.5+0.8*earN*bk + 0.3*(1.0-bk)) + n2*0.22 + n3*0.35 + spots*0.2;
   normal = bumpN(-vViewPosition, normal, Hh*0.022, faceDirection);`)
       .replace('#include <emissivemap_fragment>', `#include <emissivemap_fragment>
-  totalEmissiveRadiance += vec3(1.0,0.42,0.1)*vF.x*0.55 + vec3(0.6,0.8,1.0)*vF.y*0.6 + vec3(1.0,0.9,0.7)*vF.z*0.22;`);
+  totalEmissiveRadiance += vec3(1.0,0.42,0.1)*vF.x*0.55 + vec3(0.6,0.8,1.0)*vF.y*0.6 + vec3(1.0,0.88,0.62)*vF.z*0.38;`);
   };
   return m;
 }
@@ -1719,7 +1736,7 @@ function stretchUpdate(vx, vz, D) {
     const g = GD[i];
     if (g < R) {
       const s = (rx[i] - gvx) * DRAG.dirx + (rz[i] - gvz) * DRAG.dirz;
-      const gl = s > 0 ? Math.sqrt(Math.max(0, g * g - s * s)) : g;
+      const sa = s > 0 ? Math.min(s, 0.3) : 0; const gl = s > 0 ? Math.sqrt(Math.max(0, g * g - sa * sa)) : g;
       const x = Math.min(1, gl / R);
       const a = 1 - x * x;
       w = (1 - beta) * a * a + beta * (1 - x);
@@ -1852,7 +1869,11 @@ function endOvenDrag(sx, sy) {
     for (let i = 0; i < NV; i++) if (!edited[i] && ra[i] > 0 && area[i] > ra[i] * 1.18 && !locked[i]) { edited[i] = 1; if (bake[i] > 0.6) { bakeT[i] = 0; } }
     remeshAfterEdit();
     const holesAfter = LOOPS.filter((l) => l.hole && Math.abs(l.area) > 0.02).length;
-    if (holesAfter > holesBefore) { disc('ring', `holes ${holesBefore}->${holesAfter}`); PUP.excite(0.8); }
+    if (holesAfter > holesBefore) {
+      disc('ring', `holes ${holesBefore}->${holesAfter}`); PUP.excite(0.8); PUP.tilt(1);
+      let big = null; for (const l of LOOPS) if (l.hole && (!big || Math.abs(l.area) > Math.abs(big.area))) big = l;
+      if (big) { let hx = 0, hz = 0; for (const v of big) { hx += px[v]; hz += pz[v]; } hx /= big.length; hz /= big.length; eventAt(hx, 0.85, hz); const st = Math.max(1, Math.floor(big.length / 10)); for (let k = 0; k < big.length; k += st) { const v = big[k]; PART.emit('spark', px[v], 0.9, pz[v], 1); glowB[v] = Math.max(glowB[v], 0.8); } }
+    }
     computeAreas();
     const list = []; for (let i = 0; i < NV; i++) if (edited[i]) list.push(i);
     startBake(list, { kind: 'pull', fresh: DRAG.maxD < 0.75, earOK: DRAG.maxD < 0.8 && DRAG.edge, D: DRAG.maxD, fast: serve });
@@ -1898,10 +1919,10 @@ function sealCheck(rec) {
   rec.verts.forEach((v, k) => {
     const g = gridAt(dx[v], dz[v]); const c = gridAt(dx[v], dz[v], GC);
     if (g > 0 && c > 0) chUnder += c * area[v];
-    if (isB[v] && dc[k] > 0.55 * maxD) { freeN++; if (g > 0 && c < 0.007) { landed++; landedV.push(v); } }
+    if (isB[v] && dc[k] > 0.55 * maxD) { freeN++; if (g > 0) { landed++; landedV.push(v); } }
   });
   rec.cheeseUnder = chUnder;
-  rec.sealed = chUnder > 0.002 && freeN > 0 && landed / freeN >= 0.45;
+  rec.sealed = chUnder > 0.001 && freeN > 0 && landed / freeN >= 0.3;
   if (rec.sealed) {
     for (const v of landedV) seam[v] = 1;
     // dome air target
@@ -1939,26 +1960,37 @@ function commitUnfold() {
 
 // ---------------- joins ----------------
 function detectJoins() {
-  const cand = [], targ = [];
+  const cand = [], targ = new Uint8Array(NV);
   for (let i = 0; i < NV; i++) {
     if (!isB[i] || layer[i] || locked[i]) continue;
-    if (WT[i] > 0.25) cand.push(i); else if (WT[i] < 0.12) targ.push(i);
+    if (WT[i] > 0.25) cand.push(i); else if (WT[i] < 0.12) targ[i] = 1;
   }
-  if (!cand.length || !targ.length) return 0;
-  const pairs = [];
-  const near = new Map();
-  for (const i of cand) {
-    // hop-limited neighborhood
+  if (!cand.length) return 0;
+  // boundary neighbours along loops
+  const nxt = new Int32Array(NV).fill(-1), prv = new Int32Array(NV).fill(-1);
+  for (const lp of LOOPS) { const n = lp.length; for (let k = 0; k < n; k++) { const v = lp[k]; if (nxt[v] < 0) { nxt[v] = lp[(k + 1) % n]; prv[v] = lp[(k - 1 + n) % n]; } } }
+  const farApart = (i, j) => { // not within 5 hops
     const seen = new Set([i]); let fr = [i];
-    for (let h = 0; h < 5; h++) { const nf = []; for (const a of fr) for (let k = ADJS[a]; k < ADJS[a + 1]; k++) { const b = ADJ[k]; if (!seen.has(b)) { seen.add(b); nf.push(b); } } fr = nf; }
-    let best = -1, bd = 0.15;
-    for (const j of targ) { if (seen.has(j)) continue; const d = Math.hypot(px[i] - px[j], pz[i] - pz[j]); if (d < bd) { bd = d; best = j; } }
-    if (best >= 0) pairs.push([bd, i, best]);
+    for (let h = 0; h < 5; h++) { const nf = []; for (const a of fr) for (let k = ADJS[a]; k < ADJS[a + 1]; k++) { const b = ADJ[k]; if (b === j) return false; if (!seen.has(b)) { seen.add(b); nf.push(b); } } fr = nf; }
+    return true;
+  };
+  const R = 0.2;
+  let bi = -1, bj = -1, bd = R;
+  for (const i of cand) for (let j = 0; j < NV; j++) {
+    if (!targ[j]) continue; const d = Math.hypot(px[i] - px[j], pz[i] - pz[j]); if (d < bd && farApart(i, j)) { bd = d; bi = i; bj = j; }
   }
-  if (!pairs.length) return 0;
-  pairs.sort((a, b) => a[0] - b[0]);
-  const used = new Set(); const take = [];
-  for (const [d, i, j] of pairs) { if (used.has(i) || used.has(j)) continue; used.add(i); used.add(j); take.push([i, j]); if (take.length >= 8) break; }
+  if (bi < 0) return 0;
+  const take = [[bi, bj]]; const used = new Set([bi, bj]);
+  for (const dir of [0, 1]) { // zipper both ways: i forward / j backward, then i backward / j forward
+    let i = bi, j = bj;
+    for (let k = 0; k < 8 && take.length < 10; k++) {
+      const i2 = dir === 0 ? nxt[i] : prv[i], j2 = dir === 0 ? prv[j] : nxt[j];
+      if (i2 < 0 || j2 < 0 || i2 === j2 || used.has(i2) || used.has(j2)) break;
+      if (WT[i2] < 0.12 && WT[j2] < 0.12) break;
+      if (Math.hypot(px[i2] - px[j2], pz[i2] - pz[j2]) > R * 1.15 || !farApart(i2, j2)) break;
+      take.push([i2, j2]); used.add(i2); used.add(j2); i = i2; j = j2;
+    }
+  }
   const id = ++joinSeq;
   const jverts = [];
   const rep = new Map();
@@ -2442,6 +2474,7 @@ function makeDough(outline, mode) {
     rawFn = (x, z) => Math.hypot(x - far[0], z - far[1]) < 0.42;
     bx0 = cX - 2.2; bz0 = cZ - 2.0; bx1 = cX + 2.2; bz1 = cZ + 2.0;
   }
+  MAT_OFF.x = rnd(0, 20); MAT_OFF.z = rnd(0, 20);
   const chx = cX + rnd(-0.12, 0.12), chz = cZ + rnd(-0.12, 0.12), chR = 0.52 + rnd(-0.04, 0.04);
   genFromSDF(sdf, bx0, bz0, bx1, bz1, 0.082, (i, x, z, s) => {
     const sd = Math.min(0, s);
@@ -2478,7 +2511,9 @@ function startServe() {
   const o = extractOutline(true) || extractOutline(false); if (o) saveOutline(o);
   disc('serve', `round ${ROUND}`);
   DOOR.target = 1; warmTarget = 1; PROPS.plateGlow.userData.on = 0;
-  let cx = 0, cz = 0; for (let i = 0; i < NV; i++) { cx += px[i]; cz += pz[i]; } cx /= NV; cz /= NV;
+  let cx = 0, cz = 0, zmin = 9; for (let i = 0; i < NV; i++) { cx += px[i]; cz += pz[i]; zmin = Math.min(zmin, pz[i]); } cx /= NV; cz /= NV;
+  // keep the served pizza in front of the oven: shift target forward if it would reach behind the oven front
+  const back = (PLATE.z - (cz - zmin)) - 1.95; if (back < 0) cz += back;
   SERVE = { t: 0, p0x: Float32Array.from(px.subarray(0, NV)), p0z: Float32Array.from(pz.subarray(0, NV)), cx, cz, TO: 1.9, landed: false };
   SND.fanfare(); PUP.excite(0.9, 3);
   TILT2.A = null; TILT2.B = null; TILT2.k = 1;
@@ -2587,7 +2622,8 @@ function startDemo() {
   let nx = BNX[v], nz = BNZ[v];
   if (INV.kind === 'fold') { nx = -nx; nz = -nz; }
   const L = STAGE === 'plate' ? 0.1 : (INV.kind === 'tilt' ? 0.38 : 0.34);
-  const q = worldToScreen(dx[v] + nx * L, top[v], dz[v] + nz * L);
+  let q = worldToScreen(dx[v] + nx * L, top[v], dz[v] + nz * L);
+  if (INV.kind === 'share') { const m = PUP.mouthWorld(); q = worldToScreen(m.x, m.y, m.z); }
   HAND.active = true; HAND.t = 0; HAND.a = p; HAND.b = q; HAND.synthetic = false;
   if (STAGE === 'oven') HAND.shownOven = true; else HAND.shownPlate = true;
 }
@@ -2708,6 +2744,9 @@ document.addEventListener('contextmenu', stop);
 document.addEventListener('dblclick', stop, { passive: false });
 document.addEventListener('selectstart', stop);
 window.addEventListener('blur', () => { if (DRAG.active) endDrag(); });
+// extra audio unlock points for browsers that only accept end-of-gesture events
+window.addEventListener('pointerup', () => { if (!SND.ok()) SND.unlock(); }, { passive: true });
+document.addEventListener('touchend', () => { if (!SND.ok()) SND.unlock(); }, { passive: true });
 
 // ----- main loop -----
 let running = true, lastTS = 0, rafId = 0, frameNo = 0;
@@ -2756,10 +2795,19 @@ function stepWorld(dt) {
   if (!DRAG.active && recoilT > 0.6) { for (let i = 0; i < NV; i++) { ox[i] = 0; oz[i] = 0; } }
   updateTilt(dt);
   // invite animation
+  const prevPh = invitePhase % 2.6;
   invitePhase += dt;
+  if (!DRAG.active && INV.v >= 0 && INV.v < NV && prevPh < 0.3 && invitePhase % 2.6 >= 0.3 && (STAGE === 'oven' || STAGE === 'plate')) { const v = INV.v; PART.emit('spark', dx[v], top[v] + 0.06, dz[v], 2); }
   if (DRAG.active) { for (let i = 0; i < NV; i++) inv[i] *= Math.exp(-dt * 10); }
   else if (INV.pending && NOW > INV.pending && (STAGE === 'oven' || STAGE === 'plate')) { INV.pending = 0; chooseInvite(); }
-  // geometry
+  // geometry (skip when nothing moves)
+  const busy = DRAG.active || STAGE === 'serving' || STAGE === 'arriving' || FEEDING || recoilT < 0.7 || TILT2.k < 0.999 || Math.abs(TILT2.v) > 0.002 || invitePhase % 2.6 < 1.5 || glowAny > 0 || cheeseRate > 0.0004 || geoDirty > 0 || STRANDS.length > 0;
+  let animV = busy;
+  if (!animV) for (let i = 0; i < NV; i++) { if (bake[i] !== bakeT[i] || Math.abs(lift[i]) > 1e-4 || Math.abs(liftV[i]) > 1e-3 || Math.abs(air[i] - airT[i] * (bakeT[i] > 0.5 ? 1 : 0)) > 1e-4 || squash[i] > 0) { animV = true; break; } }
+  geoDirty = Math.max(0, geoDirty - 1);
+  if (!animV && NV === lastNVgeo && topoVersion === lastTopo) { idleFrames++; } else { idleFrames = 0; }
+  lastNVgeo = NV; lastTopo = topoVersion;
+  if (idleFrames > 2) { /* geometry unchanged */ } else {
   computeAreas();
   computeHeights();
   if (STAGE === 'oven' || STAGE === 'plate') cheeseRate = lerp(cheeseRate, cheeseFlow(dt), 0.2);
@@ -2769,6 +2817,7 @@ function stepWorld(dt) {
   if (TILT2.B && !DISC.tilt && NOW - TILT2.changed < 6 && cheeseFlowAcc - TILT2.cheese0 > 0.0012) disc('tilt', `cheese moved ${(cheeseFlowAcc - TILT2.cheese0).toFixed(4)}`);
   updateBoundaryNormals();
   buildGeometry();
+  }
   checkBatches();
   updateFeeding(dt);
   if (autoEat && NOW > autoEat.t && !DRAG.active && !FEEDING) { const v = autoEat.any; autoEat = null; if (v < NV && STAGE === 'plate') { const pc = piece[v]; let A = 0; for (let i = 0; i < NV; i++) if (piece[i] === pc) A += area[i]; if (A < 0.4) feedPiece(pc, false); } }
@@ -2793,7 +2842,7 @@ function stepWorld(dt) {
   }
   updateHand(dt);
 }
-let cheeseSndCool = 0;
+let cheeseSndCool = 0, geoDirty = 3, idleFrames = 0, lastNVgeo = -1, lastTopo = -1;
 function loop(ts) {
   if (!running) return;
   rafId = requestAnimationFrame(loop);
@@ -2811,7 +2860,10 @@ function loop(ts) {
   perfAcc += dt; perfN++; perfT += dt;
   if (perfT > 2.0) {
     const avg = perfAcc / perfN; perfAcc = 0; perfN = 0; perfT = 0;
-    if (avg > 0.024 && DPR > 1.0) { DPR = Math.max(1.0, DPR - 0.25); renderer.setPixelRatio(DPR); renderer.setSize(VIEW.w, VIEW.h, false); lowStreak = 0; }
+    if (avg > 0.024 && DPR > 1.0) {
+      DPR = Math.max(1.0, DPR - 0.25); renderer.setPixelRatio(DPR); renderer.setSize(VIEW.w, VIEW.h, false); lowStreak = 0;
+      if (DPR <= 1.25 && LIGHT.key.shadow.mapSize.x > 1024) { LIGHT.key.shadow.mapSize.set(1024, 1024); if (LIGHT.key.shadow.map) { LIGHT.key.shadow.map.dispose(); LIGHT.key.shadow.map = null; } }
+    }
     else if (avg < 0.0175 && DPR < maxDPR) { lowStreak++; if (lowStreak > 3) { DPR = Math.min(maxDPR, DPR + 0.25); renderer.setPixelRatio(DPR); renderer.setSize(VIEW.w, VIEW.h, false); lowStreak = 0; } }
   }
 }
@@ -2824,7 +2876,7 @@ window.addEventListener('orientationchange', () => { setTimeout(applyLayout, 120
 if (window.visualViewport) window.visualViewport.addEventListener('resize', () => applyLayout());
 
 function onLayoutChange(oldPlate) {
-  PUP.place();
+  PUP.place(); geoDirty = 3;
   const ddx = PLATE.x - oldPlate.x, ddz = PLATE.z - oldPlate.z;
   if ((STAGE === 'plate' || STAGE === 'empty') && (ddx || ddz)) { for (let i = 0; i < NV; i++) { px[i] += ddx; pz[i] += ddz; rx[i] += ddx; rz[i] += ddz; } }
   if (SERVE) { /* serve recomputes target from PLATE each frame */ }
