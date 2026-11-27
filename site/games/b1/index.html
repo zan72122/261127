@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <meta name="robots" content="noindex,nofollow">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="theme-color" content="#141f3a">
+  <link rel="icon" href="data:,">
+  <title>雪原のトナカイそりとオーロラ郵便局</title>
+  <style>
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    html, body {
+      margin: 0; padding: 0; width: 100%; height: 100%;
+      overflow: hidden; background: #141f3a;
+      touch-action: none; user-select: none; -webkit-user-select: none;
+      -webkit-touch-callout: none; overscroll-behavior: none;
+      position: fixed; inset: 0;
+    }
+    #c { display: block; width: 100%; height: 100%; touch-action: none; }
+    #veil {
+      position: fixed; inset: 0; pointer-events: none;
+      background: radial-gradient(circle at 50% 45%, #243860 0%, #10192e 100%);
+      opacity: 1; transition: opacity 1.3s ease-out;
+    }
+    #fps {
+      position: fixed; top: 8px; left: 8px; display: none;
+      padding: 4px 8px; border-radius: 4px;
+      background: rgba(14, 22, 42, 0.62); color: #e2ecf8;
+      font: 11px/1.4 ui-monospace, Menlo, monospace; pointer-events: none;
+      white-space: pre;
+    }
+    #action-btn {
+      position: fixed;
+      right: max(18px, env(safe-area-inset-right));
+      bottom: max(18px, env(safe-area-inset-bottom));
+      width: 66px;
+      height: 66px;
+      border-radius: 50%;
+      border: 2px solid rgba(110, 240, 190, 0.55);
+      background: radial-gradient(circle at 35% 30%, rgba(242, 184, 92, 0.25), rgba(20, 32, 60, 0.52));
+      backdrop-filter: blur(6px);
+      -webkit-backdrop-filter: blur(6px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0;
+      opacity: 0;
+      pointer-events: none;
+      transform: scale(0.88);
+      transition: opacity 0.26s ease, transform 0.26s ease;
+      cursor: pointer;
+    }
+    #action-btn.visible {
+      opacity: 1;
+      pointer-events: auto;
+      transform: scale(1);
+    }
+    #action-btn:active {
+      transform: scale(0.93);
+    }
+    #action-btn svg {
+      width: 38px;
+      height: 38px;
+      display: block;
+    }
+  </style>
+</head>
+<body>
+  <canvas id="c"></canvas>
+  <button id="action-btn" type="button" aria-label="action">
+    <!-- Wordless snow canopy icon (dismount / slow descent) -->
+    <svg id="icon-float" viewBox="0 0 64 64" fill="none">
+      <path d="M12 28 C18 14, 46 14, 52 28 C44 25, 20 25, 12 28 Z" fill="#e8f6f0" fill-opacity="0.94"/>
+      <path d="M32 26 L32 42" stroke="#ffd27d" stroke-width="2.4" stroke-linecap="round"/>
+      <circle cx="32" cy="44" r="3.8" fill="#e8f6f0"/>
+      <path d="M26 55 C28 49, 36 49, 38 55" stroke="#e8f6f0" stroke-width="2.8" stroke-linecap="round"/>
+    </svg>
+    <!-- Wordless antler + sleigh call icon (summon / reboard) -->
+    <svg id="icon-call" viewBox="0 0 64 64" fill="none" style="display:none">
+      <path d="M22 40 C26 28, 38 26, 48 30 C44 37, 42 42, 42 48 L22 48 Z" fill="#ffd27d" fill-opacity="0.92"/>
+      <path d="M16 50 C24 52, 42 52, 52 46" stroke="#e8f6f0" stroke-width="2.8" stroke-linecap="round"/>
+      <path d="M38 27 L42 15 M42 19 L48 16 M40 21 L35 17" stroke="#e8f6f0" stroke-width="2.4" stroke-linecap="round"/>
+    </svg>
+  </button>
+  <div id="veil"></div>
+  <div id="fps"></div>
+  <script>
+    window.__ready = false;
+    window.__errors = [];
+    window.__moment = 'garden';
+    window.__autolog = [];
+    window.__autodone = false;
+    window.addEventListener('error', function (e) {
+      var msg = (e && (e.message || (e.error && e.error.stack))) || String(e);
+      window.__errors.push(msg);
+    });
+    window.addEventListener('unhandledrejection', function (e) {
+      var r = e && e.reason;
+      window.__errors.push(r ? (r.stack || r.message || String(r)) : 'unhandledrejection');
+    });
+  </script>
+  <script type="module" src="./src/main.js"></script>
+</body>
+</html>
