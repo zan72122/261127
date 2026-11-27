@@ -300,7 +300,7 @@ export class Doll {
         add(sg, taperTube(curve([[0, 0, 0], [s * 0.008, -0.025, 0.002], [s * 0.004, -0.05, 0.006], [s * 0.012, -0.072, 0.004]]), t => [0.009 * (1 - 0.5 * t), 0.0045], { segs: 16, radial: 8, up: new THREE.Vector3(s, 0, 0.3) }), hm);
       }
       // headband
-      add(this.head, xf(new THREE.TorusGeometry(0.049, 0.0032, 8, 40, Math.PI), [0, 0.006, 0.004], [-0.35, 0, 0], [1, 1.02, 1]), M.cream, false);
+      add(this.head, xf(new THREE.TorusGeometry(0.0505, 0.003, 8, 40, Math.PI), [0, -0.001, 0.003], [-0.3, 0, 0], [1.0, 0.965, 1]), M.cream, false);
       add(this.head, xf(bowGeo(0.75), [0.034, 0.04, 0.012], [0, 0.9, -0.5]), M.cream, false);
     } else if (st === 'braids') {
       for (const s of [-1, 1]) {

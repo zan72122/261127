@@ -277,12 +277,21 @@ export class Game {
   clampZone(p, zone, r = 0.03) {
     const R = L.room, P = L.porch, d = L.door, z0 = R.z0;
     const doorOpen = this.doorState.a > 0.9;
-    const inDoorX = p.x > d.hingeX + 0.02 && p.x < d.hingeX + d.w - 0.02;
+    const dx0 = d.hingeX + 0.03, dx1 = d.hingeX + d.w - 0.03;
+    const near = Math.abs(p.z - z0) < 0.06, zone0 = zone;
     if (zone === 'in') {
-      if (p.z < z0 + r) { if (doorOpen && inDoorX && p.z < z0 - 0.01) zone = 'porch'; else p.z = z0 + r; }
+      if (p.z < z0 + r) {
+        // pass through the open doorway (forgiving: funnel toward the opening)
+        if (doorOpen && p.z < z0 - 0.01 && p.x > d.hingeX - 0.12 && p.x < d.hingeX + d.w + 0.12) { zone = 'porch'; }
+        else p.z = z0 + r;
+      }
     } else {
-      if (p.z > z0 - 0.015) { if (doorOpen && inDoorX && p.z > z0 + 0.01) zone = 'in'; else p.z = z0 - 0.02; }
+      if (p.z > z0 - 0.015) {
+        if (doorOpen && p.z > z0 + 0.01) zone = 'in';
+        else p.z = z0 - 0.02;
+      }
     }
+    if (doorOpen && near && (zone !== zone0 || zone === 'porch')) p.x = Math.min(dx1, Math.max(dx0, p.x));
     if (zone === 'in') { p.x = Math.min(R.x1 - r, Math.max(R.x0 + r, p.x)); p.z = Math.min(R.z1 - r * 0.5, p.z); }
     else { p.x = Math.min(P.x1 - 0.015, Math.max(P.x0 + 0.015, p.x)); p.z = Math.max(P.z0 + 0.02, Math.min(z0 - 0.02, p.z)); }
     // divider wall (partial)
@@ -304,6 +313,10 @@ export class Game {
     window.addEventListener('pointercancel', e => this.onUp(e, true), opts);
     cv.addEventListener('lostpointercapture', e => { if (e.pointerId === this.input.id) this.onUp(e, true); });
     window.addEventListener('blur', () => this.cancelDrag());
+    // iOS unlocks audio reliably on touchend/click: resume there too (idempotent)
+    const unlock = () => { this.sound.start(); };
+    window.addEventListener('touchend', unlock, { passive: true }); window.addEventListener('click', unlock, { passive: true });
+    window.addEventListener('pointerup', unlock, { passive: true });
   }
   onDown(e) {
     if (e.cancelable) e.preventDefault();
@@ -311,7 +324,7 @@ export class Game {
     this.input.lastAny = this.time; this.idle = 0;
     this.demoAbort && this.demoAbort();
     if (this.input.id !== null) return; // single finger only
-    const I = this.input; I.id = e.pointerId; I.down = true; I.x = I.sx = e.clientX; I.y = I.sy = e.clientY; I.t0 = this.time; I.moved = false; I.edgeT = 0;
+    const I = this.input; I.id = e.pointerId; I.down = true; I.x = I.sx = e.clientX; I.y = I.sy = e.clientY; I.t0 = this.time; I.rt0 = e.timeStamp || performance.now(); I.moved = false; I.edgeT = 0;
     try { this.renderer.domElement.setPointerCapture(e.pointerId); } catch (err) {}
     const hit = this.pickAt(I.x, I.y);
     I.target = hit;
@@ -330,7 +343,7 @@ export class Game {
     const I = this.input; if (e.pointerId !== I.id) return;
     I.id = null; I.down = false;
     try { this.renderer.domElement.releasePointerCapture(e.pointerId); } catch (err) {}
-    const tap = !I.moved && this.time - I.t0 < 0.35 && !cancel;
+    const tap = !I.moved && (e.timeStamp || performance.now()) - I.rt0 < 520 && !cancel;
     if (this.drag) this.release(tap);
     I.target = null;
   }
@@ -436,8 +449,10 @@ export class Game {
       d.zone = D.zone;
       d.root.position.x += (D.pos.x - d.root.position.x) * k; d.root.position.z += (D.pos.z - d.root.position.z) * k;
       d.root.position.y += (D.pos.y + Math.sin(this.time * 7) * 0.002 - d.root.position.y) * (1 - Math.exp(-dt * 30));
-      // face the viewer while carried (keep face visible)
-      d.yawT = Math.atan2(this.camera.position.x - d.root.position.x, this.camera.position.z - d.root.position.z) * 0.7;
+      // face the viewer while carried (keep face visible); turn toward a friend when brought close
+      const fr = this.nearestDoll(d, 0.26, o => !o.away && o.st !== 'lie');
+      if (fr && d.handSlots.some(s => s.occupant)) d.yawT = Math.atan2(fr.root.position.x - d.root.position.x, fr.root.position.z - d.root.position.z);
+      else d.yawT = Math.atan2(this.camera.position.x - d.root.position.x, this.camera.position.z - d.root.position.z) * 0.7;
       this.autoDoor(D.pos);
     } else {
       const it = D.obj;
@@ -497,14 +512,22 @@ export class Game {
       this.sound.drop(d.id, false);
     }
     if (tap) this.tapDoll(d, D.prev);
+    else this.giveOnDrop(d);
     this.log('drop', d.id + ':' + (target.kind || 'floor'));
   }
   dollDropTarget(d, D) {
     const p = d.root.position, zone = D.zone;
     if (zone === 'in') {
-      // chairs (generous)
-      let bi = -1, bd = 0.085;
-      L.chairs.forEach((c, i) => { if (this.seatOccupant(i)) return; const dd = Math.hypot(p.x - c.x, p.z - c.z); if (dd < bd) { bd = dd; bi = i; } });
+      // chairs (generous): close on the floor plan, or where the doll appears on screen
+      let bi = -1, bd = 1;
+      const cs = this.scr(d.chest.getWorldPosition(_v2)), mp = this.minPx() * 1.9;
+      L.chairs.forEach((c, i) => {
+        if (this.seatOccupant(i)) return;
+        const sw = Math.hypot(p.x - c.x, p.z - c.z) / 0.085;
+        const ss = this.scr(_v3.set(c.x, L.seatH + 0.05, c.z)), sp = Math.hypot(ss.x - cs.x, ss.y - cs.y) / mp;
+        const sc = Math.min(sw, sp * 1.05);
+        if (sc < bd) { bd = sc; bi = i; }
+      });
       if (bi >= 0) return { kind: 'seat', index: bi };
       const b = L.bed;
       if (p.x > b.x0 - 0.02 && p.x < b.x1 + 0.02 && p.z > b.z0 - 0.02 && p.z < b.z1 + 0.03) {
@@ -537,7 +560,7 @@ export class Game {
     for (const c of L.chairs) { const dc = Math.hypot(pos.x - c.x, pos.z - c.z); if (dc < 0.055) { const k = 0.056 / Math.max(dc, 1e-3); pos.x = c.x + (pos.x - c.x) * k; pos.z = c.z + (pos.z - c.z) * k; } }
     // other dolls
     for (let it = 0; it < 3; it++) for (const o of this.dolls) {
-      if (o === d || o.away || o.st !== 'stand' || o.zone !== (d ? d.zone : 'in')) continue;
+      if (o === d || o.away || o.st === 'held' || o.st === 'lie' || o.zone !== (d ? d.zone : 'in')) continue;
       const op = o.dropT < 1 ? o.dropTo : o.root.position; const dx = pos.x - op.x, dz = pos.z - op.z, dd = Math.hypot(dx, dz);
       if (dd < 0.058) { const k = 0.06 / Math.max(dd, 1e-3); if (dd < 1e-3) { pos.x += 0.06; } else { pos.x = op.x + dx * k; pos.z = op.z + dz * k; } }
     }
@@ -586,11 +609,13 @@ export class Game {
       if (s.type === 'bed') { const b = L.bed; if (it.pos.x > b.x0 - 0.03 && it.pos.x < b.x1 + 0.03 && it.pos.z > b.z0 - 0.03 && it.pos.z < b.z1 + 0.05) return s; continue; }
       const pts = [];
       s.node.getWorldPosition(_v2); pts.push(_v2.clone());
-      if (s.type === 'hand') { const dl = s.doll; for (const n of (it.data.deco && it.kind !== 'bouquet' ? [dl.chest, dl.pelvis, dl.sockets[1 - s.side]] : [dl.chest, dl.head, dl.pelvis, dl.sockets[1 - s.side]])) { n.getWorldPosition(_v2); pts.push(_v2.clone()); } }
-      let r = 0.03;
+      const bulky = it.kind === 'pot' || it.kind === 'plate';
+      if (s.type === 'hand' && !bulky) { const dl = s.doll; for (const n of (it.data.deco && it.kind !== 'bouquet' ? [dl.chest, dl.pelvis, dl.sockets[1 - s.side]] : [dl.chest, dl.head, dl.pelvis, dl.sockets[1 - s.side]])) { n.getWorldPosition(_v2); pts.push(_v2.clone()); } }
+      if (s.type === 'hand' && it.kind === 'pot' && (this.pouring || this.time - (this.lastPourT || -9) < 2)) continue;
+      let r = bulky && s.type === 'hand' ? 0.018 : 0.03;
       if (s.type === 'hook') r = 0.05; if (s.type === 'shelf') r = 0.02; if (s.type === 'foot') r = 0.022; if (s.type === 'cake') r = 0.02; if (s.type === 'head') r = 0.03;
       for (const p of pts) {
-        const ss = this.scr(p); const rp = Math.max(minPx, r * this.pxPerM(p));
+        const ss = this.scr(p); const rp = Math.max(bulky && s.type === 'hand' ? minPx * 0.6 : minPx, r * this.pxPerM(p));
         let sc = Math.hypot(ss.x - is.x, ss.y - is.y) / rp;
         if (s.type === 'hand' && s.occupant) sc *= 1.3;
         if (s.type === 'head') sc *= 0.7;
@@ -688,10 +713,10 @@ export class Game {
 
   adaptQuality(dt) {
     const Q = this.quality; Q.frames++; Q.acc += dt; Q.checkT += dt;
-    if (Q.checkT > 3 && this.time > 4 && !Q.locked) {
+    if (Q.checkT > 2.5 && this.time > 3 && !Q.locked) {
       const avg = Q.acc / Q.frames; Q.frames = 0; Q.acc = 0; Q.checkT = 0;
-      if (avg > 0.026 && Q.dprScale > 0.62) { Q.dprScale = Math.max(0.6, Q.dprScale - 0.15); this.resize && this.resize(); }
-      else if (avg > 0.03 && Q.shadows) { Q.shadows = false; this.key.castShadow = false; this.renderer.shadowMap.enabled = false; this.scene.traverse(o => { if (o.material) { const ms = Array.isArray(o.material) ? o.material : [o.material]; ms.forEach(m => m.needsUpdate = true); } }); }
+      if (avg > 0.0195 && Q.dprScale > 0.62) { Q.dprScale = Math.max(0.6, Q.dprScale - 0.15); this.resize && this.resize(); this.log('quality', 'dpr ' + Q.dprScale.toFixed(2)); }
+      else if (avg > 0.0195 && Q.shadows) { this.log('quality', 'shadows off'); Q.shadows = false; this.key.castShadow = false; this.renderer.shadowMap.enabled = false; this.scene.traverse(o => { if (o.material) { const ms = Array.isArray(o.material) ? o.material : [o.material]; ms.forEach(m => m.needsUpdate = true); } }); }
     }
   }
 

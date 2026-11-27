@@ -55,9 +55,12 @@ export const Guide = {
         this.fx.emit({ pos: p.clone().add(_v2.set(0.012, 0.012, 0.01)), vel: _v2.set(0, 0.02, 0), cell: P_SPARK, size: 0.012, life: 0.9, col: '#fff8e0' });
       }
     } else g.material.opacity = 0;
-    if (this.hint) this.hint.pos = this.hint.pos;
     // expose a plain position for gaze
     if (this.hint && this.hint.posV) this.hint.posVec = this.hint.posV;
+    // portrait: when the invitation is in the other room, the edge light breathes a little brighter
+    const port = this.S.w / this.S.h < 1.2, hp = this.hint && this.hint.posV;
+    const want = port && show && hp ? (this.S.viewName === 'living' && hp.x > L.divX ? 'R' : this.S.viewName === 'bed' && hp.x < L.divX ? 'L' : '') : '';
+    if (want !== this.edgeHint) { this.edgeHint = want; for (const k of ['L', 'R']) { const el = document.getElementById('edge' + k); if (el) el.classList.toggle('hint', want === k); } }
   },
 
   updateDemo(dt) {

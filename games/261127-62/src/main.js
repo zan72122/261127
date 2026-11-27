@@ -34,7 +34,7 @@ function boot() {
   const hemi = new THREE.HemisphereLight('#fff7ee', '#b48a66', 0.75); scene.add(hemi);
   const key = new THREE.DirectionalLight('#fff0dc', 2.3);
   key.position.set(-0.55, 1.5, 1.15); key.target.position.set(0.3, 0, -0.15);
-  key.castShadow = true; key.shadow.mapSize.set(1536, 1536);
+  key.castShadow = true; key.shadow.mapSize.set(1024, 1024);
   const sc = key.shadow.camera; sc.left = -1.05; sc.right = 1.05; sc.top = 0.85; sc.bottom = -0.85; sc.near = 0.5; sc.far = 3.4;
   key.shadow.bias = -0.0004; key.shadow.normalBias = 0.012; key.shadow.radius = 3;
   scene.add(key, key.target);
@@ -53,7 +53,7 @@ function boot() {
   }
   const tmpV = new THREE.Vector3();
   function fit(region, aspect, outPos, outTgt) {
-    const pitch = aspect < 0.75 ? 0.7 : aspect < 1.2 ? 0.6 : 0.47;
+    const pitch = aspect < 0.75 ? 0.8 : aspect < 1.2 ? 0.62 : 0.47;
     camera.fov = aspect < 0.75 ? 38 : aspect < 1.2 ? 34 : 30;
     camera.aspect = aspect; camera.updateProjectionMatrix();
     const dir = new THREE.Vector3(0, Math.sin(pitch), Math.cos(pitch));
@@ -61,7 +61,8 @@ function boot() {
     for (const x of [region.x0, region.x1]) for (const y of [0, region.y1]) for (const z of [region.z0, region.z1]) corners.push(new THREE.Vector3(x, y, z));
     if (region.top) corners.push(new THREE.Vector3((region.x0 + region.x1) / 2 - 0.25, region.top, region.z0));
     const tgt = new THREE.Vector3((region.x0 + region.x1) / 2, region.y1 * 0.3, (region.z0 + region.z1) / 2);
-    const mx = 0.96, myT = 0.9, myB = 0.94;
+    const sa = safeInsets();
+    const mx = 0.96 - 2 * Math.max(sa.l, sa.r) / Math.max(1, S.w), myT = 0.9 - 2 * sa.t / Math.max(1, S.h), myB = 0.94 - 2 * sa.b / Math.max(1, S.h);
     let dist = 1.5;
     for (let it = 0; it < 4; it++) {
       let lo = 0.2, hi = 12;
@@ -82,6 +83,9 @@ function boot() {
     }
     outTgt.copy(tgt); outPos.copy(tgt).addScaledVector(dir, dist);
   }
+  function safeInsets() {
+    try { const el = document.getElementById('safe'); if (!el) return { l: 0, r: 0, t: 0, b: 0 }; const cs = getComputedStyle(el); return { l: parseFloat(cs.paddingLeft) || 0, r: parseFloat(cs.paddingRight) || 0, t: parseFloat(cs.paddingTop) || 0, b: parseFloat(cs.paddingBottom) || 0 }; } catch (e) { return { l: 0, r: 0, t: 0, b: 0 }; }
+  }
   function setView(name) {
     S.viewName = name;
     fit(regionFor(name, S.w / S.h), S.w / S.h, S.wantPos, S.wantTgt);
@@ -100,6 +104,7 @@ function boot() {
     if (eL) eL.className = port && S.viewName === 'bed' ? 'on' : ''; if (eR) eR.className = port && S.viewName === 'living' ? 'on' : '';
   }
   game.resize = resize;
+  try { if (/[?&]hq/.test(location.search)) game.quality.locked = true; } catch (e) {}
   try { if (/[?&]lq/.test(location.search)) { game.quality.dprScale = 0.35; game.quality.shadows = false; key.castShadow = false; renderer.shadowMap.enabled = false; game.quality.locked = true; } } catch (e) {}
   window.addEventListener('resize', resize);
   window.addEventListener('orientationchange', () => { resize(); });

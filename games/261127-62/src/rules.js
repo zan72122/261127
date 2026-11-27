@@ -35,7 +35,7 @@ export const Rules = {
         if (o === dragD || !this.awake(o) || o.st === 'held') continue;
         const ps = this.pairState(dragD, o);
         const dist = dragD.root.position.distanceTo(o.root.position);
-        if (dist > 0.2) { ps.give = false; ps.cheer = false; }
+        if (dist > 0.34) { ps.give = false; ps.cheer = false; }
         this.ruleGive(dragD, o, ps);
         this.ruleCheers(dragD, o, ps);
       }
@@ -77,6 +77,11 @@ export const Rules = {
       if (ps.greet) continue;
       if (p.st === 'held' && i.st === 'held') continue;
       ps.greet = true;
+      // the host steps a little aside so both faces can be seen through the doorway
+      if (i.st === 'stand' && !i.walk && Math.abs(i.root.position.x - L.door.x) < 0.075) {
+        const to = V(L.door.x + 0.105, 0, Math.max(i.root.position.z, L.room.z0 + 0.07));
+        i.walk = { from: i.root.position.clone(), to, t: 0, dur: 0.45, endYaw: Math.atan2(p.root.position.x - to.x, p.root.position.z - to.z) };
+      }
       for (const [a, b] of [[p, i], [i, p]]) {
         if (a.st !== 'held') a.yawT = Math.atan2(b.root.position.x - a.root.position.x, b.root.position.z - a.root.position.z);
         a.focus = { doll: b, until: this.time + 2.6 };
@@ -101,11 +106,18 @@ export const Rules = {
     if (!best) return;
     const ip = _v.set(0, best.pickY, 0).add(best.pos);
     const reach = Math.min(ip.distanceTo(b.chest.getWorldPosition(_v2)), ip.distanceTo(this.handPos(b, 0, _v3)), ip.distanceTo(this.handPos(b, 1, _v3)), ip.distanceTo(b.head.getWorldPosition(_v3)) + 0.02);
-    if (reach > 0.11) return;
+    if (reach > (this.dropGive ? 0.15 : 0.13)) return;
     // both holding cups -> cheers instead
     if (best.kind === 'cup' && b.handSlots.some(s => s.occupant && s.occupant.kind === 'cup')) return;
     ps.give = true;
     this.giveTo(a, b, best, fh);
+  },
+  // a carried doll that is set down right next to a friend still hands over what it holds
+  giveOnDrop(a) {
+    if (!this.awake(a)) return;
+    this.dropGive = true;
+    try { for (const o of this.dolls) { if (o === a || !this.awake(o) || o.st === 'held') continue; const ps = this.pairState(a, o); if (a.root.position.distanceTo(o.root.position) < 0.2) this.ruleGive(a, o, ps); } }
+    finally { this.dropGive = false; }
   },
   giveTo(a, b, it, hand) {
     const t = this.time;
@@ -140,9 +152,10 @@ export const Rules = {
     const ca = a.handSlots.map(s => s.occupant).findIndex(x => x && x.kind === 'cup');
     const cb = b.handSlots.map(s => s.occupant).findIndex(x => x && x.kind === 'cup');
     if (ca < 0 || cb < 0) return;
+    if (this.time - (ps.cheerAt || -9) < 2.5) return;
     const A = a.handSlots[ca].occupant, B = b.handSlots[cb].occupant;
     if (A.pos.distanceTo(B.pos) > 0.11 && a.chest.getWorldPosition(_v).distanceTo(b.chest.getWorldPosition(_v2)) > 0.13) return;
-    ps.cheer = true;
+    ps.cheer = true; ps.cheerAt = this.time;
     const t = this.time;
     const mid = V().addVectors(a.chest.getWorldPosition(_v), b.chest.getWorldPosition(_v2)).multiplyScalar(0.5); mid.y += 0.05;
     this.gesture(a, 'cheer', { side: ca, target: mid.clone(), dur: 0.9 });
@@ -166,6 +179,10 @@ export const Rules = {
       const mp = d.mouth.getWorldPosition(_v2);
       const wd = mp.distanceTo(ip);
       const ms = this.scr(mp), px = Math.hypot(ms.x - is.x, ms.y - is.y), rp = Math.max(this.minPx() * 0.6, 0.024 * this.pxPerM(mp));
+      // closer to the hands/chest than to the mouth means "hold it", not "eat it"
+      let pxHold = 1e9;
+      { const hs = this.scr(d.chest.getWorldPosition(_v3)); pxHold = Math.hypot(hs.x - is.x, hs.y - is.y); }
+      if (px > pxHold * 0.8) continue;
       const sc = Math.min(px / rp, wd / 0.03);
       if (sc < bd && sc < maxPx) { bd = sc; best = d; }
     }
@@ -269,6 +286,7 @@ export const Rules = {
       pot.tilt += (0.62 - pot.tilt) * (1 - Math.exp(-dt * 10));
       // magnet the pot so the spout is above the cup
       if (this.drag && this.drag.obj === pot) { _v.set(target.pos.x - 0.036, target.pos.y + 0.03, target.pos.z); pot.pos.lerp(_v, 1 - Math.exp(-dt * 12)); }
+      this.lastPourT = this.time;
       if (pot.tilt > 0.4) {
         target.data.level = Math.min(1, target.data.level + dt * 0.85);
         this.sound.pourLevel(target.data.level);
@@ -359,7 +377,7 @@ export const Rules = {
     if (it.kind === 'blanket') this.log('blanketFree', s.kind);
   },
   tapItem(it) {
-    it.popT = 0;
+    it.hopT = 0;
     if (it.kind === 'gift' && !it.data.open) return;
     if (it.kind === 'cup' && it.data.level > 0.1) { this.fx.emit({ pos: it.pos.clone().add(_v.set(0, 0.03, 0)), vel: _v2.set(0, 0.03, 0), cell: P_BUBBLE, size: 0.01, life: 1.2, col: '#ffffff', alpha: 0.6 }); }
   },

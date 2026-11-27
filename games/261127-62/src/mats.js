@@ -41,6 +41,7 @@ export function initMaterials() {
   M.mintDark = P({ color: '#9fd3be', roughness: 0.45, clearcoat: 0.3 });
   M.gold = P({ color: '#e6c06a', metalness: 1, roughness: 0.28 });
   M.silver = P({ color: '#e8e8ea', metalness: 1, roughness: 0.22 });
+  M.silverDS = P({ color: '#e8e8ea', metalness: 1, roughness: 0.22, side: THREE.DoubleSide });
   M.glass = P({ color: '#eaf6ff', roughness: 0.05, transparent: true, opacity: 0.18, metalness: 0, clearcoat: 1, depthWrite: false });
   const tl = T.tiles(); tl.map.repeat.set(4, 1.6); tl.normalMap.repeat.set(4, 1.6);
   M.tile = P({ map: tl.map, normalMap: tl.normalMap, roughness: 0.4, clearcoat: 0.5, clearcoatRoughness: 0.2 });

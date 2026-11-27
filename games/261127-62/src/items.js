@@ -72,9 +72,11 @@ function teapotGeo() {
   return { body, lid, spout, handle };
 }
 function spoonGeo() {
-  const bowl = new THREE.SphereGeometry(1, 16, 10, 0, Math.PI * 2, Math.PI / 2, Math.PI / 2); bowl.scale(0.0065, 0.0028, 0.0085); bowl.translate(0, 0.0028, 0.012);
-  const handle = taperTube(curve([[0, 0.003, 0.004], [0, 0.0045, -0.008], [0, 0.0065, -0.024]]), t => [0.0012 + 0.0016 * t, 0.0007], { segs: 10, radial: 6, up: new THREE.Vector3(0, 1, 0) });
-  return merge([bowl, handle]);
+  // shallow bowl (double-sided shell) + flat handle that widens to a rounded end
+  const bowl = new THREE.SphereGeometry(1, 18, 8, 0, Math.PI * 2, Math.PI * 0.62, Math.PI * 0.38); bowl.scale(0.0068, 0.0055, 0.009); bowl.translate(0, 0.0058, 0.012);
+  const rim = new THREE.TorusGeometry(1, 0.06, 5, 24); rim.rotateX(Math.PI / 2); rim.scale(0.0068 * Math.sin(Math.PI * 0.62), 0.004, 0.009 * Math.sin(Math.PI * 0.62)); rim.translate(0, 0.0058 + 0.0055 * Math.cos(Math.PI * 0.62), 0.012);
+  const handle = taperTube(curve([[0, 0.0032, 0.005], [0, 0.0038, -0.006], [0, 0.0052, -0.018], [0, 0.0058, -0.026]]), t => [0.0011 + 0.0019 * t * t, 0.0006], { segs: 14, radial: 8, up: new THREE.Vector3(0, 1, 0) });
+  return merge([bowl, rim, handle]);
 }
 export function shoeGeo() {
   // centered on the doll foot node: foot ellipsoid ~ (0.0097, 0.0078, 0.0168)
@@ -194,7 +196,7 @@ export function buildItems() {
   const sg = spoonGeo();
   for (let i = 0; i < 2; i++) {
     const it = add(new Item('spoon', { id: 'spoon' + i }));
-    it.vis.add(mk(sg, M.silver));
+    it.vis.add(mk(sg, M.silverDS));
     const bite = new THREE.Group(); bite.position.set(0, 0.004, 0.012);
     bite.add(mk(xf(ell(0.0045, 0.003, 0.0045, 10, 6), [0, 0, 0]), M.sponge)); bite.add(mk(xf(ell(0.0035, 0.0022, 0.0035, 10, 6), [0, 0.0024, 0]), M.creamTop));
     bite.visible = false; it.vis.add(bite); it.bite = bite; it.data = { loaded: false };
