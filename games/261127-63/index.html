@@ -1692,7 +1692,7 @@ function decideMode() {
 function clampTarget(i) {
   const doorK = DOOR.k;
   if (STAGE !== 'oven') return;
-  const zMax = doorK > 0.6 ? 5.6 : LIP_Z - 0.06;
+  const zMax = doorK > 0.6 ? LIP_Z + 0.45 : LIP_Z - 0.06;
   if (pz[i] > zMax) pz[i] = zMax;
   if (pz[i] < CAV.z0 + 0.03) pz[i] = CAV.z0 + 0.03;
   if (pz[i] < 1.75) { if (px[i] < CAV.x0 + 0.03) px[i] = CAV.x0 + 0.03; if (px[i] > CAV.x1 - 0.03) px[i] = CAV.x1 - 0.03; }
@@ -2037,7 +2037,7 @@ function snapJoin(J) {
 
 // ---------------- remesh (split long edges) ----------------
 function remeshAfterEdit() {
-  for (let pass = 0; pass < 3; pass++) { if (!splitLong(0.15)) break; }
+  for (let pass = 0; pass < 2; pass++) { if (!splitLong(NV > 2200 ? 0.22 : 0.17)) break; }
   buildTopology(); updateLocks();
 }
 function splitLong(maxLen) {
@@ -2178,7 +2178,7 @@ function beginPlate(sx, sy, demo) {
   let gv = -1;
   const inside = insideDough(f.x, f.z);
   let whole = false;
-  if (inside && nv.bd > 0.45) { gv = nv.ai; whole = true; }
+  if (inside && nv.bd > 0.25) { gv = nv.ai; whole = true; }
   else if (nv.bd < er) gv = nv.bi; else if (inside) gv = nv.bi >= 0 && nv.bd < 0.6 ? nv.bi : nv.ai; else if (nv.bd < er * 1.5) gv = nv.bi;
   if (gv < 0) return false;
   Object.assign(DRAG, { active: true, mode: 'plate', gv, edge: !!isB[gv], sx, sy, gx: f.x, gz: f.z, fx: f.x, fz: f.z, D: 0, demo: !!demo, t0: NOW, lastF: { x: f.x, z: f.z, t: NOW }, speed: 0, broke: false, cut: null, creak: 0, moved: false });
