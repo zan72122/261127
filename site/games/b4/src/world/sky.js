@@ -79,12 +79,17 @@ export class AutumnSky {
   }
 
   makeEnvironment(renderer) {
-    const pmrem = new THREE.PMREMGenerator(renderer);
-    const s = new THREE.Scene();
-    s.add(this.mesh.clone());
-    const rt = pmrem.fromScene(s, 0.04);
-    pmrem.dispose();
-    return rt.texture;
+    try {
+      const pmrem = new THREE.PMREMGenerator(renderer);
+      const s = new THREE.Scene();
+      s.add(this.mesh.clone());
+      const rt = pmrem.fromScene(s, 0.04);
+      pmrem.dispose();
+      return rt.texture;
+    } catch (e) {
+      (window.__errors || (window.__errors = [])).push('pmrem:' + (e && (e.message || e)));
+      return null;
+    }
   }
 
   update(camPos) {

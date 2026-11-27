@@ -1,5 +1,21 @@
 import * as THREE from '../../lib/three.module.js';
 
+function pickRTType(renderer) {
+  const gl = renderer.getContext();
+  try {
+    const rt = new THREE.WebGLRenderTarget(2, 2, { type: THREE.HalfFloatType, depthBuffer: false });
+    renderer.setRenderTarget(rt);
+    const ok = gl && gl.checkFramebufferStatus(gl.FRAMEBUFFER) === gl.FRAMEBUFFER_COMPLETE;
+    renderer.setRenderTarget(null);
+    rt.dispose();
+    if (ok) return THREE.HalfFloatType;
+  } catch (e) {
+    try { renderer.setRenderTarget(null); } catch (e2) { /* ignore */ }
+  }
+  return THREE.UnsignedByteType;
+}
+
+
 const VERT = /* glsl */ `
 varying vec2 vUv;
 void main() {
@@ -22,10 +38,12 @@ export class Post {
     this.renderer = renderer;
     this.bloomOn = bloom;
     const isGL2 = renderer.capabilities.isWebGL2;
+    const rtType = pickRTType(renderer);
+    const samples = (isGL2 && rtType === THREE.HalfFloatType) ? msaa : 0;
 
     this.sceneRT = new THREE.WebGLRenderTarget(4, 4, {
-      type: THREE.HalfFloatType,
-      samples: isGL2 ? msaa : 0,
+      type: rtType,
+      samples,
       depthBuffer: true,
     });
 
@@ -33,13 +51,13 @@ export class Post {
     this.scratch = [];
     if (bloom) {
       for (let i = 0; i < 3; i++) {
-        const rt = new THREE.WebGLRenderTarget(4, 4, { type: THREE.HalfFloatType, depthBuffer: false });
+        const rt = new THREE.WebGLRenderTarget(4, 4, { type: rtType, depthBuffer: false });
         rt.texture.minFilter = THREE.LinearFilter;
         rt.texture.magFilter = THREE.LinearFilter;
         rt.texture.generateMipmaps = false;
         this.levels.push(rt);
 
-        const sc = new THREE.WebGLRenderTarget(4, 4, { type: THREE.HalfFloatType, depthBuffer: false });
+        const sc = new THREE.WebGLRenderTarget(4, 4, { type: rtType, depthBuffer: false });
         sc.texture.minFilter = THREE.LinearFilter;
         sc.texture.magFilter = THREE.LinearFilter;
         sc.texture.generateMipmaps = false;

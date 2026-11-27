@@ -12,18 +12,39 @@ import { Seaplane } from './chars/seaplane.js';
 import { AutumnAtmosphere } from './fx/atmosphere.js';
 import { Director } from './story/director.js';
 
-function detectQuality(params) {
+function isConstrainedClient() {
   const ua = navigator.userAgent || '';
-  const mobile = /iPhone|iPad|iPod|Android/i.test(ua) || (navigator.maxTouchPoints > 1 && /Macintosh/.test(ua));
+  const plat = navigator.platform || '';
+  const touches = navigator.maxTouchPoints || 0;
+  const appleTouch = /iPhone|iPad|iPod/i.test(ua)
+    || ((/Mac/i.test(ua) || /Mac/i.test(plat)) && touches > 1);
+  const android = /Android/i.test(ua);
+  let coarse = false;
+  try {
+    coarse = !!(window.matchMedia
+      && (window.matchMedia('(pointer: coarse)').matches
+        || window.matchMedia('(hover: none)').matches));
+  } catch (e) { /* ignore */ }
+  // iPadOS desktop UA can omit "iPad"; some WebViews also omit maxTouchPoints.
+  const safari = /Safari/i.test(ua) && !/Chrome|Chromium|Edg|Firefox|Android/i.test(ua);
+  const small = Math.min(window.innerWidth || 9999, window.innerHeight || 9999) <= 1366;
+  return appleTouch || android || coarse || (safari && (touches > 0 || small));
+}
+
+function detectQuality(params) {
+  const constrained = isConstrainedClient();
   const cores = navigator.hardwareConcurrency || 4;
-  let tier = mobile ? (cores >= 6 ? 'mid' : 'low') : 'high';
+  // Prefer opening reliably on iPad/Safari; desktop Chrome stays high.
+  let tier = constrained ? (cores >= 8 ? 'mid' : 'low') : 'high';
   if (params.get('q')) tier = params.get('q');
   const presets = {
-    high: { shadow: 1024, msaa: 2, bloom: true, maxDpr: 1.5, low: false },
-    mid: { shadow: 1024, msaa: 0, bloom: true, maxDpr: 1.25, low: false },
-    low: { shadow: 512, msaa: 0, bloom: false, maxDpr: 1.0, low: true },
+    high: { shadow: 1024, msaa: 2, bloom: true, maxDpr: 1.5, low: false, constrained: false },
+    mid: { shadow: 1024, msaa: 0, bloom: true, maxDpr: 1.25, low: false, constrained: true },
+    low: { shadow: 512, msaa: 0, bloom: false, maxDpr: 1.0, low: true, constrained: true },
   };
-  return { tier, ...(presets[tier] || presets.mid) };
+  const preset = presets[tier] || presets.mid;
+  if (constrained) preset.msaa = 0;
+  return { tier, constrained, ...preset };
 }
 
 export class Game {
@@ -36,8 +57,9 @@ export class Game {
     const renderer = (this.renderer = new THREE.WebGLRenderer({
       canvas,
       antialias: false,
-      powerPreference: 'high-performance',
+      powerPreference: this.q.constrained ? 'default' : 'high-performance',
       stencil: false,
+      failIfMajorPerformanceCaveat: false,
     }));
     renderer.toneMapping = THREE.NeutralToneMapping;
     renderer.toneMappingExposure = 1.05;
@@ -63,7 +85,12 @@ export class Game {
     // Sky & procedural IBL environment
     this.sky = new AutumnSky();
     this.scene.add(this.sky.group);
-    this.scene.environment = this.sky.makeEnvironment(r);
+    try {
+      this.scene.environment = this.sky.makeEnvironment(r);
+    } catch (e) {
+      this.scene.environment = null;
+      (window.__errors || (window.__errors = [])).push('pmrem:' + (e && (e.message || e)));
+    }
 
     // Clear autumn afternoon directional sun + sky/ground fill + soft warm bounce
     this.sun = new THREE.DirectionalLight('#ffd8a8', 2.85);
@@ -128,7 +155,11 @@ export class Game {
     this.director.go(startState);
     this.director.update(1 / 60);
 
-    r.compile(this.scene, this.camera);
+    try {
+      r.compile(this.scene, this.camera);
+    } catch (e) {
+      (window.__errors || (window.__errors = [])).push('compile:' + (e && (e.message || e)));
+    }
     this.last = performance.now();
     this._loop = this._loop.bind(this);
     requestAnimationFrame(this._loop);
