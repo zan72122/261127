@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <meta name="robots" content="noindex,nofollow">
+  <link rel="icon" href="data:,">
+  <title>Seaplane &amp; Autumn Fjord</title>
+  <style>
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    html, body {
+      margin: 0; padding: 0; width: 100%; height: 100%;
+      overflow: hidden; background: #14243b;
+      touch-action: none; user-select: none; -webkit-user-select: none;
+    }
+    #c { display: block; width: 100%; height: 100%; touch-action: none; }
+    #veil {
+      position: fixed; inset: 0; pointer-events: none;
+      background: radial-gradient(circle at 50% 45%, #233b5c 0%, #101e33 100%);
+      opacity: 1; transition: opacity 0.55s ease-out;
+    }
+    #fps {
+      position: fixed; top: 8px; left: 8px; display: none;
+      padding: 4px 8px; border-radius: 4px;
+      background: rgba(12, 22, 38, 0.62); color: #f3ebd8;
+      font: 11px/1.4 ui-monospace, Menlo, monospace; pointer-events: none;
+      white-space: pre;
+    }
+    #action-btn {
+      position: fixed;
+      right: max(18px, env(safe-area-inset-right));
+      bottom: max(18px, env(safe-area-inset-bottom));
+      width: 74px;
+      height: 74px;
+      border-radius: 50%;
+      border: 2px solid rgba(243, 235, 216, 0.72);
+      background: radial-gradient(circle at 35% 30%, rgba(243, 235, 216, 0.34), rgba(24, 46, 76, 0.62));
+      box-shadow: 0 4px 16px rgba(10, 20, 35, 0.35);
+      backdrop-filter: blur(6px);
+      -webkit-backdrop-filter: blur(6px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0;
+      opacity: 0;
+      pointer-events: none;
+      transform: scale(0.88);
+      transition: opacity 0.25s ease, transform 0.25s ease;
+      cursor: pointer;
+    }
+    #action-btn.visible {
+      opacity: 1;
+      pointer-events: auto;
+      transform: scale(1);
+    }
+    #action-btn:active { transform: scale(0.92); }
+    #action-btn svg { width: 42px; height: 42px; display: block; }
+  </style>
+</head>
+<body>
+  <canvas id="c"></canvas>
+  <button id="action-btn" type="button" aria-label="action">
+    <!-- Wordless parasol canopy icon (dismount / slow descent) -->
+    <svg id="icon-parasol" viewBox="0 0 64 64" fill="none">
+      <path d="M12 29 C18 14, 46 14, 52 29 C44 26, 20 26, 12 29 Z" fill="#f3ebd8" fill-opacity="0.94"/>
+      <path d="M32 27 L32 45 C32 49, 28 50, 26 48" stroke="#e2a856" stroke-width="2.6" stroke-linecap="round"/>
+      <circle cx="24" cy="40" r="3.4" fill="#f3ebd8"/>
+    </svg>
+    <!-- Wordless seaplane silhouette icon (board / call seaplane) -->
+    <svg id="icon-plane" viewBox="0 0 64 64" fill="none" style="display:none">
+      <path d="M10 34 L28 31 L36 20 L42 20 L38 31 L53 33 L56 36 L38 37 L28 38 L12 37 Z" fill="#f3ebd8" fill-opacity="0.95"/>
+      <path d="M22 44 L44 44" stroke="#e2a856" stroke-width="3" stroke-linecap="round"/>
+      <path d="M28 38 L26 44 M38 37 L40 44" stroke="#f3ebd8" stroke-width="2.2" stroke-linecap="round"/>
+    </svg>
+  </button>
+  <div id="veil"></div>
+  <div id="fps"></div>
+  <script>
+    window.__ready = false;
+    window.__errors = [];
+    window.__moment = 'garden';
+    window.__autolog = [];
+    window.__autodone = false;
+    window.addEventListener('error', function (e) {
+      var msg = (e && (e.message || (e.error && e.error.stack))) || String(e);
+      window.__errors.push(msg);
+    });
+    window.addEventListener('unhandledrejection', function (e) {
+      var r = e && e.reason;
+      window.__errors.push(r ? (r.stack || r.message || String(r)) : 'unhandledrejection');
+    });
+  </script>
+  <script type="module" src="./src/main.js"></script>
+</body>
+</html>
