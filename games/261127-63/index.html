@@ -2713,9 +2713,8 @@ function onDown(e) {
   e.preventDefault();
   SND.unlock();
   lastInput = NOW;
+  if (HAND.active || (DRAG.active && DRAG.demo)) { cancelDemo(); if (DRAG.active && DRAG.demo) endDrag(); HAND.active = false; }
   if (DRAG.active) return; // ignore extra fingers
-  if (HAND.active) cancelDemo();
-  if (DRAG.active) return;
   const ok = beginInteraction(e.clientX, e.clientY, e.pointerId, false);
   if (ok) { try { canvasEl.setPointerCapture(e.pointerId); } catch (er) {} DRAG.lsx = e.clientX; DRAG.lsy = e.clientY; }
 }
