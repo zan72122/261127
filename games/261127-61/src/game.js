@@ -56,6 +56,8 @@ export class Game {
     }
     this.browse = BROWSE[Math.floor(r() * BROWSE.length)];
     const [sx, sz] = SITES[this.site];
+    // traces of earlier nights stay, slowly recovering
+    if (!first) { this.W.press.fade(0.3); this.W.prints.fade(0.7); }
     // vary which stems overlap the view each evening: one tuft per station stands in the line of sight
     for (const t of this.W.tufts) {
       if (!t.peek) continue;
@@ -530,7 +532,10 @@ export class Game {
     const aspect = cam.aspect;
     const needH = right - left + 4;
     const needV = Math.max(hi - lo + 6, 2 * Math.atan(Math.tan(needH * D2R / 2) / aspect) * R2D);
-    const fovT = clamp(needV, 24, this.baseFov || 60);
+    // while walking through the grass the view opens up: the resting animal and the one standing far behind in one sweep
+    const sweeping = this.camMoving || (this.drag && this.drag.camMode);
+    this.sweepK = clamp((this.sweepK || 0) + (sweeping ? dt * 1.5 : -dt * 0.6), 0, 1);
+    const fovT = lerp(clamp(needV, 24, this.baseFov || 60), this.baseFov || 60, this.sweepK);
     cam.fov += (fovT - cam.fov) * Math.min(1, dt * 1.5);
     cam.updateProjectionMatrix();
     const hNow = 2 * Math.atan(Math.tan(cam.fov * D2R / 2) * aspect) * R2D;

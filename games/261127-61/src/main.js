@@ -134,6 +134,7 @@ function boot() {
     audio: () => ({ ok: sound.ok, state: sound.ctx ? sound.ctx.state : 'none' }),
     t: () => game.t,
     canvas: () => ({ w: canvas.width, h: canvas.height, cw: canvas.clientWidth, ch: canvas.clientHeight }),
+    sun: (el) => { game.lowerSun(game.sunEl - el); return game.sunEl; },
     freeze: (on) => { game.frozen = !!on; return game.frozen; },
     step: (n, dt) => { for (let i = 0; i < n; i++) game.update(dt || 1 / 30); return game.phase; },
   };
