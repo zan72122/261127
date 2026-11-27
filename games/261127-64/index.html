@@ -201,9 +201,12 @@ function drawMark(g,m){
     if(m.reeds){ g.lineCap='round'; for(let i=0;i<4;i++){ const x=m.x+(R()-.5)*m.w*1.2, y=profY(p,x)+2; for(let j=-1;j<=1;j++){ const hh=5+R()*6; g.strokeStyle=rgba(1,0.7); g.lineWidth=0.9; g.beginPath(); g.moveTo(x,y); g.lineTo(x+j*3+(R()-.5)*2,y-hh); g.stroke(); } } }
     break; }
   case 'path':{
-    const p=m.p, n=p.length/2; g.lineCap='round'; let acc=0;
-    for(let i=1;i<n;i++){ const x0=p[2*i-2],y0=p[2*i-1],x1=p[2*i],y1=p[2*i+1]; acc++; if(acc%2) continue; const w=1.6+R()*1.4; g.strokeStyle=rgba(1,0.5+R()*0.3); g.lineWidth=w; g.beginPath(); g.moveTo(x0,y0); g.lineTo(lerp(x0,x1,0.8),lerp(y0,y1,0.8)); g.stroke(); }
-    for(let i=0;i<n;i+=3){ const x=p[2*i], y=p[2*i+1]; g.fillStyle=rgba(2,0.35); g.beginPath(); g.arc(x+(R()-.5)*10,y+3+R()*4,pos(0.8+R()*1.3),0,7); g.fill(); }
+    const p=m.p, n=p.length/2; if(n<2) break; g.lineCap='round'; g.lineJoin='round';
+    // reserved pale trail over the ink, edged on both sides, with step ticks
+    g.strokeStyle='rgba(247,242,229,0.92)'; g.lineWidth=9; g.beginPath(); g.moveTo(p[0],p[1]); for(let i=1;i<n;i++) g.lineTo(p[2*i],p[2*i+1]); g.stroke();
+    for(let i=1;i<n;i++){ const x0=p[2*i-2],y0=p[2*i-1],x1=p[2*i],y1=p[2*i+1]; const dx=x1-x0, dy=y1-y0, d=Math.hypot(dx,dy)||1, nx=-dy/d, ny=dx/d;
+      for(const sd of [-1,1]){ if((i+(sd>0?1:0))%3===0) continue; g.strokeStyle=rgba(1,0.6+R()*0.3); g.lineWidth=1.3+R()*0.9; g.beginPath(); g.moveTo(x0+nx*5*sd,y0+ny*5*sd); g.lineTo(x1+nx*5*sd,y1+ny*5*sd); g.stroke(); }
+      if(i%2===0){ g.strokeStyle=rgba(2,0.55); g.lineWidth=1.1; g.beginPath(); g.moveTo(x0+nx*3.8,y0+ny*3.8); g.lineTo(x0-nx*3.8,y0-ny*3.8); g.stroke(); } }
     break; }
   case 'sp':{ g.fillStyle=rgba(m.t||0,m.a||0.85); g.beginPath(); g.ellipse(m.x,m.y,pos(m.r),pos(m.r*0.8),R()*3,0,7); g.fill(); break; }
   case 'stream':{
@@ -257,7 +260,7 @@ function stampTo(g,m,s,ox,oy){
   ensureScratch(w,h);
   sg.setTransform(1,0,0,1,0,0); sg.globalCompositeOperation='source-over'; sg.globalAlpha=1; sg.clearRect(0,0,w,h);
   sg.setTransform(s,0,0,s,-x0,-y0); drawMark(sg,m); sg.setTransform(1,0,0,1,0,0); sg.globalCompositeOperation='source-over';
-  g.save(); g.setTransform(1,0,0,1,0,0); g.globalCompositeOperation=(m.k==='band')?'source-over':'multiply';
+  g.save(); g.setTransform(1,0,0,1,0,0); g.globalCompositeOperation=(m.k==='band'||m.k==='path')?'source-over':'multiply';
   g.drawImage(scratch,0,0,w,h,ox+x0,oy+y0,w,h); g.restore();
 }
 function makeMarkSprite(m,s){ const b=m.bb; const x0=Math.floor(b[0]*s), y0=Math.floor(b[1]*s); const w=Math.max(1,Math.ceil(b[2]*s)-x0), h=Math.max(1,Math.ceil(b[3]*s)-y0); const c=document.createElement('canvas'); c.width=Math.min(4096,w); c.height=Math.min(4096,h); const g=c.getContext('2d'); g.setTransform(s,0,0,s,-x0,-y0); drawMark(g,m); return {c,x0,y0,s}; }
@@ -500,9 +503,9 @@ function computeLayout(){
   const aw=Math.max(240,W-sl-sr), ah=Math.max(240,H-st-sb);
   const portrait=ah>aw*1.05; const o={portrait,aw,ah,sl,st};
   if(portrait){
-    const sFull=(aw-16)/PW, sH=ah*0.42/PH;
-    const s=clamp(sH,sFull,(aw-16)/640), VW=Math.min(PW,(aw-16)/s);
-    const ss=Math.min((aw-4)/(PW+2*EXT), ah*0.4/PH);
+    const sFull=(aw-36)/PW, sH=ah*0.42/PH;
+    const s=clamp(sH,sFull,(aw-36)/640), VW=Math.min(PW,(aw-36)/s);
+    const ss=Math.min((aw-24)/(PW+2*EXT), ah*0.4/PH);
     const bigR=Math.min(aw*0.205, ah*0.1), smallR=bigR*0.66;
     const floorY=st+ah-6;
     const ch=Math.min(ah*0.18, aw*0.42);
@@ -516,7 +519,7 @@ function computeLayout(){
     o.drumW={B:{x:sl+aw*0.3,y:floorY-bigR*1.62,R:bigR},S:{x:sl+aw*0.765,y:floorY-smallR*1.38,R:smallR}};
     o.drumS=o.drumW;
     // gallery
-    const gw=Math.min(aw*0.8,(drumTop-st-30)/3.7/(PH/(PW+2*EXT))), gh=gw*PH/(PW+2*EXT), gap=Math.max(8,gh*0.08);
+    const gw=Math.min(aw*0.8,(drumTop-st-40)/4.25/(PH/(PW+2*EXT))), gh=gw*PH/(PW+2*EXT), gap=Math.max(10,gh*0.16);
     const gx=sl+Math.max(8,(aw-gw)/2-aw*0.06), gy=st+Math.max(12,(drumTop-st-(gh*3.62+gap*3))*0.4);
     o.slots=[0,1,2].map(i=>({x:gx,y:gy+i*(gh+gap),w:gw,h:gh}));
     o.blank={x:gx,y:gy+3*(gh+gap),w:gw*0.42,h:gh*0.62};
@@ -535,7 +538,7 @@ function computeLayout(){
     o.ch=ch; o.feet=Math.min(floorY-4, paperB+ch+(floorY-paperB-ch)*0.35);
     o.drumW={B:{x:sl+marg*0.5,y:floorY-bigR*1.62,R:bigR},S:{x:sl+aw-marg*0.5,y:floorY-smallR*1.38,R:smallR}};
     o.drumS=o.drumW;
-    const gw=Math.min((VW*s-16)/2, ((paperB+ch*0.35-top)-14)/2/(PH/(PW+2*EXT))), gh=gw*PH/(PW+2*EXT), gap=14;
+    const gw=Math.min((aw*0.8-14)/2, ((floorY-bigR*2.6)-top-26)/2/(PH/(PW+2*EXT))), gh=gw*PH/(PW+2*EXT), gap=14;
     const gx=sl+(aw-(gw*2+gap))/2, gy=top+4;
     o.slots=[{x:gx,y:gy,w:gw,h:gh},{x:gx+gw+gap,y:gy,w:gw,h:gh},{x:gx,y:gy+gh+gap,w:gw,h:gh}];
     o.blank={x:gx+gw+gap+gw*0.25,y:gy+gh+gap+gh*0.18,w:gw*0.5,h:gh*0.64};
@@ -721,7 +724,7 @@ function checkPath(){
   let pine=null; for(const p of P.pines){ if(p.x>=xs-20&&p.x<=xe+10&&(!pine||(BASE-p.y)>(BASE-pine.y))) pine=p; }
   const xEnd=pine?pine.x-4:xe-6, xStart=Math.max(-20,xs-46);
   const pts=[]; const steps=Math.max(4,Math.round((xEnd-xStart)/6));
-  for(let i=0;i<=steps;i++){ const t=i/steps, x=lerp(xStart,xEnd,t); const hh=hAt(P,x); pts.push(x, BASE-hh+7+Math.sin(x*0.09)*3*(hh>20?1:0.3)); }
+  for(let i=0;i<=steps;i++){ const t=i/steps, x=lerp(xStart,xEnd,t); const hh=hAt(P,x); const dip=hh>24?Math.min(hh*0.35,10+8*Math.sin(x*0.06)):2; pts.push(x, BASE-hh+dip+Math.min(4,hh*0.1)); }
   S.lastPathX=xe;
   const order=L4[0].k+L4[1].k;
   queueTask('path',pts,0.8,null);
@@ -740,7 +743,7 @@ function bloom(m,dur,mode){ finishMark(m); if(LY.s<=0) return; S.blooms.push({m,
 function flushBlooms(){ for(const b of S.blooms){ addMark(b.m); } S.blooms.length=0; }
 
 /* ---------------- signal / seal / unroll ---------------- */
-function startSignal(){ S.phase='signal'; S.pt=0; S.signal='B'; S.target='B'; S.child.pointT=1.4; S.child.pointAt='signal'; }
+function startSignal(){ S.phase='signal'; S.pt=0; S.idle=0; S.signal='B'; S.target='B'; S.child.pointT=1.4; S.child.pointAt='signal'; }
 function doSeal(){
   S.signal=null; S.phase='seal'; S.pt=0;
   flushBlooms(); flushTasks();
@@ -795,7 +798,7 @@ function startEnter(){ S.phase='enter'; S.pt=0; computeRoute(); S.trail=[]; S.tr
   S.mists=[0,1,2].map(i=>({x:-EXT+i*480+100,y:BASE-120-i*40,w:220+i*60,v:6+i*3}));
   S.target='S';
 }
-function startPlay(){ S.phase='play'; S.pt=0; S.child.inside=true; }
+function startPlay(){ S.phase='play'; S.pt=0; S.idle=0; S.child.inside=true; }
 function pickPeak(x){
   const P=S.P; let best=null, bs=-1e9;
   for(let i=1;i<NC-1;i++){ const h=P.h[i]; if(h>45&&h>=P.h[i-1]&&h>=P.h[i+1]){ const px=i*DX; const sc=h-Math.abs(px-x)*0.28; if(sc>bs){ bs=sc; best={x:px,y:BASE-h,h}; } } }
@@ -848,10 +851,10 @@ function startRollup(){
   S.gallery.push(sc); S.newestId=sc.id; S.stats.songs++;
   renderThumb(sc);
   const idx=S.gallery.indexOf(sc);
-  S.anim={from:PTlerp(L.work,L.scroll,1),slot:idx};
+  S.anim={slot:idx};
   S.phase='rollup'; S.pt=0; sRustle(1.1,0.12);
 }
-function enterGallery(){ S.phase='gallery'; S.pt=0; S.anim=null; S.beat.active=false; }
+function enterGallery(){ S.phase='gallery'; S.pt=0; S.idle=0; S.anim=null; S.beat.active=false; }
 function selectScroll(item){
   // item: scroll object or 'blank'
   flushBlooms(); flushTasks();
@@ -1193,7 +1196,7 @@ function drawSeal(PT,seal,red,alpha){
   const k=PT.s*DPR/sp.sc; let sc=1; let a=alpha==null?1:alpha;
   if(seal.t!==undefined&&seal.t<0.35){ sc=1.5-0.5*easeOut(seal.t/0.35); a*=clamp(seal.t/0.12,0,1); }
   const cx=(PT.ox+(seal.x+sp.sz/2)*PT.s)*DPR, cy=(PT.oy+(seal.y+sp.sz/2)*PT.s)*DPR; const w=sp.c.width*k*sc;
-  g.globalAlpha=a; g.drawImage(sp.c,cx-w/2,cy-w/2,w,w); g.globalAlpha=1;
+  g.globalAlpha=a; g.drawImage(sp.c,cx-w/2,cy-w/2,w,w); g.globalAlpha=1; g.setTransform(DPR,0,0,DPR,0,0);
 }
 function drawPlayFx(PT){
   const g=ctx; g.setTransform(PT.s*DPR,0,0,PT.s*DPR,PT.ox*DPR,PT.oy*DPR);
@@ -1234,7 +1237,7 @@ function drawTraveler(PT){
     g.save(); g.setTransform(DPR,0,0,DPR,0,0); g.translate(sx,sy); g.rotate(ang); drawChild(g,-6*PT.s,-5*PT.s,48*PT.s,{sit:true,lookX:0.5,eyes:S.child.eyes,face:1}); g.restore();
     g.save(); g.translate(sx*DPR,sy*DPR); g.rotate(ang); g.drawImage(sp.c,-sp.ax*k,-sp.ay*k,sp.c.width*k,sp.c.height*k); g.restore();
   } else {
-    g.save(); g.setTransform(DPR,0,0,DPR,0,0); drawChild(g,sx,sy,56*PT.s,{walk:T.walk*6,lookX:0.6,eyes:S.child.eyes,face:1,tip:null}); g.restore();
+    g.save(); g.setTransform(DPR,0,0,DPR,0,0); drawChild(g,sx,sy,72*PT.s,{walk:T.walk*6,lookX:0.6,eyes:S.child.eyes,face:1,tip:null}); g.restore();
   }
 }
 function drawDrums(now){
@@ -1306,6 +1309,7 @@ function drawGallery(alpha,excludeIdx){
   const g=ctx; g.setTransform(DPR,0,0,DPR,0,0);
   const newestIdx=S.gallery.findIndex(sc=>sc.id===S.newestId);
   for(let i=0;i<S.gallery.length;i++){ if(i===excludeIdx) continue; const sc=S.gallery[i]; const r=L.slots[i]; if(!r||!sc.thumb) continue;
+    g.setTransform(DPR,0,0,DPR,0,0); g.globalAlpha=1;
     const hl=(S.phase==='gallery'&&i===newestIdx); const bob=hl?Math.sin(S.time*5)*r.h*0.02:0; const sca=hl?1+0.015*Math.sin(S.time*5):1;
     g.save(); g.globalAlpha=alpha; g.translate(r.x+r.w/2,r.y+r.h/2+bob); g.scale(sca,sca);
     if(hl){ const gr=g.createRadialGradient(0,0,r.h*0.4,0,0,r.w*0.62); gr.addColorStop(0,rgba(4,0.2*(0.6+0.4*Math.sin(S.time*5)))); gr.addColorStop(1,rgba(4,0)); g.fillStyle=gr; g.fillRect(-r.w*0.7,-r.h*1.1,r.w*1.4,r.h*2.2); }
@@ -1407,7 +1411,7 @@ function drawBigChild(){
     const T=S.trav; if(!T) return; const q=W2S(PT,T.x,routeY(T.x));
     let u=clamp(S.pt/(ph==='enter'?0.9:1.1),0,1); if(ph==='arrive') u=1-u;
     const ux=easeInOut(u);
-    const ex=q[0], ey=q[1]-(S.mode==='boat'?5*PT.s:0), eh=(S.mode==='boat'?48:56)*PT.s;
+    const ex=q[0], ey=q[1]-(S.mode==='boat'?5*PT.s:0), eh=(S.mode==='boat'?48:72)*PT.s;
     x=lerp(c.x,ex,ux); y=lerp(L.feet,ey,ux)-Math.sin(u*Math.PI)*L.ch*0.6; h=lerp(L.ch,eh,ux);
     drawChild(g,x,y,h,{eyes:c.eyes,lookX:0.4,face:1,hop:0,sit:false,walk:0});
     return;
